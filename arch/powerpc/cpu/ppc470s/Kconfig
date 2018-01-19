@@ -1,0 +1,19 @@
+menu "ppc470s CPU"
+	depends on PPC470S
+
+config SYS_CPU
+	default "ppc470s"
+
+choice
+	prompt "Target select"
+	optional
+
+config TARGET_MPW7705
+	bool "Support MPW7705"
+	select SUPPORT_SPL
+
+endchoice
+
+source "board/rc-module/mpw7705/Kconfig"
+
+endmenu

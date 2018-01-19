@@ -1,0 +1,5 @@
+config MPW7705_DDR
+	bool "mpw7705 DDR SDRAM driver"
+	depends on TARGET_MPW7705
+	help
+	  Enable DDR SDRAM controller for the mpw7705 device.
