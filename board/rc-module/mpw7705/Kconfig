@@ -1,0 +1,12 @@
+if TARGET_MPW7705
+
+config SYS_BOARD
+	default "mpw7705"
+
+config SYS_VENDOR
+	default "rc-module"
+
+config SYS_CONFIG_NAME
+	default "mpw7705"
+
+endif
