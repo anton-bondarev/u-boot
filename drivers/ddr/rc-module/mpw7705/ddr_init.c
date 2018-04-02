@@ -1,3 +1,4 @@
+
 #include <stdint.h>
 #include <mpw7705_baremetal.h>
 #include "ddr_init.h"
@@ -24,7 +25,7 @@
 //      2 - 1333
 //      3 - 1600
 //*****************************************************************************
-void ddr_init_crg_pll (uint32_t ddr3_speed)
+static void ddr_init_crg_pll (uint32_t ddr3_speed)
 {
     //****************** DDR external CRG config*********************
     iowrite32(0x1ACCE551, CRG_DDR_BASE + CRG_DDR_WR_LOCK);
@@ -65,7 +66,7 @@ void ddr_init_crg_pll (uint32_t ddr3_speed)
 //  Arguments:
 //    TODO
 //*****************************************************************************
-void ddr_plb6mcif2_init(const uint32_t baseAddr, const uint32_t puaba)
+static void ddr_plb6mcif2_init(const uint32_t baseAddr, const uint32_t puaba)
 {
   dcrwrite32(0xffff0000, baseAddr + PLB6MCIF2_INTR_EN); //enable logging but disable interrupts
   dcrwrite32(0x40000000, baseAddr + PLB6MCIF2_PLBASYNC); //PLB clock equals MCIF2 clock
@@ -169,7 +170,7 @@ static void ddr3phy_init(uint32_t baseAddr, const uint32_t burstLen)
 //  Arguments:
 //    TODO
 //*****************************************************************************
-void ddr_ddr34lmc_init (
+static void ddr_ddr34lmc_init (
         const uint32_t baseAddr,
         const uint32_t initMode,
         const uint32_t eccMode,
@@ -320,7 +321,7 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
 //*****************************************************************************
 //  This function writes burst = 4 into MR3 memory register
 //*****************************************************************************
-void ddr_burst4 (void)
+static void ddr_burst4 (void)
 {
     dcrwrite32(((DDR_BurstLength << 0) | (DDR_CL_CHIP << 4) | (0b1 << 8) | (0b110 << 9) | (0b1 << 12)), EM0_DDR3LMC_DCR_BASE + DDR34LMC_INITCMD0);
     dcrwrite32(((0b1111 << 0) | (1 << 4) | (2 << 16) | (0x1 << 31)), EM0_DDR3LMC_DCR_BASE + DDR34LMC_INITSEQ0);
@@ -340,7 +341,7 @@ void ddr_burst4 (void)
 //  DDR common initialisation function
 //    It include CRG, interconnect, Phy and MAC initialisation
 //*****************************************************************************
-void ddr_init (void)
+static void _ddr_init (void)
 {
     ddr_init_crg_pll (DDR_ddr3_speed);
     ddr_plb6mcif2_init (EM0_PLB6MCIF2_DCR_BASE, 0x00000000);
@@ -359,4 +360,233 @@ void ddr_init (void)
     {
         ddr_burst4 ();
     }
+}
+
+static uint32_t invalidate_tlb_entry (void)
+{
+    uint32_t res;
+    asm volatile
+    (
+        "addis  %0, r0, 0x0000 \n\t"  // res  = 0x00000000
+        "addis  r3, r0, 0x4000 \n\t"  // [r3] = 0x4000_0000, (%2)
+        "ori    r3, r3, 0x0070 \n\t"  // [r3] = 0x4000_03F0, (%1) // ? 0870
+        "tlbsx. r4, r0, r3     \n\t"  // [r3] - EA, [r4] - Way, Index
+        "bne end               \n\t"  // branch if not found
+        "oris   r4, r4, 0x8000 \n\t"  // r4[0]=1, r4[4]=0
+        "tlbwe  r3, r4, 0      \n\t"  // [r3] - EA[0:19], V[20], [r4]- Way[1:2], Index[8:15], index is NU
+        "end:or     %0, r4, r4     \n\t"
+    
+        "isync \n\t"
+        "msync \n\t"
+        :"=r"(res) 
+        ::
+    );
+    return res;
+};
+
+static void write_tlb_entry_1stGB(void)
+{
+    asm volatile
+    (
+        "addis r3, r0, 0x0000 \n\t"  // 0x0000
+        "addis r4, r0, 0x4000 \n\t"  // 0x0000
+        "ori   r4, r4, 0x0BF0 \n\t"  // 0x0BF0  set 0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F (4K, 16K, 64K, 1M, 16M, 256M, 1GB)
+        "tlbwe r4, r3, 0      \n\t"
+        
+        "addis r4, r0, 0x0000 \n\t"  // 0x0000
+        "ori   r4, r4, 0x0000 \n\t"  // 0x0000
+        "tlbwe r4, r3, 1      \n\t"
+        
+        "addis r4, r0, 0x0003 \n\t"  // 0000
+        "ori   r4, r4, 0x043F \n\t"  // 023F
+        "tlbwe r4, r3, 2      \n\t"
+        
+        "isync \n\t"
+        "msync \n\t"
+        :::
+    );  
+};
+
+/*
+static void write_tlb_entry_2ndGB(void)
+{
+    asm volatile
+    (
+        "addis r3, r0, 0x0000 \n\t"  // 0x0000
+        "addis r4, r0, 0x4000 \n\t"  // 0x0000
+        "ori   r4, r4, 0x0BF0 \n\t"  // 0x0BF0  set 0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F (4K, 16K, 64K, 1M, 16M, 256M, 1GB)
+        "tlbwe r4, r3, 0      \n\t"
+        
+        "addis r4, r0, 0x4000 \n\t"  // 0x0000
+        "ori   r4, r4, 0x0000 \n\t"  // 0x0000
+        "tlbwe r4, r3, 1      \n\t"
+        
+        "addis r4, r0, 0x0003 \n\t"  // 0000
+        "ori   r4, r4, 0x043F \n\t"  // 023F
+        "tlbwe r4, r3, 2      \n\t"
+        
+        "isync \n\t"
+        "msync \n\t"
+        :::
+    );  
+};
+
+static void write_tlb_entry_3rdGB(void)
+{
+    asm volatile
+    (
+        "addis r3, r0, 0x0000 \n\t"  // 0x0000
+        "addis r4, r0, 0x4000 \n\t"  // 0x0000
+        "ori   r4, r4, 0x0BF0 \n\t"  // 0x0BF0  set 0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F (4K, 16K, 64K, 1M, 16M, 256M, 1GB)
+        "tlbwe r4, r3, 0      \n\t"
+        
+        "addis r4, r0, 0x8000 \n\t"  // 0x0000
+        "ori   r4, r4, 0x0000 \n\t"  // 0x0000
+        "tlbwe r4, r3, 1      \n\t"
+        
+        "addis r4, r0, 0x0003 \n\t"  // 0000
+        "ori   r4, r4, 0x043F \n\t"  // 023F
+        "tlbwe r4, r3, 2      \n\t"
+        
+        "isync \n\t"
+        "msync \n\t"
+        :::
+    );  
+};
+
+static void mem_check_1stGB(void)
+{
+    uint32_t EM_ptr_offset;
+    
+    invalidate_tlb_entry   ();
+    write_tlb_entry_1stGB  ();
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        *((uint32_t *) (EM_ptr_offset)) = 0x00000000;
+    }
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        *((uint32_t *) (EM_ptr_offset)) = EM_ptr_offset;
+    }
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        if (*((uint32_t *) (EM_ptr_offset)) != EM_ptr_offset)
+        {
+            *((uint32_t *) (0x00070000)) = 0xDEADBEEF;
+            *((uint32_t *) (0x00070004)) = EM_ptr_offset;
+			puts("mem_check_1stGB failed\n");
+            while (1);
+        }
+    }
+    *((uint32_t *) (0x00070000)) = 0x7A557A55;
+}
+
+static void mem_check_2ndGB(void)
+{
+    uint32_t EM_ptr_offset;
+    
+    invalidate_tlb_entry   ();
+    write_tlb_entry_2ndGB  ();
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        *((uint32_t *) (EM_ptr_offset)) = 0x00000000;
+    }
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        *((uint32_t *) (EM_ptr_offset)) = EM_ptr_offset + 0x40000000;
+    }
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        if (*((uint32_t *) (EM_ptr_offset)) != (EM_ptr_offset + 0x40000000))
+        {
+            *((uint32_t *) (0x00070010)) = 0xDEADBEEF;
+            *((uint32_t *) (0x00070014)) = EM_ptr_offset;
+			puts("mem_check_2ndGB failed\n");
+            while (1);
+        }
+    }
+    *((uint32_t *) (0x00070010)) = 0x7A557A55;
+}
+
+static void mem_check_3rdGB(void)
+{
+    uint32_t EM_ptr_offset;
+    
+    invalidate_tlb_entry   ();
+    write_tlb_entry_3rdGB  ();
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        *((uint32_t *) (EM_ptr_offset)) = 0x00000000;
+    }
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        *((uint32_t *) (EM_ptr_offset)) = EM_ptr_offset + 0x80000000;
+    }
+    
+    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
+    {
+        if (*((uint32_t *) (EM_ptr_offset)) != (EM_ptr_offset + 0x80000000))
+        {
+            *((uint32_t *) (0x00070020)) = 0xDEADBEEF;
+            *((uint32_t *) (0x00070024)) = EM_ptr_offset;
+			puts("mem_check_3rdGB failed\n");
+            while (1);
+        }
+    }
+    *((uint32_t *) (0x00070020)) = 0x7A557A55;
+}
+*/
+
+static void init_ppc(void)
+{
+    asm volatile
+    (
+        // initialize MMUCR
+        "addis r0, r0, 0x0000   \n\t"  // 0x0000
+        "ori   r0, r0, 0x0000   \n\t"  // 0x0000
+        "mtspr 946, r0          \n\t"  // SPR_MMUCR, 946
+        "mtspr 48,  r0          \n\t"  // SPR_PID,    48
+        // Set up TLB search priority
+        "addis r0, r0, 0x1234   \n\t"  // 0x1234
+        "ori   r0, r0, 0x5678   \n\t"  // 0x5678  
+        "mtspr 830, r0          \n\t"  // SSPCR, 830
+        "mtspr 831, r0          \n\t"  // USPCR, 831
+        "mtspr 829, r0          \n\t"  // ISPCR, 829
+        :::
+    );   
+};
+
+static void TLB_interconnect_init(void)
+{
+    uint32_t dcr_val = 0;
+    
+    //***************************************************************
+    //  Setting PPC for translation elaboration
+    //    Made by assembler insertion. No other way to do it.
+    //***************************************************************
+    init_ppc();
+    //***************************************************************
+
+    // Set Seg0, Seg1, Seg2 and BC_CR0
+    dcrwrite32(0x00000010, 0x80000204);  // BC_SGD1
+    dcrwrite32(0x00000010, 0x80000205);  // BC_SGD2
+    dcr_val = dcrread32(0x80000200);     // BC_CR0
+    dcrwrite32( dcr_val | 0x80000000, 0x80000200);
+}
+
+void ddr_init(void)
+{
+	_ddr_init();
+    TLB_interconnect_init();
+
+	invalidate_tlb_entry();
+    write_tlb_entry_1stGB();
 }
