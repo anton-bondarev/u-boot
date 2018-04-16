@@ -1,0 +1,27 @@
+/dts-v1/;
+/ {
+	compatible = "rc-module,mpw7705";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	aliases {
+		spi0 = &spi;
+	} ;
+
+	spi: spi@0x3C03E000 {
+		compatible = "rc-module,pl022-spi";
+		reg = <0x3C03E000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		num-cs = <1>;
+		spi-max-frequency = <12500000>;
+		u-boot,dm-pre-reloc;
+		flash: m25p80@0 {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			compatible = "st,m25p32", "jedec,spi-nor";
+			reg = <0>;
+			u-boot,dm-pre-reloc;
+		};
+	};
+};
