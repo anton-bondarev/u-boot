@@ -400,7 +400,7 @@ static int initr_flash(void)
 }
 #endif
 
-#if defined(CONFIG_PPC) && !defined(CONFIG_DM_SPI)
+#if defined(CONFIG_PPC) && !defined(CONFIG_DM_SPI) && !defined(CONFIG_PPC470S)
 static int initr_spi(void)
 {
 	/* PPC does this here */
@@ -779,7 +779,7 @@ static init_fnc_t init_sequence_r[] = {
 	/* initialize higher level parts of CPU like time base and timers */
 	cpu_init_r,
 #endif
-#ifdef CONFIG_PPC
+#if defined(CONFIG_PPC) && !defined(CONFIG_PPC470S)
 	initr_spi,
 #endif
 #ifdef CONFIG_CMD_NAND
