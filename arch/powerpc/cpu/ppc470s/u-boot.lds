@@ -17,18 +17,27 @@ SECTIONS
     {
         PROVIDE(__bss_start = .);
         *(.bss)
-        PROVIDE(__bss_end = .);
+        *(.sbss*)
+         PROVIDE(__bss_end = .);
     } > im0
 
     .data :
     {
-        *(.data)
+        *(.rodata*)
+        *(.data*)
+        *(.sdata*)
     } > im0
 
-    .rodata :
+    . = ALIGN(4);
+    __image_copy_end = .;
+
+    .end :
     {
-    *(.rodata)
-    *(.rodata).*
+        *(.__end)
     } > im0
+
+    _image_binary_end = .;
+    _end = .;
+
 }
 ENTRY(_start)
