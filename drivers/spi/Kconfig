@@ -222,6 +222,13 @@ config ZYNQ_QSPI
 	  Zynq QSPI IP core. This IP is used to connect the flash in
 	  4-bit qspi, 8-bit dual stacked and shared 4-bit dual parallel.
 
+config PL022_SPI
+	bool "PL022 SPI driver"
+	help
+	  Enable the PL022 SPI driver. This driver can be used to
+	  access the SPI flash and SPI Data flash on rc-module's PL022
+		platform.
+
 endif # if DM_SPI
 
 config SOFT_SPI
