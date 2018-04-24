@@ -185,7 +185,6 @@ static inline void out_8(volatile unsigned char __iomem *addr, u8 val)
 static inline u16 in_le16(const volatile unsigned short __iomem *addr)
 {
 	u16 ret;
-
 	__asm__ __volatile__("sync; lhbrx %0,0,%1;\n"
 			     "twi 0,%0,0;\n"
 			     "isync" : "=r" (ret) :
