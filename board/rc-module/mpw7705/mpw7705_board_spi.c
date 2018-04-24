@@ -263,9 +263,9 @@ static void enable_gpio_for_SPI_CTRL0(void)
 
     uint8_t afsel;
     //http://svn.module.ru/r42_mm7705/mm7705/trunk/ifsys/units/lsif0/doc/LSIF0_pinout.xlsx
-    afsel = read_PL061_AFSEL(LSIF1_MGPIO3__);
-    afsel |= 0b01110000;
-    write_PL061_AFSEL(LSIF1_MGPIO3__, afsel);
+    afsel = read_PL061_AFSEL(LSIF0_MGPIO0__);
+    afsel |= 0b00000111;
+    write_PL061_AFSEL(LSIF0_MGPIO0__, afsel);
 
     //set software control for slave select signal
     afsel = read_PL061_AFSEL(BOOT_GPIO_FOR_SPI_BASE);
