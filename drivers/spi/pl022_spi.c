@@ -21,7 +21,7 @@
  * MA 02111-1307 USA
  */
 
-#define DEBUG 1
+//#define DEBUG 1
 
 #include <common.h>
 #include <dm.h>
@@ -143,7 +143,7 @@ void spi_cs_deactivate(struct spi_slave *slave);
 static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		const void *dout, void *din, unsigned long flags)
 {
-	debug("pl022_spi_xfer %d, %u\n", bitlen, flags);
+	debug("pl022_spi_xfer %d, %u, 0x%x\n", bitlen, flags, dout);
 
 	struct udevice *bus = dev->parent;
 	struct pl022_spi_priv *priv = dev_get_priv(bus);
@@ -192,7 +192,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		//debug("alive1. len_tx = %d, len = %d\n", len_tx, len);
 		if (readw(regs + SSP_SR) & SSP_SR_MASK_TNF) {
 			value = (txp != NULL) ? *txp++ : 0;
-			debug("SPI write: %x\n", value);
+			//debug("SPI write: %x\n", value);
 			writew(value, regs + SSP_DR);
 			len_tx++;
 		} else {
@@ -206,7 +206,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 		if (readw(regs + SSP_SR) & SSP_SR_MASK_RNE) {
 			value = readw(regs + SSP_DR);
-			debug("SPI read: %x\n", value);
+			//debug("SPI read: %x\n", value);
 			if (rxp)
 				*rxp++ = value;
 			len_rx++;
@@ -221,7 +221,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 			if (rxp)
 			{
 				*rxp++ = value;
-				debug("SPI read: %x\n", value);
+				//debug("SPI read: %x\n", value);
 			}
 			len_rx++;
 		}

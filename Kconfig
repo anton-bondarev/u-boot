@@ -365,7 +365,7 @@ config SYS_EXTRA_OPTIONS
 	  new boards should not use this option.
 
 config SYS_TEXT_BASE
-	depends on ARC || X86 || ARCH_UNIPHIER || ARCH_ZYNQMP || \
+	depends on ARC || X86 || PPC || ARCH_UNIPHIER || ARCH_ZYNQMP || \
 		(M68K && !TARGET_ASTRO_MCF5373L) || MICROBLAZE || MIPS || \
 		ARCH_ZYNQ || ARCH_KEYSTONE || ARCH_OMAP2PLUS
 	depends on !EFI_APP

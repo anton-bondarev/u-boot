@@ -7,6 +7,7 @@
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
+#define DEBUG_MPW7705 1
 
 #include <common.h>
 #include <bootstage.h>
@@ -26,6 +27,12 @@ void hang(void)
 	puts("### ERROR ### Please RESET the board ###\n");
 #endif
 	bootstage_error(BOOTSTAGE_ID_NEED_RESET);
+#ifdef DEBUG_MPW7705
+	/* go to host mode */
+	void (*bootrom_enter_host_mode)() = 0xfffc0178;
+	bootrom_enter_host_mode();
+#else
 	for (;;)
 		;
+#endif
 }
