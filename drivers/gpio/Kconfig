@@ -255,6 +255,13 @@ config ZYNQ_GPIO
 	help
 	  Supports GPIO access on Zynq SoC.
 
+config PL061_GPIO
+	bool "PL061 GPIO driver"
+	depends on DM_GPIO
+	default y
+	help
+	  Supports PL061 GPIO access.
+
 config DM_74X164
 	bool "74x164 serial-in/parallel-out 8-bits shift register"
 	depends on DM_GPIO
@@ -262,6 +269,7 @@ config DM_74X164
 	  Driver for 74x164 compatible serial-in/parallel-out 8-outputs
 	  shift registers, such as 74lv165, 74hc595.
 	  This driver can be used to provide access to more gpio outputs.
+
 
 config DM_PCA953X
 	bool "PCA95[357]x, PCA9698, TCA64xx, and MAX7310 I/O ports"

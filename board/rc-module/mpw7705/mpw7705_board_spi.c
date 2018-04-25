@@ -143,7 +143,7 @@
 #define PL061_PeriphID1_DFLT 0x10
 #define PL061_PeriphID2_DFLT 0x04
 #define PL061_PeriphID3_DFLT 0x00
-#define PL061_CellID0_DFLT   0x0D    debug("enable_gpio_for_SPI_CTRL0\n");
+#define PL061_CellID0_DFLT   0x0D 
 
 #define PL061_CellID1_DFLT   0xF0
 #define PL061_CellID2_DFLT   0x05
@@ -341,6 +341,16 @@ static bool spi_core_init(void)
 
 int pl022_spi_init(void)
 {
+
+    // test MGPIO:
+  	debug("MGPIO1 pids: %02x %02x %02x %02x\n", 
+          read_PL061_PeriphID0(0x3C061000),
+          read_PL061_PeriphID1(0x3C061000),
+          read_PL061_PeriphID2(0x3C061000),
+          read_PL061_PeriphID3(0x3C061000)
+      );
+
+
     // ASTRO TODO: 2nd SPI
     enable_gpio_for_SPI_CTRL0();
 

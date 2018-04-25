@@ -2,6 +2,7 @@ MEMORY
 {
     rom (rx) : ORIGIN = 0xFFFC0000, LENGTH = 0x00040000
     im0 (rx) : ORIGIN = 0x00040000, LENGTH = 0x00040000
+    ddr (rx) : ORIGIN = 0x40000000, LENGTH = 0x20000000
 }
 
 OUTPUT_ARCH(powerpc)
@@ -11,7 +12,7 @@ SECTIONS
     {
     KEEP(*(.text.start))
     *(.text)
-    } > im0
+    } > ddr
 
     .bss :
     {
@@ -19,14 +20,14 @@ SECTIONS
         *(.bss)
         *(.sbss*)
          PROVIDE(__bss_end = .);
-    } > im0
+    } > ddr
 
     .data :
     {
         *(.rodata*)
         *(.data*)
         *(.sdata*)
-    } > im0
+    } > ddr
 
     . = ALIGN(4);
     __image_copy_end = .;
@@ -34,7 +35,7 @@ SECTIONS
     .end :
     {
         *(.__end)
-    } > im0
+    } > ddr
 
     _image_binary_end = .;
     _end = .;

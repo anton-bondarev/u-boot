@@ -2,6 +2,13 @@
 / {
 	compatible = "rc-module,mpw7705";
 
+    config {
+           u-boot,spl-payload-offset = <0x30000>; 
+/*           u-boot,mmc-env-offset = <0x4000>;      
+           u-boot,efi-partition-entries-offset = <0x200000>; */
+           u-boot,boot-led = "module_led";
+    };
+
 	aliases {
 		spi0 = &spi0;
 	} ; 
@@ -11,10 +18,30 @@
 	    compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
-	
+
+		gpio0: gpio0@0x3C03B000 	{
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C03B000 0x1000>;
+
+			u-boot,dm-pre-reloc;
+		};
+
+		gpio1: gpio1@0x3C03C000 	{
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C03C000 0x1000>;
+
+			u-boot,dm-pre-reloc;
+		};
 
 	    spi0: spi0@0x3C03E000 {
 		    compatible = "rc-module,pl022-spi";
+			/*pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_spi0_clk_default &pinctrl_spi0_mosi_default &pinctrl_spi0_miso_default>;
+			*/
 		    #address-cells = <1>;
 		    #size-cells = <0>;
 		    reg = <0x3C03E000 0x1000>;
@@ -28,5 +55,37 @@
 			    u-boot,dm-pre-reloc;
 		    };
 	    };
-	}; 
+		
+	};
+
+	lsif1 {
+	    u-boot,dm-pre-reloc;
+	    compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+
+	};
+
+	gpio-leds {
+			compatible = "gpio-leds";
+	    	u-boot,dm-pre-reloc;
+
+			test0 {
+				label = "Test LED 0";
+				gpios = <&gpio0 0 1>;
+			    u-boot,dm-pre-reloc;
+			};
+			test1 {
+				label = "Test LED 1";
+				gpios = <&gpio0 1 0>;
+			    u-boot,dm-pre-reloc;
+			};
+			test2 {
+				label = "Test LED 2";
+				gpios = <&gpio0 2 1>;
+			    u-boot,dm-pre-reloc;
+			};
+	};
+
 };
