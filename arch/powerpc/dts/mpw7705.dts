@@ -1,3 +1,5 @@
+#include "mpw7705-pinfunc.h"
+
 /dts-v1/;
 / {
 	compatible = "rc-module,mpw7705";
@@ -35,13 +37,43 @@
 		    reg = <0x3C03C000 0x1000>;
 
 			u-boot,dm-pre-reloc;
+
+			pinctrl0 {
+					compatible = "rc-module,pl061-pinctrl";
+					u-boot,dm-pre-reloc;
+					
+					pinctrl_spi0_ss_default: spi0_ss_default {
+						u-boot,dm-pre-reloc;
+						pinmux = <PINMUX_SW_PIN(2, SOFT, OUTPUT, HIGH)>;
+					};					
+			};
+		};
+
+		mgpio0: mgpio0@0x3C040000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C040000 0x1000>;
+			u-boot,dm-pre-reloc;
+		
+			pinctrl1 {
+					compatible = "rc-module,pl061-pinctrl";
+					u-boot,dm-pre-reloc;
+					
+					pinctrl_spi0_default: spi0_default {
+						u-boot,dm-pre-reloc;
+						pinmux = 	<SPI0_SCLK>,
+									<SPI0_MOSI>,
+									<SPI0_MISO>;
+					};					
+			};
 		};
 
 	    spi0: spi0@0x3C03E000 {
 		    compatible = "rc-module,pl022-spi";
-			/*pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_spi0_clk_default &pinctrl_spi0_mosi_default &pinctrl_spi0_miso_default>;
-			*/
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_spi0_default>, <&pinctrl_spi0_ss_default>;
+			
 		    #address-cells = <1>;
 		    #size-cells = <0>;
 		    reg = <0x3C03E000 0x1000>;
@@ -49,13 +81,13 @@
 		    spi-max-frequency = <12500000>;
 		    u-boot,dm-pre-reloc;
 
-		    flash: m25p80@0 {
-			    compatible = "st,m25p32", "jedec,spi-nor";
+		    flash: m25p32@0 {
+			    compatible = "spi-flash_";
 			    reg = <0>;
 			    u-boot,dm-pre-reloc;
 		    };
 	    };
-		
+
 	};
 
 	lsif1 {
@@ -66,7 +98,7 @@
 
 
 	};
-
+/*
 	gpio-leds {
 			compatible = "gpio-leds";
 	    	u-boot,dm-pre-reloc;
@@ -87,5 +119,6 @@
 			    u-boot,dm-pre-reloc;
 			};
 	};
+*/	
 
 };
