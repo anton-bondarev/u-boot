@@ -143,7 +143,7 @@ void spi_cs_deactivate(struct spi_slave *slave);
 static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		const void *dout, void *din, unsigned long flags)
 {
-	debug("pl022_spi_xfer %d, %u, 0x%x\n", bitlen, flags, dout);
+	debug("pl022_spi_xfer %d, %d, 0x%x\n", bitlen, (int)flags, (int)dout);
 
 	struct udevice *bus = dev->parent;
 	struct pl022_spi_priv *priv = dev_get_priv(bus);
@@ -192,7 +192,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		//debug("alive1. len_tx = %d, len = %d\n", len_tx, len);
 		if (readw(regs + SSP_SR) & SSP_SR_MASK_TNF) {
 			value = (txp != NULL) ? *txp++ : 0;
-			//debug("SPI write: %x\n", value);
+			debug("SPI write: %x\n", value);
 			writew(value, regs + SSP_DR);
 			len_tx++;
 		} else {
@@ -206,7 +206,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 		if (readw(regs + SSP_SR) & SSP_SR_MASK_RNE) {
 			value = readw(regs + SSP_DR);
-			//debug("SPI read: %x\n", value);
+			debug("SPI read: %x\n", value);
 			if (rxp)
 				*rxp++ = value;
 			len_rx++;
@@ -221,7 +221,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 			if (rxp)
 			{
 				*rxp++ = value;
-				//debug("SPI read: %x\n", value);
+				debug("SPI read: %x\n", value);
 			}
 			len_rx++;
 		}
@@ -315,7 +315,7 @@ static int pl022_spi_probe(struct udevice *bus)
 
 	pl022_spi_init();
 
-	debug("Priv regs: %08x\n", priv->regs);
+	debug("Priv regs: %08x\n", (int) priv->regs);
 	debug("SPI ver: %02x %02x %02x %02x\n", readb(priv->regs + SSP_PID0), readb(priv->regs + SSP_PID1), readb(priv->regs + SSP_PID2), readb(priv->regs + SSP_PID3));
 	/* PL022 version is 0x00041022 */
 	if ((readb(priv->regs + SSP_PID0) == 0x22) &&

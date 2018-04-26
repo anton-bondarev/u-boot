@@ -1,5 +1,5 @@
 
-#define DEBUG 1
+//#define DEBUG 1
 #include <common.h>
 #include <dm.h>
 #include <linux/compat.h>
@@ -159,6 +159,7 @@ inline static uint##REG_SIZE##_t read_##REG_NAME(uint32_t const base_addr)\
 inline static void write_##REG_NAME(uint32_t const base_addr, uint32_t const value)\
 {\
     *((volatile uint##REG_SIZE##_t*)(base_addr + REG_OFFSET)) = value;\
+    debug("0x%x <- %x", (base_addr + REG_OFFSET), value); \
 }
 
 READ_MEM_REG(PL022_CR0,PL022_CR0,16);
@@ -263,14 +264,14 @@ static void enable_gpio_for_SPI_CTRL0(void)
 
     uint8_t afsel;
     //http://svn.module.ru/r42_mm7705/mm7705/trunk/ifsys/units/lsif0/doc/LSIF0_pinout.xlsx
-    afsel = read_PL061_AFSEL(LSIF0_MGPIO0__);
-    afsel |= 0b00000111;
-    write_PL061_AFSEL(LSIF0_MGPIO0__, afsel);
+    //afsel = read_PL061_AFSEL(LSIF0_MGPIO0__);
+    //afsel |= 0b00000111;
+    //write_PL061_AFSEL(LSIF0_MGPIO0__, afsel);
 
     //set software control for slave select signal
-    afsel = read_PL061_AFSEL(BOOT_GPIO_FOR_SPI_BASE);
-    afsel &= ~(1 << BOOT_GPIO_FOR_SPI_PIN);
-    write_PL061_AFSEL(BOOT_GPIO_FOR_SPI_BASE, afsel);
+    //afsel = read_PL061_AFSEL(BOOT_GPIO_FOR_SPI_BASE);
+    //afsel &= ~(1 << BOOT_GPIO_FOR_SPI_PIN);
+    //write_PL061_AFSEL(BOOT_GPIO_FOR_SPI_BASE, afsel);
 
     //set SS pin value to not active
     spi_ss(1);
@@ -352,13 +353,9 @@ int pl022_spi_init(void)
 
 
     // ASTRO TODO: 2nd SPI
-    enable_gpio_for_SPI_CTRL0();
+    //enable_gpio_for_SPI_CTRL0();
 
-    bool res = spi_core_init();
-    if (!res)
-    {
-        disable_gpio_for_SPI_CTRL0();
-    }
+    spi_core_init();
 
     return 0;
 }

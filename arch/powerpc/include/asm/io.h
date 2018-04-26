@@ -22,7 +22,7 @@
 
 #define readb(addr) in_8((volatile u8 *)(addr))
 #define writeb(b,addr) out_8((volatile u8 *)(addr), (b))
-#if !defined(__BIG_ENDIAN)
+#if 1 /*!defined(__BIG_ENDIAN)*/
 #define readw(addr) (*(volatile u16 *) (addr))
 #define readl(addr) (*(volatile u32 *) (addr))
 #define writew(b,addr) ((*(volatile u16 *) (addr)) = (b))

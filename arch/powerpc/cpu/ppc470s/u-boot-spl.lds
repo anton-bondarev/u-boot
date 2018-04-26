@@ -34,9 +34,8 @@ SECTIONS
 
     . = ALIGN(4);
     .u_boot_list : {
-            KEEP(*(SORT(.u_boot_list*)));
-    } >im0
-
+          KEEP(*(SORT(.u_boot_list*)));
+    } > im0
 
     . = ALIGN(4);
     __image_copy_end = .;
