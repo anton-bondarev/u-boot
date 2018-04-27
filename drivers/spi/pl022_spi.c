@@ -1,24 +1,10 @@
 /*
- * (C) Copyright 2012
- * Armando Visconti, ST Microelectronics, armando.visconti@st.com.
+ * PL022  SPI driver
  *
- * Driver for ARM PL022 SPI Controller. Based on atmel_spi.c
- * by Atmel Corporation.
+ * Copyright (C) 2018 AstroSoft
+ *               Alexey Spirkov <alexeis@astrosoft.ru>
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 //#define DEBUG 1
@@ -28,7 +14,11 @@
 #include <malloc.h>
 #include <spi.h>
 #include <asm/io.h>
+#include <asm/gpio.h>
 //#include <asm/hardware.h>
+
+#define MAX_CS_COUNT    4
+
 
 /* SSP registers mapping */
 #define SSP_CR0		0x000
@@ -75,6 +65,27 @@
 #define SSP_SR_MASK_RFF		(0x1 << 3) /* Receive FIFO full */
 #define SSP_SR_MASK_BSY		(0x1 << 4) /* Busy Flag */
 
+/* SSP Interrupt mask register */
+#define SSP_IMSC_TXIM_n      3
+#define SSP_IMSC_RXIM_n      2
+#define SSP_IMSC_RTIM_n      1
+#define SSP_IMSC_RORIM_n     0
+
+/* SSP interrupt reset register */
+#define SSP_ICR_RTIC_n       1
+#define SSP_ICR_RORIC_n      0
+
+/* SSP DMA control register */
+#define SSP_DMACR_TXDMAE_n   1
+#define SSP_DMACR_RXDMAE_n   0
+
+/* SSP CR1 control register */
+#define SSP_CR1_SOD_n        3
+#define SSP_CR1_MS_n         2
+#define SSP_CR1_SSE_n        1
+#define SSP_CR1_LBM_n        0
+
+
 struct pl022_spi_platdata
 {
 	void *regs;
@@ -87,7 +98,7 @@ struct pl022_spi_priv
 	unsigned int mode;
 	unsigned int speed;
 	unsigned int freq;
-	u8 cs;
+	struct gpio_desc cs_gpios[MAX_CS_COUNT];
 };
 
 static int pl022_spi_ofdata_to_platdata(struct udevice *bus)
@@ -137,8 +148,32 @@ static int pl022_spi_release_bus(struct udevice *dev)
 }
 
 // ASTRO TODO: move to .h file
-void spi_cs_activate(struct spi_slave *slave);
-void spi_cs_deactivate(struct spi_slave *slave);
+//void spi_cs_activate(struct spi_slave *slave);
+//void spi_cs_deactivate(struct spi_slave *slave);
+
+static void spi_cs_activate(struct udevice *dev, uint cs)
+{
+	struct udevice *bus = dev_get_parent(dev);
+	struct pl022_spi_priv *priv = dev_get_priv(bus);
+
+	if (!dm_gpio_is_valid(&priv->cs_gpios[cs]))
+			return;
+
+	dm_gpio_set_value(&priv->cs_gpios[cs], 0);
+
+}
+
+static void spi_cs_deactivate(struct udevice *dev, uint cs)
+{
+	struct udevice *bus = dev_get_parent(dev);
+	struct pl022_spi_priv *priv = dev_get_priv(bus);
+
+	if (!dm_gpio_is_valid(&priv->cs_gpios[cs]))
+			return;
+
+	dm_gpio_set_value(&priv->cs_gpios[cs], 1);
+}
+
 
 static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		const void *dout, void *din, unsigned long flags)
@@ -147,9 +182,12 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 	struct udevice *bus = dev->parent;
 	struct pl022_spi_priv *priv = dev_get_priv(bus);
+
+	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);	
+
 	u8 *regs = priv->regs;
 
-	struct spi_slave slave;
+	//struct spi_slave slave;
 
 	// ASTRO TODO: choose cs
 	// slave.cs = 0;
@@ -160,21 +198,10 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	u8		*rxp = din, value;
 
 	if (bitlen == 0)
-		/* Finish any previously submitted transfers */
 		goto out;
 
-	/*
-	 * TODO: The controller can do non-multiple-of-8 bit
-	 * transfers, but this driver currently doesn't support it.
-	 *
-	 * It's also not clear how such transfers are supposed to be
-	 * represented as a stream of bytes...this is a limitation of
-	 * the current SPI interface.
-	 */
 	if (bitlen % 8) {
 		ret = -1;
-
-		/* Errors always terminate an ongoing transfer */
 		flags |= SPI_XFER_END;
 		goto out;
 	}
@@ -182,7 +209,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	len = bitlen / 8;
 
 	if (flags & SPI_XFER_BEGIN)
-		spi_cs_activate(&slave);
+		spi_cs_activate(dev, slave_plat->cs);
 
 	debug("alive. len_tx = %d, len = %d\n", len_tx, len);
 
@@ -192,7 +219,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		//debug("alive1. len_tx = %d, len = %d\n", len_tx, len);
 		if (readw(regs + SSP_SR) & SSP_SR_MASK_TNF) {
 			value = (txp != NULL) ? *txp++ : 0;
-			debug("SPI write: %x\n", value);
+			// debug("SPI write: %x\n", value);
 			writew(value, regs + SSP_DR);
 			len_tx++;
 		} else {
@@ -202,26 +229,23 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 				debug("Wait with SR: %x\n", (int)val);
 		}
 
-		//debug("alive2. len_tx = %d, len = %d\n", len_tx, len);
-
 		if (readw(regs + SSP_SR) & SSP_SR_MASK_RNE) {
 			value = readw(regs + SSP_DR);
-			debug("SPI read: %x\n", value);
+			// debug("SPI read: %x\n", value);
 			if (rxp)
 				*rxp++ = value;
 			len_rx++;
 		}
-
-		//debug("alive3. len_tx = %d, len = %d\n", len_tx, len);
 	}
 
+	// finish reading
 	while (len_rx < len_tx) {
 		if (readw(regs + SSP_SR) & SSP_SR_MASK_RNE) {
 			value = readw(regs + SSP_DR);
 			if (rxp)
 			{
 				*rxp++ = value;
-				debug("SPI read: %x\n", value);
+				//debug("SPI read: %x\n", value);
 			}
 			len_rx++;
 		}
@@ -231,7 +255,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 out:
 	if (flags & SPI_XFER_END)
-		spi_cs_deactivate(&slave);
+		spi_cs_deactivate(dev, slave_plat->cs);
 
 	debug("Exit from pl022_spi_xfer!\n");
 
@@ -303,31 +327,70 @@ static int pl022_spi_probe(struct udevice *bus)
 	debug("pl022_spi_probe\n");
     struct pl022_spi_platdata *plat = dev_get_platdata(bus);
 	struct pl022_spi_priv *priv = dev_get_priv(bus);
+	int i;
 
 	priv->regs = plat->regs;
 
-	// ASTRO TODO: choose cs
-	//struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);
-	if(!spi_cs_is_valid(0, 0)) {
-		debug("SPI params are not correct\n");
-		return 1;
+	int ret = gpio_request_list_by_name(bus, "cs-gpios", priv->cs_gpios,
+									ARRAY_SIZE(priv->cs_gpios), 0);
+	if (ret < 0) {
+			pr_err("Can't get %s gpios! Error: %d\n", bus->name, ret);
+			return ret;
 	}
 
-	pl022_spi_init();
+	for(i = 0; i < ARRAY_SIZE(priv->cs_gpios); i++) {
+			if (!dm_gpio_is_valid(&priv->cs_gpios[i]))
+					continue;
+
+			dm_gpio_set_dir_flags(&priv->cs_gpios[i],
+									GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
+
+			// and disable
+			dm_gpio_set_value(&priv->cs_gpios[i], 1);
+	}
+
 
 	debug("Priv regs: %08x\n", (int) priv->regs);
 	debug("SPI ver: %02x %02x %02x %02x\n", readb(priv->regs + SSP_PID0), readb(priv->regs + SSP_PID1), readb(priv->regs + SSP_PID2), readb(priv->regs + SSP_PID3));
 	/* PL022 version is 0x00041022 */
-	if ((readb(priv->regs + SSP_PID0) == 0x22) &&
+	if (! ((readb(priv->regs + SSP_PID0) == 0x22) &&
 		(readb(priv->regs + SSP_PID1) == 0x10) &&
 		((readb(priv->regs + SSP_PID2) & 0xf) == 0x04) &&
-		(readb(priv->regs + SSP_PID3) == 0x00))
+		(readb(priv->regs + SSP_PID3) == 0x00)))
 	{
-		debug("SPI ver is correct\n");
-		return 0;
-	} else {
 		debug("SPI ver is NOT correct\n");
+		return -EINVAL;
 	}
+
+	debug("SPI ver is correct\n");
+
+	// disable interrupts
+	u16 imsc = (0b0 << SSP_IMSC_TXIM_n)
+            | (0b0 << SSP_IMSC_RXIM_n)
+            | (0b0 << SSP_IMSC_RTIM_n)
+            | (0b0 << SSP_IMSC_RORIM_n);
+	
+	writew(imsc, priv->regs + SSP_IMSC);
+
+	// reset interrupts state
+	u16 icr = (0b1 << SSP_ICR_RTIC_n)
+            | (0b1 << SSP_ICR_RORIC_n);
+
+	writew(icr, priv->regs + SSP_ICR);
+
+	// disable DMA
+	u16 dmacr = (0b0 << SSP_DMACR_TXDMAE_n)
+            | (0b0 << SSP_DMACR_RXDMAE_n);
+
+	writew(dmacr, priv->regs + SSP_DMACR);
+
+	// enable SSP
+	u16 cr1 = (0b1 << SSP_CR1_SOD_n)
+            | (0b0 << SSP_CR1_MS_n)
+            | (0b1 << SSP_CR1_SSE_n) 
+            | (0b0 << SSP_CR1_LBM_n);
+
+	writew(cr1, priv->regs + SSP_CR1);            
 
 	return 0;
 }

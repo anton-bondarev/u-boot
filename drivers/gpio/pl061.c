@@ -31,6 +31,8 @@ static int pl061_direction_input(struct udevice *dev, unsigned pin)
 	struct pl061_platdata *plat = dev_get_platdata(dev);
 	struct pl061_regs *const regs = plat->regs;
 
+	debug("pl061_direction_input set for %d\n", pin);
+
 	clrbits(8, &regs->dir, 1 << pin);
 
 	return 0;
@@ -41,6 +43,7 @@ static int pl061_direction_output(struct udevice *dev, unsigned pin,
 {
 	struct pl061_platdata *plat = dev_get_platdata(dev);
 	struct pl061_regs *const regs = plat->regs;
+	debug("pl061_direction_output set for %d\n", pin);
 
 	if (val)
 		setbits(8, &regs->data, 1 << pin);
@@ -56,6 +59,8 @@ static int pl061_get_value(struct udevice *dev, unsigned pin)
 {
 	struct pl061_platdata *plat = dev_get_platdata(dev);
 	struct pl061_regs *const regs = plat->regs;
+
+	debug("pl061_get_value for %d == %d\n", pin, readb(&regs->data) & (1 << pin));
 
 	return readb(&regs->data) & (1 << pin);
 }
@@ -82,6 +87,8 @@ static int pl061_set_value(struct udevice *dev, unsigned pin, int val)
 {
 	struct pl061_platdata *plat = dev_get_platdata(dev);
 	struct pl061_regs *const regs = plat->regs;
+
+	debug("pl061_set_value set value for %d == %d\n", pin, val);
 
 	if (val)
 		setbits(8, &regs->data, 1 << pin);

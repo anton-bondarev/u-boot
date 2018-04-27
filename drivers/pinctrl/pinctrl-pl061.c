@@ -79,7 +79,12 @@ static int pl061_set_state(struct udevice *dev, struct udevice *config)
 			setbits(8, &regs->afsel, 1 << pinno);
 		}
 
-		debug("pinctrl: 0x%x(%x):0x%x(%x) lsif%d, mgpio%d[%d] to %d, %d\n", &regs->dir, readb(&regs->dir) ,&regs->afsel, readb(&regs->afsel), lsif, mgpio, pinno, func, inout);		
+		debug("pinctrl: 0x%x(%x):0x%x(%x) lsif%d, mgpio%d[%d] to %d, %d, val: %d\n", 
+					(int)&regs->dir, 
+					(int)readb(&regs->dir),
+					(int)&regs->afsel,
+					(int)readb(&regs->afsel),
+					lsif, mgpio, pinno, func, inout, val);		
 	}
 
 	return 0;
