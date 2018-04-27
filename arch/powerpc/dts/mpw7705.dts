@@ -35,18 +35,10 @@
 		    #address-cells = <1>;
 		    #size-cells = <0>;
 		    reg = <0x3C03C000 0x1000>;
+			#gpio-cells = <2>;
+			gpio-controller;
 
 			u-boot,dm-pre-reloc;
-
-			pinctrl0 {
-					compatible = "rc-module,pl061-pinctrl";
-					u-boot,dm-pre-reloc;
-					
-					pinctrl_spi0_ss_default: spi0_ss_default {
-						u-boot,dm-pre-reloc;
-						pinmux = <PINMUX_SW_PIN(2, SOFT, OUTPUT, HIGH)>;
-					};					
-			};
 		};
 
 		mgpio0: mgpio0@0x3C040000 {
@@ -56,7 +48,7 @@
 		    reg = <0x3C040000 0x1000>;
 			u-boot,dm-pre-reloc;
 		
-			pinctrl1 {
+			pinctrl {
 					compatible = "rc-module,pl061-pinctrl";
 					u-boot,dm-pre-reloc;
 					
@@ -72,17 +64,17 @@
 	    spi0: spi0@0x3C03E000 {
 		    compatible = "rc-module,pl022-spi";
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_spi0_default>, <&pinctrl_spi0_ss_default>;
+			pinctrl-0 = <&pinctrl_spi0_default>;
 			
 		    #address-cells = <1>;
 		    #size-cells = <0>;
 		    reg = <0x3C03E000 0x1000>;
-		    num-cs = <1>;
-		    spi-max-frequency = <12500000>;
+		    cs-gpios = <&gpio1 2 1>;
+		    spi-max-frequency = <12500000>;			
 		    u-boot,dm-pre-reloc;
 
-		    flash: m25p32@0 {
-			    compatible = "spi-flash_";
+		    spi_flash@0 {
+			    compatible = "st,m25w32", "spi-flash";
 			    reg = <0>;
 			    u-boot,dm-pre-reloc;
 		    };

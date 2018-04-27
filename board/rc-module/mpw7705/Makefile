@@ -1,4 +1,4 @@
-obj-y +=  io.o mpw7705_board_spi.o
+obj-y +=  io.o
 
 ifdef CONFIG_SPL_BUILD
 obj-y  += spl.o
