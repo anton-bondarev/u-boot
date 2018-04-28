@@ -7,11 +7,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-static const char logo[] =
-"_________________________________\n"
-"< Hello World, from U-Boot SPL! >\n"
-"_________________________________\n";
-
 static gd_t global_data;
 
 void ddr_init (void);
@@ -49,6 +44,8 @@ void spl_board_init(void)
 		puts("Booting from SPI flash\n");
 	else if (boot_device == BOOT_DEVICE_MMC1)
 		puts("Booting from SD card\n");
+	else if (boot_device == BOOT_DEVICE_EDCL)
+		puts("Enter HOST mode for EDCL boot\n");
 	else
 		puts("Unknown boot device\n");
 }
@@ -59,9 +56,11 @@ void board_boot_order(u32 *spl_boot_list)
 	switch (spl_boot_list[0]) {
 	case BOOT_DEVICE_SPI:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;
+		spl_boot_list[2] = BOOT_DEVICE_EDCL;
 		break;
 	case BOOT_DEVICE_MMC1:
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
+		spl_boot_list[2] = BOOT_DEVICE_EDCL;
 		break;
 	}
 }
