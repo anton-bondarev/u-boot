@@ -909,7 +909,7 @@ void board_init_f(ulong boot_flags)
 		hang();
 
 #if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX) && \
-		!defined(CONFIG_EFI_APP) && !CONFIG_IS_ENABLED(X86_64)
+		!defined(CONFIG_EFI_APP) && !CONFIG_IS_ENABLED(X86_64) && !defined(CONFIG_PPC470S)
 	/* NOTREACHED - jump_to_copy() does not return */
 	hang();
 #endif

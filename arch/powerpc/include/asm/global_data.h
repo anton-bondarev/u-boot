@@ -107,11 +107,7 @@ struct arch_global_data {
 #include <asm-generic/global_data.h>
 
 #if 1
-#if defined(CONFIG_PPC470S)
-#define DECLARE_GLOBAL_DATA_PTR     volatile gd_t *gd
-#else // defined(CONFIG_PPC470S)
 #define DECLARE_GLOBAL_DATA_PTR     register volatile gd_t *gd asm ("r2")
-#endif // defined(CONFIG_PPC470S)
 #else /* We could use plain global data, but the resulting code is bigger */
 #define XTRN_DECLARE_GLOBAL_DATA_PTR	extern
 #define DECLARE_GLOBAL_DATA_PTR     XTRN_DECLARE_GLOBAL_DATA_PTR \

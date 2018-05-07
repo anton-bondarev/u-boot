@@ -20,6 +20,7 @@
 *.bin
 *.patch
 *.cfgtmp
+*.edcl
 
 # host programs on Cygwin
 *.exe

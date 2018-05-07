@@ -85,6 +85,7 @@ extern ulong __rel_dyn_start;
 extern ulong __rel_dyn_end;
 extern ulong __bss_end;
 extern ulong _image_binary_end;
+extern ulong __image_copy_start;
 
 extern ulong _TEXT_BASE;	/* code start */
 

@@ -10,10 +10,10 @@ DECLARE_GLOBAL_DATA_PTR;
 // ASTRO TODO
 int get_clocks(void)
 {
-    gd->cpu_clk = 0; // In Hz
-    gd->bus_clk = 0;
-    gd->pci_clk = 0;
-    gd->mem_clk = 0;
+    gd->cpu_clk = 500000000; // In Hz
+    gd->bus_clk = 100000000;
+    gd->pci_clk = 100000000;
+    gd->mem_clk = 100000000;
 
     // arch/powerpc/include/asm/global_data.h: struct arch_global_data
     /*gd->arch.lbc_clk = 0;
@@ -29,5 +29,5 @@ int get_clocks(void)
     gd->arch.cpm_clk = 0;
     gd->arch.scc_clk = 0;*/
 
-    return gd->cpu_clk == 0;
+    return 0;
 }

@@ -542,12 +542,6 @@ config MPC8XX_CONS
 	depends on 8xx
 	default y
 
-config MPW7705_SERIAL
-	bool "mpw7705 on-chip UART"
-	help
-	  If you have a mpw7705 device and want to use the on-chip
-	  serial ports, say Y to this option. If unsure, say N.
-
 choice
 	prompt "Console port"
 	default 8xx_CONS_SMC1
