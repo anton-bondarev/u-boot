@@ -17,16 +17,17 @@ void board_init_f(ulong dummy)
 	size_t len = (size_t)&__bss_end - (size_t)&__bss_start;
 	memset((void *)&__bss_start, 0x00, len);
 
+	/* init dram */
+	ddr_init();
+
+	board_init_f_init_reserve((ulong) gd);
+	gd->ram_size = CONFIG_SYS_DDR_SIZE;
+
+	spl_early_init();
+
 	preloader_console_init();
 
-	gd = &global_data;
-	memset(gd, 0, sizeof(gd_t));
-
 	spl_set_bd();
-	
-	/* init dram */
-	gd->ram_size = CONFIG_SYS_DDR_SIZE;
-	ddr_init();
 
 	board_init_r(NULL, 0);
 }

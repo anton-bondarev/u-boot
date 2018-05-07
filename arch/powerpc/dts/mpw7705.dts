@@ -11,6 +11,10 @@
            u-boot,boot-led = "module_led";
     };
 
+	chosen {
+		stdout-path = &uart0;
+	};
+
 	aliases {
 		spi0 = &spi0;
 	} ; 
@@ -58,6 +62,18 @@
 									<SPI0_MOSI>,
 									<SPI0_MISO>;
 					};					
+
+					pinctrl_uart0_default: uart0_default {
+						u-boot,dm-pre-reloc;
+						pinmux = 	<UART0_RXD>,
+									<UART0_TXD>;
+					};					
+					pinctrl_uart1_default: uart1_default {
+						pinmux = 	<UART1_RXD>,
+									<UART1_TXD>;
+					};					
+
+
 			};
 		};
 
@@ -80,6 +96,24 @@
 		    };
 	    };
 
+		uart0: uart0@3C034000 {  /* console */
+                compatible = "arm,pl011", "arm,primecell";
+                reg = <0x3C034000 0x1000>;
+                clock = <100000000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_uart0_default>;
+
+ 			    u-boot,dm-pre-reloc;
+		};		
+
+		uart1: uart1@3C035000 { 
+                compatible = "arm,pl011", "arm,primecell";
+                reg = <0x3C035000 0x1000>;
+                clock = <100000000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_uart1_default>;
+		};		
+
 	};
 
 	lsif1 {
@@ -88,29 +122,5 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-
 	};
-/*
-	gpio-leds {
-			compatible = "gpio-leds";
-	    	u-boot,dm-pre-reloc;
-
-			test0 {
-				label = "Test LED 0";
-				gpios = <&gpio0 0 1>;
-			    u-boot,dm-pre-reloc;
-			};
-			test1 {
-				label = "Test LED 1";
-				gpios = <&gpio0 1 0>;
-			    u-boot,dm-pre-reloc;
-			};
-			test2 {
-				label = "Test LED 2";
-				gpios = <&gpio0 2 1>;
-			    u-boot,dm-pre-reloc;
-			};
-	};
-*/	
-
 };

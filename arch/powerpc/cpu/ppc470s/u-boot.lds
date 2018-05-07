@@ -1,33 +1,37 @@
-MEMORY
-{
-    rom (rx) : ORIGIN = 0xFFFC0000, LENGTH = 0x00040000
-    im0 (rx) : ORIGIN = 0x00040000, LENGTH = 0x00040000
-    ddr (rx) : ORIGIN = 0x40000000, LENGTH = 0x20000000
-}
-
 OUTPUT_ARCH(powerpc)
 SECTIONS
 {
+    . = 0x40100040;
+    __image_copy_start = .;
     .text :
     {
-    KEEP(*(.text.start))
-    *(.text)
-    } > ddr
+        KEEP(*(.text.start))
+        *(.text)
+    }
 
     .bss :
     {
         PROVIDE(__bss_start = .);
-        *(.bss)
+        *(.bss*)
         *(.sbss*)
          PROVIDE(__bss_end = .);
-    } > ddr
+    }
 
-    .data :
-    {
-        *(.rodata*)
-        *(.data*)
-        *(.sdata*)
-    } > ddr
+    .data : {
+            *(.data*)
+	    *(.rodata*)
+            *(.sdata*)
+            _GOT2_TABLE_ = .;
+            KEEP(*(.got2))
+            KEEP(*(.got))
+    }
+    __got2_entries = ((_GLOBAL_OFFSET_TABLE_ - _GOT2_TABLE_) >> 2) - 1;
+
+
+    . = ALIGN(4);
+    .u_boot_list : {
+          KEEP(*(SORT(.u_boot_list*)));
+    }
 
     . = ALIGN(4);
     __image_copy_end = .;
@@ -35,10 +39,9 @@ SECTIONS
     .end :
     {
         *(.__end)
-    } > ddr
+    }
 
     _image_binary_end = .;
     _end = .;
 
 }
-ENTRY(_start)
