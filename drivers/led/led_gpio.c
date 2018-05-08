@@ -3,6 +3,7 @@
  * Copyright (c) 2015 Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
  */
+#define DEBUG
 
 #include <common.h>
 #include <dm.h>

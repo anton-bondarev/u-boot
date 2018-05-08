@@ -19,6 +19,14 @@
 .section ".text.start","ax",@progbits
 .global _start
 _start:
+
+// setup stack
+#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_SPL_STACK
+    load_const_link sp, CONFIG_SPL_STACK
+#endif
+#endif
+
 	bl	cpu_init_early_f
 
     lis	r3,(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)@h

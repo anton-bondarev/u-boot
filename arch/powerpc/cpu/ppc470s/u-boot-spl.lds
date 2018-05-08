@@ -1,7 +1,9 @@
+#include <config.h>
+
 OUTPUT_ARCH(powerpc)
 SECTIONS
 {
-    . = 0x00040000;
+    . = CONFIG_SPL_TEXT_BASE;
     .text :
     {
        KEEP(*(.text.start))
@@ -46,4 +48,5 @@ SECTIONS
 }
 
 ENTRY(_start)
-ASSERT(_end <= 0x00080000, "SPL size too big");
+
+ASSERT(_end <= MPW_SPL_ADDR_LIMIT, "SPL size too big");

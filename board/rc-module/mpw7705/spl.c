@@ -3,13 +3,14 @@
 #include <spi.h>
 #include <spi_flash.h>
 
-#include <mpw7705_baremetal.h>
-
 DECLARE_GLOBAL_DATA_PTR;
 
 static gd_t global_data;
 
 void ddr_init (void);
+int testdramfromto(uint *pstart, uint *pend);
+
+/* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
 
 void board_init_f(ulong dummy)
 {
