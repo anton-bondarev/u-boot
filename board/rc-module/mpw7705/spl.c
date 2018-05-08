@@ -52,6 +52,15 @@ void spl_board_init(void)
 		puts("Unknown boot device\n");
 }
 
+
+#ifdef CONFIG_SPL_MMC_SUPPORT
+u32 spl_boot_mode(const u32 boot_device)
+{
+	return MMCSD_MODE_RAW;
+}
+#endif
+
+
 void board_boot_order(u32 *spl_boot_list)
 {
 	spl_boot_list[0] = spl_boot_device();
