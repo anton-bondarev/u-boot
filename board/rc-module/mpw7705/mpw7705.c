@@ -21,11 +21,9 @@ int dram_init(void)
 }
 
 #if defined(CONFIG_SYS_DRAM_TEST)
-int
-testdram(void)
+
+int testdramfromto(uint *pstart, uint *pend)
 {
-	uint *pstart = (uint *) CONFIG_SYS_MEMTEST_START;
-	uint *pend = (uint *) CONFIG_SYS_MEMTEST_END;
 	uint *p;
 
 	printf("Testing DRAM from 0x%08x to 0x%08x\n",
@@ -57,4 +55,13 @@ testdram(void)
 	printf("DRAM test passed.\n");
 	return 0;
 }
+
+int
+testdram(void)
+{
+	uint *pstart = (uint *) CONFIG_SYS_MEMTEST_START;
+	uint *pend = (uint *) CONFIG_SYS_MEMTEST_END;
+	return testdramfromto(pstart, pend);
+}
+
 #endif

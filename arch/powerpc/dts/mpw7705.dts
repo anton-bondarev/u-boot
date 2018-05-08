@@ -1,3 +1,4 @@
+#include <dt-bindings/gpio/gpio.h>
 #include "mpw7705-pinfunc.h"
 
 /dts-v1/;
@@ -114,7 +115,6 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_uart1_default>;
 		};		
-
 	};
 
 	lsif1 {

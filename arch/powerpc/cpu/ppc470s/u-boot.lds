@@ -1,7 +1,9 @@
+#include <config.h>
+
 OUTPUT_ARCH(powerpc)
 SECTIONS
 {
-    . = 0x40100040;
+    . = CONFIG_SYS_TEXT_BASE;
     __image_copy_start = .;
     .text :
     {
