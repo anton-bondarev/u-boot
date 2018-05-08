@@ -134,6 +134,7 @@ static bool wait_buf_tran_finish_handle(void)
 #define SDIO_CTRL_NODATA(_cmd, _resp, _crc, _idx)          \
    ( _cmd << 16 | (_idx << 12) | (_crc << 13)  | (_resp << 10) | (0x11))
 
+
 static bool sd_send_cmd(uint32_t cmd_ctrl, uint32_t arg)
 {
 #ifdef SDIO_DEBUG
@@ -150,9 +151,14 @@ static bool sd_send_cmd(uint32_t cmd_ctrl, uint32_t arg)
 	r4 = read_SDIO_SDR_RESPONSE4_REG(SDIO__);
 	debug(" res=%s {0x%x, 0x%x, 0x%x, 0x%x}\n", (result ? "ok" : "err"), r1, r2, r3, r4);
 #endif
+	volatile uint delay;
+	for ( delay = 0; delay < 20; ++ delay )
+		;
 	return result;
 }
 ////////////////////////////////////////////////////////////////
+//#define debug(...)
+
 
 #define SD_CARD_DETECT_GPIO_BASE  GPIO1__
 #define SD_CARD_DETECT_GPIO_PIN  (1 << 1)
@@ -177,15 +183,6 @@ bool check_sd_card_present(void)
     return true;
 }
 
-static void enable_gpio_for_SDIO(void)
-{
-    uint8_t afsel;
-    //http://svn.module.ru/r42_mm7705/mm7705/trunk/ifsys/units/lsif1/doc/LSIF1-pinout.xlsx
-    afsel = read_PL061_AFSEL(LSIF1_MGPIO4__);
-    afsel |= 0b11111000;
-    write_PL061_AFSEL(LSIF1_MGPIO4__, afsel);
-}
-
 #define SDIO_CLK_DIV_400KHz   124
 #define SDIO_CLK_DIV_10MHz    4
 #define SDIO_CLK_DIV_50MHz    0
@@ -197,8 +194,6 @@ bool sd_init(void)
         debug("SD: No card inserted\n");
         return false;
     }
-
-    enable_gpio_for_SDIO();
 
     write_SPISDIO_SDIO_CLK_DIVIDE(SPISDIO__, SDIO_CLK_DIV_10MHz);
 
@@ -444,13 +439,13 @@ static void mpw7705_mmc_read_response(struct mmc *mmc, struct mmc_cmd *cmd)
 
 static bool proc_cmd(uint code, uint arg)
 {
-	uint attempt = 5;
+	uint attempt = 10;
 	while ( attempt -- ) {
 		if ( sd_send_cmd(code, arg) )
 			return true;
 		debug("+");
-		uint delay;
-		for ( delay = 0; delay < 100000; ++ delay )
+		volatile uint delay;
+		for ( delay = 0; delay < 10000; ++ delay )
 			;
 	}
 	return false;

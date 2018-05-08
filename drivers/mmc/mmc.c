@@ -2619,7 +2619,19 @@ int mmc_init(struct mmc *mmc)
 	start = get_timer(0);
 
 	if (!mmc->init_in_progress)
+	{
+#ifdef CONFIG_MPW7705		
+		int i = 0;
+		for(i = 0; i < 2; i++)
+		{
+			err = mmc_start_init(mmc);
+			if(!err)
+				break;
+		}	
+#else
 		err = mmc_start_init(mmc);
+#endif
+	}
 
 	if (!err)
 		err = mmc_complete_init(mmc);

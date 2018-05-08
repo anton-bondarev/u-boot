@@ -123,11 +123,40 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
+
+		mgpio7: mgpio7@0x3C067000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C067000 0x1000>;
+			u-boot,dm-pre-reloc;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					u-boot,dm-pre-reloc;
+					
+					pinctrl_sdio_default: sdio_default {
+						u-boot,dm-pre-reloc;
+						pinmux = 	<SDIO_CMD>,
+									<SDIO_D0>,
+									<SDIO_D1>,
+									<SDIO_D2>,
+									<SDIO_D3>;
+					};					
+			};
+		};
+
+
+		mmc1: mmc1@0x3C06A000 {
+			compatible = "rc-module,mmc-0.2";
+			reg = <0x3C06A000 0x1000>;
+			u-boot,dm-pre-reloc;
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_sdio_default>;
+
+		};
+
 	};
 	
-	mmc1: mmc1@0x3C06A000 {
-		compatible = "rc-module,mmc-0.2";
-		u-boot,dm-pre-reloc;
-		status = "okay";
-	};
 };

@@ -83,3 +83,9 @@
 #define UART1_RXD               PINMUX_HW_PIN(LSIF0, mGPIO0, 6)
 #define UART1_TXD               PINMUX_HW_PIN(LSIF0, mGPIO0, 7)
 
+#define SDIO_CMD                PINMUX_HW_PIN(LSIF1, mGPIO7, 0)
+#define SDIO_D0                 PINMUX_HW_PIN(LSIF1, mGPIO7, 1)
+#define SDIO_D1                 PINMUX_HW_PIN(LSIF1, mGPIO7, 2)
+#define SDIO_D2                 PINMUX_HW_PIN(LSIF1, mGPIO7, 3)
+#define SDIO_D3                 PINMUX_HW_PIN(LSIF1, mGPIO7, 4)
+
