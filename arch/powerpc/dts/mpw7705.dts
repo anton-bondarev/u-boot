@@ -17,6 +17,7 @@
 
 	aliases {
 		spi0 = &spi0;
+		mmc1 = &mmc1;
 	} ; 
 
 	lsif0 {
@@ -122,5 +123,11 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
+	};
+	
+	mmc1: mmc1@0x3C06A000 {
+		compatible = "rc-module,mmc-0.2";
+		u-boot,dm-pre-reloc;
+		status = "okay";
 	};
 };
