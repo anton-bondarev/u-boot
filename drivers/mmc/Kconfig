@@ -199,6 +199,12 @@ config MMC_MESON_GX
 	help
 	 Support for EMMC host controller on Meson GX ARM SoCs platform (S905)
 
+config MMC_MPW7705
+	bool "MPW7705 MMC controller support"
+	depends on DM_MMC && BLK
+	help
+	  Support for MMC on MPW7705 platform
+	 
 config MMC_MXC
 	bool "Freescale i.MX21/27/31 or MPC512x Multimedia Card support"
 	help
