@@ -1,5 +1,5 @@
-#define DEBUG
-#define SDIO_DEBUG
+//#define DEBUG
+//#define DEBUG_BUF
 
 #include <clk.h>
 #include <common.h>
@@ -12,6 +12,8 @@
 
 #include "mpw7705_sysreg.h"
 
+#define SDIO_TIMEOUT        2000000 
+
 DECLARE_GLOBAL_DATA_PTR;
 
 struct mpw7705_mmc_platdata {
@@ -20,18 +22,18 @@ struct mpw7705_mmc_platdata {
 	uint32_t regbase;
 };
 
-static uint32_t ucurrent(void) 
+static uint32_t wait_tick(void) 
 { 
 	static uint32_t tick = 0;
 	return tick ++; 
 }
 
-static bool isprintable(const char c)
+static void delay_loop(uint count)
 {
-	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '!' && c <= '?') || c == ' ') ? true : false;
+	volatile uint cnt = count;
+	while ( cnt -- )
+		;
 }
-
-#define CMD17_CTRL          0x00117911
 
 #define SDR_TRAN_FIFO_FINISH    0x00000001
 #define SDR_TRAN_SDC_DAT_DONE   0x00000002
@@ -46,12 +48,10 @@ static bool isprintable(const char c)
 #define BUFER_TRANS_START           0x04
 #define DCCR_1_VAL                  0x00020F01
 
-#define SDIO_TIMEOUT        2000000 //in microseconds
-
 //-------------------------------------
 static bool wait_cmd_done_handle(void) 
 {
-	uint32_t start = ucurrent();
+	uint32_t start = wait_tick();
 	do {
 		int status = read_SPISDIO_SDIO_INT_STATUS(SPISDIO__);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
@@ -62,7 +62,7 @@ static bool wait_cmd_done_handle(void)
 			write_SDIO_SDR_BUF_TRAN_RESP_REG(SDIO__, SDR_TRAN_SDC_CMD_DONE);
 			return true;
 		}
-	} while ( ucurrent() - start < SDIO_TIMEOUT );
+	} while ( wait_tick() - start < SDIO_TIMEOUT );
 
 	debug("CMD ERROR: TIMEOUT\n");
 	return false;
@@ -70,7 +70,7 @@ static bool wait_cmd_done_handle(void)
 
 static bool wait_tran_done_handle(void)
 {
-	uint32_t start = ucurrent();
+	uint32_t start = wait_tick();
 	do {
 		int status = read_SPISDIO_SDIO_INT_STATUS(SPISDIO__);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
@@ -81,7 +81,7 @@ static bool wait_tran_done_handle(void)
 			write_SDIO_SDR_BUF_TRAN_RESP_REG(SDIO__, SDR_TRAN_SDC_DAT_DONE);
 			return true;
 		}
-	} while ( ucurrent() - start < SDIO_TIMEOUT );
+	} while ( wait_tick() - start < SDIO_TIMEOUT );
 
 	debug("TRN ERROR: TIMEOUT\n");
 	return false;
@@ -89,7 +89,7 @@ static bool wait_tran_done_handle(void)
 
 static bool wait_ch1_dma_done_handle(void)
 {
-	uint32_t start = ucurrent();
+	uint32_t start = wait_tick();
 	do {
 		int status = read_SPISDIO_SDIO_INT_STATUS(SPISDIO__);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
@@ -100,7 +100,7 @@ static bool wait_ch1_dma_done_handle(void)
 			write_SDIO_DCCR_1(SDIO__, DSSR_CHANNEL_TR_DONE);
 			return true;
 		}
-	} while ( ucurrent() - start < SDIO_TIMEOUT );
+	} while ( wait_tick() - start < SDIO_TIMEOUT );
 
 	debug("DMA ERROR: TIMEOUT\n");
 	return false;
@@ -108,7 +108,7 @@ static bool wait_ch1_dma_done_handle(void)
 
 static bool wait_buf_tran_finish_handle(void)
 {
-	uint32_t start = ucurrent();
+	uint32_t start = wait_tick();
 	do {
 		int status = read_SPISDIO_SDIO_INT_STATUS(SPISDIO__);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
@@ -119,7 +119,7 @@ static bool wait_buf_tran_finish_handle(void)
 			write_SDIO_SDR_BUF_TRAN_RESP_REG(SDIO__, SDR_TRAN_FIFO_FINISH);
 			return true;
 		}
-	} while( ucurrent() - start < SDIO_TIMEOUT );
+	} while( wait_tick() - start < SDIO_TIMEOUT );
 
 	debug("BLK ERROR: TIMEOUT\n");
 	return false;
@@ -134,31 +134,17 @@ static bool wait_buf_tran_finish_handle(void)
 #define SDIO_CTRL_NODATA(_cmd, _resp, _crc, _idx)          \
    ( _cmd << 16 | (_idx << 12) | (_crc << 13)  | (_resp << 10) | (0x11))
 
-
 static bool sd_send_cmd(uint32_t cmd_ctrl, uint32_t arg)
 {
-#ifdef SDIO_DEBUG
 	debug("SEND CMD_%d(%x)[%x]", cmd_ctrl >> 16, cmd_ctrl & 0xFFFF, arg);
-#endif
 	write_SDIO_SDR_CMD_ARGUMENT_REG(SDIO__, arg);
 	write_SDIO_SDR_CTRL_REG(SDIO__, cmd_ctrl);
 	bool result = wait_cmd_done_handle();
-#ifdef SDIO_DEBUG
-	int r1, r2, r3, r4;
-	r1 = read_SDIO_SDR_RESPONSE1_REG(SDIO__);
-	r2 = read_SDIO_SDR_RESPONSE2_REG(SDIO__);
-	r3 = read_SDIO_SDR_RESPONSE3_REG(SDIO__);
-	r4 = read_SDIO_SDR_RESPONSE4_REG(SDIO__);
-	debug(" res=%s {0x%x, 0x%x, 0x%x, 0x%x}\n", (result ? "ok" : "err"), r1, r2, r3, r4);
-#endif
-	volatile uint delay;
-	for ( delay = 0; delay < 20; ++ delay )
-		;
+	debug(" res=%s", (result ? "ok" : "err"));
+	delay_loop(20);
 	return result;
 }
 ////////////////////////////////////////////////////////////////
-//#define debug(...)
-
 
 #define SD_CARD_DETECT_GPIO_BASE  GPIO1__
 #define SD_CARD_DETECT_GPIO_PIN  (1 << 1)
@@ -215,6 +201,8 @@ bool sd_init(void)
 }
 
 //----------------------------
+#define CMD17_CTRL  0x00117911
+
 static bool SD2buf(int buf_num, int idx, uint len)
 {
 	write_SDIO_SDR_ADDRESS_REG(SDIO__, (buf_num << 2));
@@ -253,20 +241,45 @@ static bool buf2axi(int buf_num, int dma_addr, uint len)
 	return true;
 }
 //------------------------------------------
+#define BLOCK_SIZE  512
+
 //dest_addr is a physical address
 //Hi [35:32] must be set through LSIF1 reg
-static bool sd_read_block(uint32_t block, uint32_t dest_addr, uint len)
+static bool sd_read_block(uint32_t src_adr, u8 * dst_ptr)
 {
-	if ( ! SD2buf(0, block, len) )
+	if ( ! SD2buf(0, src_adr, BLOCK_SIZE) )
 		return false;
 	
-	if ( ! buf2axi(0, dest_addr, len) )
+	if ( ! buf2axi(0, (uint32_t) dst_ptr, BLOCK_SIZE) )
 		return false;
 
 	return true;
 }
-//-
 
+static bool sd_read_data(uint32_t src_adr, u8 * dst_ptr, uint len)
+{
+	uint32_t blk_adr = src_adr - (src_adr % BLOCK_SIZE);
+	u8 buf[BLOCK_SIZE];
+	
+	while ( len != 0 ) {
+		if ( ! sd_read_block(blk_adr, buf) ) {
+			debug("sd_read_block512 ERROR\n");
+			((void (*) (void)) 0xfffc0178)();			
+		}
+		uint32_t ofs = src_adr - blk_adr;
+		uint32_t part = BLOCK_SIZE - ofs;
+		if ( part > len )
+			part = len;
+		memcpy(dst_ptr, & buf[ofs], part);
+		dst_ptr += part;
+		blk_adr += BLOCK_SIZE;
+		len -= part;
+	}
+	
+	return true;
+}
+//-
+/*
 static void mpw7705_print_op(char * func, uint32_t adr, int reg, uint val)
 {
 	static int s_reg = -1;
@@ -318,10 +331,12 @@ static u8 mpw7705_readb(uint32_t adr, int reg)
 	mpw7705_print_op("mpw7705_readB", adr, reg, retval);
 	return retval;
 }
-
+*/
 ////////////////////////////////////////////////////////////////
 
 #define PREP_BUF(buf)  prep_buf((buf), sizeof(buf))
+#define PRINT_BUF(buf)  print_buf((buf), sizeof(buf))
+#ifdef DEBUG_BUF
 static void prep_buf(u8 * buf, uint size)
 {
 	uint i;
@@ -329,7 +344,11 @@ static void prep_buf(u8 * buf, uint size)
 		buf[i] = i;
 }
 
-#define PRINT_BUF(buf)  print_buf((buf), sizeof(buf))
+static bool isprintable(const char c)
+{
+	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '!' && c <= '?') || c == ' ') ? true : false;
+}
+
 static void print_buf(const u8 * buf, uint size)
 {
 	uint len = (size < 512 ? size : 512);
@@ -345,22 +364,26 @@ static void print_buf(const u8 * buf, uint size)
 static void test_read(void)
 {
 	static u8 block[512];
-	uint32_t adr = 0x11800;
+	uint32_t adr = 0;//0x11800 - 10;
 	uint cnt;
 
-	for ( cnt = 0; cnt < 1; ++ cnt ) {
+	for ( cnt = 0; cnt < 3; ++ cnt ) {
 		PREP_BUF(block);
 		debug("Read SD card (adr=%d) ... ", adr);		
-		bool res = sd_read_block(adr, (uint32_t) block, sizeof(block));
+		bool res = sd_read_data(adr, block, 512/*sizeof(block)*/);
 		debug("%s\n", res ? "ok" : "fail");
 		PRINT_BUF(block);
 			
-		adr += 50000000;
+		adr += 512;
 	}
 	
 	//((void (*) (void)) 0xfffc0178)();
 }
-
+#else
+	#define prep_buf(buf, size)
+	#define print_buf(buf, size)
+#endif
+	
 static int mpw7705_mmc_probe(struct udevice *dev)
 {
 	debug(">mpw7705_mmc_probe\n");
@@ -432,8 +455,10 @@ static void mpw7705_mmc_read_response(struct mmc *mmc, struct mmc_cmd *cmd)
 		cmd->response[1] = read_SDIO_SDR_RESPONSE3_REG(SDIO__);
 		cmd->response[2] = read_SDIO_SDR_RESPONSE2_REG(SDIO__);
 		cmd->response[3] = read_SDIO_SDR_RESPONSE1_REG(SDIO__);
+		debug(" {0x%x, 0x%x, 0x%x, 0x%x}\n", cmd->response[0], cmd->response[1], cmd->response[2], cmd->response[3]);
 	} else {
 		cmd->response[0] = read_SDIO_SDR_RESPONSE1_REG(SDIO__);
+		debug(" {0x%x}\n", cmd->response[0]);
 	}
 }
 
@@ -444,9 +469,7 @@ static bool proc_cmd(uint code, uint arg)
 		if ( sd_send_cmd(code, arg) )
 			return true;
 		debug("+");
-		volatile uint delay;
-		for ( delay = 0; delay < 10000; ++ delay )
-			;
+		delay_loop(10000);
 	}
 	return false;
 }
@@ -454,9 +477,6 @@ static bool proc_cmd(uint code, uint arg)
 static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, struct mmc_data *data)
 {
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
-	struct meson_mmc_platdata * pdata = mmc->priv;
-	uint32_t status;
-	ulong start;
 	int ret = 0;
 
 	debug(">CMD: cmd=%d, resp= 0x%x, arg=0x%x", cmd->cmdidx, cmd->resp_type, cmd->cmdarg);
@@ -500,7 +520,7 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 		res = proc_cmd(SDIO_CTRL_NODATA(3, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
 		break;
 	case MMC_CMD_SEND_CSD :
-		res = proc_cmd(SDIO_CTRL_NODATA(9, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
+		res = proc_cmd(SDIO_CTRL_NODATA(9, SDIO_RESPONSE_R2, crc, idx), cmd->cmdarg);
 		break;
 	case MMC_CMD_SELECT_CARD :
 		res = proc_cmd(SDIO_CTRL_NODATA(7, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
@@ -511,12 +531,40 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 	case MMC_CMD_SET_BLOCKLEN :
 		res = proc_cmd(SDIO_CTRL_NODATA(16, SDIO_RESPONSE_R1367, crc, idx), 512/*cmd->cmdarg*/);  //!!!
 		break;		
+	case MMC_CMD_STOP_TRANSMISSION :
+		res = proc_cmd(SDIO_CTRL_NODATA(12, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
+		break;		
+		
+	case MMC_CMD_READ_SINGLE_BLOCK :	
+	case MMC_CMD_READ_MULTIPLE_BLOCK :	
+		if ( data ) {
+			if ( data->flags == MMC_DATA_READ ) {
+				debug(">>READ: src=0x%x, dst=0x%x, bqty=%d, bsz=%d\n", cmd->cmdarg, (uint32_t) data->dest, data->blocks, data->blocksize);
+				uint blk_qty = data->blocks;
+				ulong src_adr = cmd->cmdarg;
+				u8 * dst_ptr = (u8 *) data->dest;
+				while ( blk_qty != 0 ) {				
+#ifdef DEBUG_BUF
+					debug(">>>%d:", blk_qty);
+#endif					
+					res = sd_read_data(src_adr, dst_ptr, data->blocksize);
+					if ( res ) 
+						print_buf(dst_ptr, data->blocksize);
+					if ( ! res )
+						break;
+					src_adr += data->blocksize;
+					dst_ptr += data->blocksize;
+					-- blk_qty;
+				}
+				debug("\n");
+			} else
+				debug("Bad flag in MMC_CMD_READ\n");				
+		}
+		break;
 		
 	case SD_CMD_APP_SEND_SCR :
 		{
 			uint len = data->blocks * data->blocksize;
-			u8 buf[512];
-			PREP_BUF(buf);
 			uint attempt;
 			for ( attempt = 0; attempt < 5; ++ attempt ) {
 				//res = true;
@@ -530,16 +578,19 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 				if ( res )
 					break;
 				debug("+");
-				uint delay;
-				for ( delay = 0; delay < 100000; ++ delay )
-					;
+				delay_loop(100000);
 			}
+			//!!! cannot yet
+			/*
 			if ( res ) {								
+				u8 buf[512];
+				PREP_BUF(buf);
 				res = buf2axi(0, (uint32_t) buf, len);
 				print_buf(buf, len);
 				if ( res )
 					memcpy(data->dest, buf, len);
 			}
+			*/
 		}
 		break;
 
@@ -559,55 +610,28 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 				if ( res )
 					break;
 				debug("+");
-				uint delay;
-				for ( delay = 0; delay < 100000; ++ delay )
-					;
+				delay_loop(100000);
 			}
+			//!!! cannot yet
+			/*
 			if ( res ) {								
 				u8 buf[512];
-				prep_buf(buf, len);
+				PREP_BUF(buf);
 				res = buf2axi(0, (uint32_t) buf, len);
 				debug(">>>BUF: res=%d\n", res);
 				print_buf(buf, len);
 				if ( res )
 					memcpy(data->dest, buf, data->blocks * data->blocksize);
 			}
+			*/
 		}
 		break;
-		
-	case MMC_CMD_STOP_TRANSMISSION :
-		res = true;
-		break;		
-		
-	case MMC_CMD_READ_SINGLE_BLOCK :	
-	case MMC_CMD_READ_MULTIPLE_BLOCK :	
-		if ( data ) {
-			if ( data->flags == MMC_DATA_READ ) {
-				debug(">>READ: src=0x%x, dst=0x%x, bqty=%d, bsz=%d\n", cmd->cmdarg, (uint32_t) data->dest, data->blocks, data->blocksize);
-				uint blk_qty = data->blocks;
-				ulong src_adr = cmd->cmdarg;
-				u8 * dst_ptr = (u8 *) data->dest;
-				while ( blk_qty != 0 ) {				
-					debug(">>>%d ", blk_qty);
-					res = sd_read_block(src_adr, (uint32_t) dst_ptr, 512/*data->blocksize*/);  //!!!
-					if ( ! res )
-						break;
-					src_adr += 512/*data->blocksize*/;  //!!!
-					dst_ptr += 512/*data->blocksize*/;  //!!!
-					-- blk_qty;
-				}
-				debug("\n");
-				break;
-			}
-		}
-		((void (*) (void)) 0xfffc0178)();
-		// nobreak
 		
 	default:
 		res = proc_cmd(SDIO_CTRL_NODATA(cmd->cmdidx, resp, crc, idx), cmd->cmdarg);
 		break;
 	}
-	debug("%s\n", res ? "ok" : "error");
+	debug(" %s", res ? "ok" : "error");
 	
 	if ( ! res )
 		ret = -EIO;
