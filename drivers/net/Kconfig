@@ -154,6 +154,13 @@ config FEC_MXC
 	  This driver supports the 10/100 Fast Ethernet controller for
 	  NXP i.MX processors.
 
+config GRETH_ETH
+	bool "Gaisler Ethernet controller"
+	help
+	  This driver supports the 10/100/1000 Fast Ethernet controller for
+	  MPW RC-Module processors.
+
+
 config FTMAC100
 	bool "Ftmac100 Ethernet Support"
 	help

@@ -5,25 +5,32 @@
  * (C) Copyright 2007
  * Daniel Hellstrom, Gaisler Research, daniel@gaisler.com
  *
+ * Update to DM mode, skip SPARK specific things
+ * (C) Copyright 2018
+ * Alexey Spirkov, AstroSoft, alexeis@astrosoft.ru
+ *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-/* #define DEBUG */
+// #define DEBUG
 
 #include <common.h>
-#include <command.h>
+#include <dm.h>
+#include <malloc.h>
+#include <memalign.h>
+#include <miiphy.h>
 #include <net.h>
 #include <netdev.h>
-#include <malloc.h>
-#include <asm/processor.h>
-#include <ambapp.h>
-#include <asm/leon.h>
-
 #include "greth.h"
+#include <asm/io.h>
 
 /* Default to 3s timeout on autonegotiation */
 #ifndef GRETH_PHY_TIMEOUT_MS
 #define GRETH_PHY_TIMEOUT_MS 3000
+#endif
+
+#ifndef GRETH_SEND_TIMEOUT_MS
+#define GRETH_SEND_TIMEOUT_MS 3000
 #endif
 
 /* Default to PHY adrress 0 not not specified */
@@ -34,9 +41,16 @@
 #endif
 
 /* ByPass Cache when reading regs */
-#define GRETH_REGLOAD(addr)		SPARC_NOCACHE_READ(addr)
+inline u32 GRETH_REGLOAD(volatile void* addr)	{
+#ifdef CONFIG_PPC	
+	asm volatile("dcbi 0,%0" : : "r" (addr) : "memory");
+#else
+	#error "Invalidate cache instruction should be defined here"
+#endif
+	return readl(addr);
+}	
 /* Write-through cache ==> no bypassing needed on writes */
-#define GRETH_REGSAVE(addr,data) (*(volatile unsigned int *)(addr) = (data))
+#define GRETH_REGSAVE(addr,data) writel(data,addr)
 #define GRETH_REGORIN(addr,data) GRETH_REGSAVE(addr,GRETH_REGLOAD(addr)|data)
 #define GRETH_REGANDIN(addr,data) GRETH_REGSAVE(addr,GRETH_REGLOAD(addr)&data)
 
@@ -127,11 +141,11 @@ static void write_mii(int phyaddr, int regaddr, int data, volatile greth_regs * 
 /* init/start hardware and allocate descriptor buffers for rx side
  *
  */
-int greth_init(struct eth_device *dev, bd_t * bis)
+int greth_init(struct udevice *dev)
 {
 	int i;
 
-	greth_priv *greth = dev->priv;
+	greth_priv *greth = dev_get_priv(dev);
 	greth_regs *regs = greth->regs;
 
 	debug("greth_init\n");
@@ -210,7 +224,7 @@ int greth_init(struct eth_device *dev, bd_t * bis)
  *  - 0 = success
  *  - 1 = timeout/fail
  */
-int greth_init_phy(greth_priv * dev, bd_t * bis)
+static int greth_init_phy(greth_priv * dev)
 {
 	greth_regs *regs = dev->regs;
 	int tmp, tmp1, tmp2, i;
@@ -236,8 +250,7 @@ int greth_init_phy(greth_priv * dev, bd_t * bis)
 
 	debug("GRETH PHY ADDRESS: %d\n", phyaddr);
 
-	/* X msecs to ticks */
-	timeout = usec2ticks(GRETH_PHY_TIMEOUT_MS * 1000);
+	timeout = GRETH_PHY_TIMEOUT_MS;
 
 	/* Get system timer0 current value
 	 * Total timeout is 5s
@@ -351,7 +364,7 @@ int greth_init_phy(greth_priv * dev, bd_t * bis)
 	return 0;
 }
 
-void greth_halt(struct eth_device *dev)
+void greth_halt(struct udevice *dev)
 {
 	greth_priv *greth;
 	greth_regs *regs;
@@ -359,10 +372,10 @@ void greth_halt(struct eth_device *dev)
 
 	debug("greth_halt\n");
 
-	if (!dev || !dev->priv)
+	if (!dev)
 		return;
 
-	greth = dev->priv;
+	greth = dev_get_priv(dev);
 	regs = greth->regs;
 
 	if (!regs)
@@ -387,13 +400,15 @@ void greth_halt(struct eth_device *dev)
 	}
 }
 
-int greth_send(struct eth_device *dev, void *eth_data, int data_length)
+int greth_send(struct udevice *dev, void *eth_data, int data_length)
 {
-	greth_priv *greth = dev->priv;
+	greth_priv *greth = dev_get_priv(dev);
 	greth_regs *regs = greth->regs;
 	greth_bd *txbd;
 	void *txbuf;
 	unsigned int status;
+	unsigned int start, timeout;
+
 
 	debug("greth_send\n");
 
@@ -424,14 +439,21 @@ int greth_send(struct eth_device *dev, void *eth_data, int data_length)
 	txbd->stat = GRETH_BD_EN | GRETH_BD_WR | data_length;
 
 	/* Remind Core which descriptor to use when sending */
+
 	GRETH_REGSAVE(&regs->tx_desc_p, (unsigned int)txbd);
 
 	/* initate send by enabling transmitter */
 	GRETH_REGORIN(&regs->control, GRETH_TXEN);
 
+	start = get_timer(0);
+	timeout = GRETH_SEND_TIMEOUT_MS;
+
 	/* Wait for data to be sent */
 	while ((status = GRETH_REGLOAD(&txbd->stat)) & GRETH_BD_EN) {
-		;
+		if (get_timer(start) > timeout) {
+			debug("greth_send: hangs on status wait, Stat: %x\n", GRETH_REGLOAD(&regs->status));
+			return -2;	/* Fail */
+		}
 	}
 
 	/* was the packet transmitted succesfully? */
@@ -461,9 +483,9 @@ int greth_send(struct eth_device *dev, void *eth_data, int data_length)
 	return 0;
 }
 
-int greth_recv(struct eth_device *dev)
+int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 {
-	greth_priv *greth = dev->priv;
+	greth_priv *greth = dev_get_priv(dev);
 	greth_regs *regs = greth->regs;
 	greth_bd *rxbd;
 	unsigned int status, len = 0, bad;
@@ -516,8 +538,8 @@ int greth_recv(struct eth_device *dev)
 			/* print all rx descriptors */
 			for (i = 0; i < GRETH_RXBD_CNT; i++) {
 				printf("[%d]: Stat=0x%lx, Addr=0x%lx\n", i,
-				       GRETH_REGLOAD(&greth->rxbd_base[i].stat),
-				       GRETH_REGLOAD(&greth->rxbd_base[i].addr));
+				       (long)GRETH_REGLOAD(&greth->rxbd_base[i].stat),
+				       (long)GRETH_REGLOAD(&greth->rxbd_base[i].addr));
 			}
 		} else {
 			/* Process the incoming packet. */
@@ -530,7 +552,7 @@ int greth_recv(struct eth_device *dev)
 			     d[7]);
 
 			/* flush all data cache to make sure we're not reading old packet data */
-			sparc_dcache_flush_all();
+			//sparc_dcache_flush_all();
 
 			/* pass packet on to network subsystem */
 			net_process_received_packet((void *)d, len);
@@ -564,55 +586,129 @@ int greth_recv(struct eth_device *dev)
 	return len;
 }
 
-void greth_set_hwaddr(greth_priv * greth, unsigned char *mac)
+int greth_set_hwaddr(struct udevice *dev)
 {
-	/* save new MAC address */
-	greth->dev->enetaddr[0] = greth->hwaddr[0] = mac[0];
-	greth->dev->enetaddr[1] = greth->hwaddr[1] = mac[1];
-	greth->dev->enetaddr[2] = greth->hwaddr[2] = mac[2];
-	greth->dev->enetaddr[3] = greth->hwaddr[3] = mac[3];
-	greth->dev->enetaddr[4] = greth->hwaddr[4] = mac[4];
-	greth->dev->enetaddr[5] = greth->hwaddr[5] = mac[5];
+	greth_priv *greth = dev_get_priv(dev);
+	struct eth_pdata *pdata = dev_get_platdata(dev);
+	uchar *mac = pdata->enetaddr;
+
 	greth->regs->esa_msb = (mac[0] << 8) | mac[1];
 	greth->regs->esa_lsb =
 	    (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5];
 
 	debug("GRETH: New MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 	       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+	return 0;
 }
 
-int greth_initialize(bd_t * bis)
+//int greth_initialize(bd_t * bis)
+//{
+//	greth_priv *greth;
+//	ambapp_apbdev apbdev;
+//	struct eth_device *dev;
+//	int i;
+//	char *addr_str, *end;
+//	unsigned char addr[6];
+//
+//	debug("Scanning for GRETH\n");
+//
+//	/* Find Device & IRQ via AMBA Plug&Play information */
+//	if (ambapp_apb_first(VENDOR_GAISLER, GAISLER_ETHMAC, &apbdev) != 1) {
+//		return -1;	/* GRETH not found */
+//	}
+//
+//	greth = (greth_priv *) malloc(sizeof(greth_priv));
+//	dev = (struct eth_device *)malloc(sizeof(struct eth_device));
+//	memset(dev, 0, sizeof(struct eth_device));
+//	memset(greth, 0, sizeof(greth_priv));
+//
+//	greth->regs = (greth_regs *) apbdev.address;
+//	greth->irq = apbdev.irq;
+//	debug("Found GRETH at %p, irq %d\n", greth->regs, greth->irq);
+//	dev->priv = (void *)greth;
+//	dev->iobase = (unsigned int)greth->regs;
+//	dev->init = greth_init;
+//	dev->halt = greth_halt;
+//	dev->send = greth_send;
+//	dev->recv = greth_recv;
+//	greth->dev = dev;
+//
+//	/* Reset Core */
+//	GRETH_REGSAVE(&greth->regs->control, GRETH_RESET);
+//
+//	/* Wait for core to finish reset cycle */
+//	while (GRETH_REGLOAD(&greth->regs->control) & GRETH_RESET) ;
+//
+//	/* Get the phy address which assumed to have been set
+//	   correctly with the reset value in hardware */
+//	greth->phyaddr = (GRETH_REGLOAD(&greth->regs->mdio) >> 11) & 0x1F;
+//
+//	/* Check if mac is gigabit capable */
+//	greth->gbit_mac = (GRETH_REGLOAD(&greth->regs->control) >> 27) & 1;
+//
+//	/* Make descriptor string */
+//	if (greth->gbit_mac) {
+//		sprintf(dev->name, "GRETH_10/100/GB");
+//	} else {
+//		sprintf(dev->name, "GRETH_10/100");
+//	}
+//
+//	/* initiate PHY, select speed/duplex depending on connected PHY */
+//	if (greth_init_phy(greth, bis)) {
+//		/* Failed to init PHY (timedout) */
+//		debug("GRETH[%p]: Failed to init PHY\n", greth->regs);
+//		return -1;
+//	}
+//
+//	/* Register Device to EtherNet subsystem  */
+//	eth_register(dev);
+//
+//	/* Get MAC address */
+//	if ((addr_str = getenv("ethaddr")) != NULL) {
+//		for (i = 0; i < 6; i++) {
+//			addr[i] =
+//			    addr_str ? simple_strtoul(addr_str, &end, 16) : 0;
+//			if (addr_str) {
+//				addr_str = (*end) ? end + 1 : end;
+//			}
+//		}
+//	} else {
+//		/* HW Address not found in environment, Set default HW address */
+//		addr[0] = GRETH_HWADDR_0;	/* MSB */
+//		addr[1] = GRETH_HWADDR_1;
+//		addr[2] = GRETH_HWADDR_2;
+//		addr[3] = GRETH_HWADDR_3;
+//		addr[4] = GRETH_HWADDR_4;
+//		addr[5] = GRETH_HWADDR_5;	/* LSB */
+//	}
+//
+//	/* set and remember MAC address */
+//	greth_set_hwaddr(greth, addr);
+//
+//	debug("GRETH[%p]: Initialized successfully\n", greth->regs);
+//	return 0;
+//}
+
+
+static int greth_probe(struct udevice *dev)
 {
-	greth_priv *greth;
-	ambapp_apbdev apbdev;
-	struct eth_device *dev;
-	int i;
-	char *addr_str, *end;
-	unsigned char addr[6];
 
-	debug("Scanning for GRETH\n");
+	// tmp - enable everything 
 
-	/* Find Device & IRQ via AMBA Plug&Play information */
-	if (ambapp_apb_first(VENDOR_GAISLER, GAISLER_ETHMAC, &apbdev) != 1) {
-		return -1;	/* GRETH not found */
-	}
+    writel(0xff, 0x3C060000 + 0x420);
+    writel(0xff, 0x3C061000 + 0x420);
+    writel(0xff, 0x3C062000 + 0x420);
+    writel(0xff, 0x3C063000 + 0x420);
+    writel(0xff, 0x3C064000 + 0x420);
+    writel(0xff, 0x3C065000 + 0x420);
+    writel(0xff, 0x3C066000 + 0x420);
+    writel(0xff, 0x3C067000 + 0x420);
+ 
 
-	greth = (greth_priv *) malloc(sizeof(greth_priv));
-	dev = (struct eth_device *)malloc(sizeof(struct eth_device));
-	memset(dev, 0, sizeof(struct eth_device));
-	memset(greth, 0, sizeof(greth_priv));
-
-	greth->regs = (greth_regs *) apbdev.address;
-	greth->irq = apbdev.irq;
-	debug("Found GRETH at %p, irq %d\n", greth->regs, greth->irq);
-	dev->priv = (void *)greth;
-	dev->iobase = (unsigned int)greth->regs;
-	dev->init = greth_init;
-	dev->halt = greth_halt;
-	dev->send = greth_send;
-	dev->recv = greth_recv;
-	greth->dev = dev;
-
+	//struct eth_pdata *pdata = dev_get_platdata(dev);
+	greth_priv *greth = dev_get_priv(dev);
+ 
 	/* Reset Core */
 	GRETH_REGSAVE(&greth->regs->control, GRETH_RESET);
 
@@ -626,45 +722,90 @@ int greth_initialize(bd_t * bis)
 	/* Check if mac is gigabit capable */
 	greth->gbit_mac = (GRETH_REGLOAD(&greth->regs->control) >> 27) & 1;
 
-	/* Make descriptor string */
-	if (greth->gbit_mac) {
-		sprintf(dev->name, "GRETH_10/100/GB");
-	} else {
-		sprintf(dev->name, "GRETH_10/100");
-	}
-
 	/* initiate PHY, select speed/duplex depending on connected PHY */
-	if (greth_init_phy(greth, bis)) {
+	if (greth_init_phy(greth)) {
 		/* Failed to init PHY (timedout) */
 		debug("GRETH[%p]: Failed to init PHY\n", greth->regs);
 		return -1;
 	}
 
-	/* Register Device to EtherNet subsystem  */
-	eth_register(dev);
-
-	/* Get MAC address */
-	if ((addr_str = getenv("ethaddr")) != NULL) {
-		for (i = 0; i < 6; i++) {
-			addr[i] =
-			    addr_str ? simple_strtoul(addr_str, &end, 16) : 0;
-			if (addr_str) {
-				addr_str = (*end) ? end + 1 : end;
-			}
-		}
-	} else {
-		/* HW Address not found in environment, Set default HW address */
-		addr[0] = GRETH_HWADDR_0;	/* MSB */
-		addr[1] = GRETH_HWADDR_1;
-		addr[2] = GRETH_HWADDR_2;
-		addr[3] = GRETH_HWADDR_3;
-		addr[4] = GRETH_HWADDR_4;
-		addr[5] = GRETH_HWADDR_5;	/* LSB */
-	}
-
-	/* set and remember MAC address */
-	greth_set_hwaddr(greth, addr);
-
+	debug("GRETH[%p]: Status after reset: 0x%x\n", greth->regs, GRETH_REGLOAD(&greth->regs->status));
+	// reset status
+ 	GRETH_REGSAVE(&greth->regs->status, 0xffffffff);
+	debug("GRETH[%p]: Status: 0x%x\n", greth->regs, GRETH_REGLOAD(&greth->regs->status));
+ 
 	debug("GRETH[%p]: Initialized successfully\n", greth->regs);
+
 	return 0;
+
 }
+
+///////////////////
+
+
+
+static int greth_remove(struct udevice *dev)
+{
+        //struct greth_priv *priv = dev_get_priv(dev);
+
+        return 0;
+}
+
+
+static int greth_ofdata_to_platdata(struct udevice *dev)
+{
+        greth_priv *priv = dev_get_priv(dev);
+		struct eth_pdata *pdata = dev_get_platdata(dev);
+		const char *mac;
+		int len;
+
+        priv->regs = devfdt_get_addr(dev);
+
+		mac = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "mac-address", &len);
+		if (mac && is_valid_ethaddr((u8 *)mac))
+			memcpy(pdata->enetaddr , mac , 6);
+
+//        pdata->phy_interface = -1;
+//        phy_mode = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "phy-mode",
+//                               NULL);
+//        if (phy_mode)
+//                pdata->phy_interface = phy_get_interface_by_name(phy_mode);
+//        if (pdata->phy_interface == -1) {
+//                debug("%s: Invalid PHY interface '%s'\n", __func__, phy_mode);
+//                return -EINVAL;
+//        }
+
+        return 0;
+}
+
+
+static const struct eth_ops greth_ops = {
+        .start                  = greth_init,
+        .send                   = greth_send,
+        .recv                   = greth_recv,
+        .stop                   = greth_halt,
+        .write_hwaddr           = greth_set_hwaddr,
+};
+
+
+static const struct udevice_id greth_ids[] = {
+        { .compatible = "rc-module,greth" },
+        { }
+};
+
+U_BOOT_DRIVER(greth) = {
+        .name   = "greth",
+        .id     = UCLASS_ETH,
+        .of_match = greth_ids,
+        .ofdata_to_platdata = greth_ofdata_to_platdata,
+        .probe  = greth_probe,
+        .remove = greth_remove,
+        .ops    = &greth_ops,
+        .priv_auto_alloc_size = sizeof(greth_priv),
+        .platdata_auto_alloc_size = sizeof(struct eth_pdata),
+};
+
+
+
+
+

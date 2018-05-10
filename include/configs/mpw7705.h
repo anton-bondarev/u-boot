@@ -90,27 +90,7 @@
 
 #define CONFIG_SYS_PBSIZE 1024
 
-
-/*
- * Ethernet configuration
- */
-/* #define CONFIG_GRETH    1 */
-
-/* Default HARDWARE address */
-#define GRETH_HWADDR_0 0x00
-#define GRETH_HWADDR_1 0x00
-#define GRETH_HWADDR_2 0x7A
-#define GRETH_HWADDR_3 0xcc
-#define GRETH_HWADDR_4 0x00
-#define GRETH_HWADDR_5 0x12
-
-#define CONFIG_ETHADDR   00:00:7a:cc:00:12
-
-/*
- * Define CONFIG_GRETH_10MBIT to force GRETH at 10Mb/s
- */
-/* #define CONFIG_GRETH_10MBIT 1 */
-#define CONFIG_PHY_ADDR         0x00
-
+/* todo - count by freq values */
+#define TIMER_TICKS_PER_US  800
 
 #endif /* __MPW7705_H */

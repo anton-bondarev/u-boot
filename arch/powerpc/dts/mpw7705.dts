@@ -123,8 +123,160 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
+		mgpio0_1: mgpio0_1@0x3C060000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C060000 0x1000>;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth0_1_default: greth0_1_default {
+						pinmux = 	<GBETH0_TX_EN>,
+									<GBETH0_TX_ER>,
+									<GBETH0_RX_DV>,
+									<GBETH0_RX_ER>,
+									<GBETH0_RX_COL>,
+									<GBETH0_RX_CRS>,
+									<GBETH0_TXD0>,
+									<GBETH0_TXD1>;
+					};					
+			};
+		};
 
-		mgpio7: mgpio7@0x3C067000 {
+		mgpio1_1: mgpio1_1@0x3C061000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C061000 0x1000>;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth0_2_default: greth0_2_default {
+						pinmux = 	<GBETH0_TXD2>,
+									<GBETH0_TXD3>,
+									<GBETH0_TXD4>,
+									<GBETH0_TXD5>,
+									<GBETH0_TXD6>,
+									<GBETH0_TXD7>,
+									<GBETH0_RXD0>,
+									<GBETH0_RXD1>;
+					};					
+			};
+		};
+
+		mgpio2_1: mgpio2_1@0x3C062000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C062000 0x1000>;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth0_3_default: greth0_3_default {
+						pinmux = 	<GBETH0_RXD2>,
+									<GBETH0_RXD3>,
+									<GBETH0_RXD4>,
+									<GBETH0_RXD5>,
+									<GBETH0_RXD6>,
+									<GBETH0_RXD7>,
+									<GBETH0_MDC>,
+									<GBETH0_MDIO>;
+					};					
+			};
+		};
+
+		mgpio3_1: mgpio3_1@0x3C063000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C063000 0x1000>;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_spi1_default: spi1_default {
+						pinmux = 	<SPI1_SCLK>,
+									<SPI1_MOSI>,
+									<SPI1_MISO>;
+					};		
+
+					pinctrl_greth1_1_default: greth1_1_default {
+						pinmux = 	<GBETH1_TX_EN>,
+									<GBETH1_TX_ER>,
+									<GBETH1_RX_DV>,
+									<GBETH1_RX_ER>,
+									<GBETH1_RX_COL>;
+					};					
+								
+			};
+		};
+		mgpio4_1: mgpio4_1@0x3C064000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C064000 0x1000>;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth1_2_default: greth1_2_default {
+						pinmux = 	<GBETH1_RX_CRS>,
+									<GBETH1_TXD0>,
+									<GBETH1_TXD1>,
+									<GBETH1_TXD2>,
+									<GBETH1_TXD3>,
+									<GBETH1_TXD4>,
+									<GBETH1_TXD5>,
+									<GBETH1_TXD6>;
+					};					
+			};
+		};		
+		mgpio5_1: mgpio5_1@0x3C065000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C065000 0x1000>;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth1_3_default: greth1_3_default {
+						pinmux = 	<GBETH1_TXD7>,
+									<GBETH1_RXD0>,
+									<GBETH1_RXD1>,
+									<GBETH1_RXD2>,
+									<GBETH1_RXD3>,
+									<GBETH1_RXD4>,
+									<GBETH1_RXD5>,
+									<GBETH1_RXD6>;
+					};					
+			};
+		};
+		mgpio6_1: mgpio6_1@0x3C066000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C066000 0x1000>;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth1_4_default: greth1_4_default {
+						pinmux = 	<GBETH1_RXD7>,
+									<GBETH1_MDC>,
+									<GBETH1_MDIO>;
+					};					
+					pinctrl_uart2_default: uart2_default {
+						pinmux = 	<UART2_RXD>,
+									<UART2_TXD>;
+					};										
+			};
+		};
+		mgpio7_1: mgpio7_1@0x3C067000 {
 		    compatible = "rc-module,pl061";
 		    #address-cells = <1>;
 		    #size-cells = <0>;
@@ -156,6 +308,23 @@
 			pinctrl-0 = <&pinctrl_sdio_default>;
 
 		};
+
+		greth0: greth0@0x3C050000 {
+			compatible = "rc-module,greth";
+            reg = <0x3C050000 0x1000>;			
+			mac-address = [ EC 17 66 77 05 00 ];
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>;
+		};
+/*
+		greth1: greth1@0x3C051000 {
+			compatible = "rc-module,greth";
+            reg = <0x3C051000 0x1000>;			
+			mac-address = [ EC 17 66 77 05 01 ];
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_greth1_1_default>, <&pinctrl_greth1_2_default>, <&pinctrl_greth1_3_default>, <&pinctrl_greth1_4_default>;
+		};
+*/
 
 	};
 	
