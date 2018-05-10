@@ -12,10 +12,3 @@ void print_reginfo(void)
     debug("ToDo register print\n");
 // ASTRO TODO
 }
-
-#ifdef CONFIG_GRETH
-int cpu_eth_init(bd_t *bis)
-{
-	return greth_initialize(bis);
-}
-#endif

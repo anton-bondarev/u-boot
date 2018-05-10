@@ -3,9 +3,14 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+
+void (*bootrom_enter_host_mode)() = BOOT_ROM_HOST_MODE;
+
 // ASTRO TODO
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
+	// for a while - enter host mode
+	bootrom_enter_host_mode();
 	return 0;
 }
 
@@ -19,6 +24,42 @@ int dram_init(void)
 #endif
 	return 0;
 }
+
+#define SPR_TBL_R           0x10C
+
+static uint32_t tcurrent(){
+  uint32_t value = 0;
+
+  __asm volatile
+  (
+      "mfspr %0, %1 \n\t"
+      :"=r"(value)
+        :"i"(SPR_TBL_R)
+      :
+  );
+
+  return value;
+}
+
+static uint32_t ucurrent(){
+  return (tcurrent()/TIMER_TICKS_PER_US);
+}
+
+static uint32_t mcurrent(){
+  return (tcurrent()/(1000*TIMER_TICKS_PER_US));
+}
+
+
+int __weak timer_init(void)
+{
+	return 0;
+}
+/* Returns time in milliseconds */
+ulong get_timer(ulong base)
+{
+	return mcurrent() - base;
+}
+
 
 #if defined(CONFIG_SYS_DRAM_TEST)
 

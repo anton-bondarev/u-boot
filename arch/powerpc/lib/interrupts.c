@@ -98,7 +98,9 @@ void timer_interrupt (struct pt_regs *regs)
 #endif /* CONFIG_SHOW_ACTIVITY */
 }
 
+#ifndef CONFIG_MPW7705
 ulong get_timer (ulong base)
 {
 	return (timestamp - base);
 }
+#endif
