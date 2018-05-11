@@ -27,6 +27,24 @@ _start:
 #endif
 #endif
 
+clear_bss:
+    /*
+    * Now clear BSS segment
+    */
+    load_const_link  r3,__bss_start
+    load_const_link  r4,__bss_end
+
+    cmplw   0, r3, r4
+    beq     6f
+
+    li      r0, 0
+5:
+    stw     r0, 0(r3)
+    addi    r3, r3, 4
+    cmplw   0, r3, r4
+    bne     5b
+6:
+
 	bl	cpu_init_early_f
 
     lis	r3,(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)@h

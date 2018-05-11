@@ -54,7 +54,6 @@
 
 #define CONFIG_SPL_FRAMEWORK
 
-#define CONFIG_ENV_SIZE         0x2000
 #define CONFIG_SYS_MALLOC_LEN   (1*1024*1024)
 
 #define CONFIG_VERY_BIG_RAM
@@ -81,8 +80,13 @@
 
 #define BOOT_ROM_HOST_MODE 0xfffc0178
 
-#define CONFIG_SYS_SPI_U_BOOT_OFFS      0x20000
+#define CONFIG_SYS_SPI_U_BOOT_OFFS      0x40000
 #define CONFIG_SYS_SPI_CLK 100000000
+
+
+#define CONFIG_ENV_OFFSET               0x140000
+#define CONFIG_ENV_SIZE                 0x4000
+#define CONFIG_ENV_SECT_SIZE            0x10000
 
 #define CONFIG_PL01X_SERIAL
 #define CONFIG_BAUDRATE 115200

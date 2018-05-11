@@ -14,10 +14,6 @@ int testdramfromto(uint *pstart, uint *pend);
 
 void board_init_f(ulong dummy)
 {
-	/* Clear global data */
-	size_t len = (size_t)&__bss_end - (size_t)&__bss_start;
-	memset((void *)&__bss_start, 0x00, len);
-
 	/* init dram */
 	ddr_init();
 
