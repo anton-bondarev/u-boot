@@ -22,7 +22,7 @@
 
 #define readb(addr) in_8((volatile u8 *)(addr))
 #define writeb(b,addr) out_8((volatile u8 *)(addr), (b))
-#if 1 /*!defined(__BIG_ENDIAN)*/
+#if !defined(__BIG_ENDIAN) || defined(CONFIG_MPW7705)
 #define readw(addr) (*(volatile u16 *) (addr))
 #define readl(addr) (*(volatile u32 *) (addr))
 #define writew(b,addr) ((*(volatile u16 *) (addr)) = (b))
@@ -68,16 +68,65 @@
 #define inl_p(port)     in_le32((u32 *)((port)+_IO_BASE))
 #define outl_p(val, port)   out_le32((u32 *)((port)+_IO_BASE), (val))
 
+#ifndef CONFIG_MPW7705
 extern void _insb(volatile u8 *port, void *buf, int ns);
 extern void _outsb(volatile u8 *port, const void *buf, int ns);
-extern void _insw(volatile u16 *port, void *buf, int ns);
-extern void _outsw(volatile u16 *port, const void *buf, int ns);
-extern void _insl(volatile u32 *port, void *buf, int nl);
-extern void _outsl(volatile u32 *port, const void *buf, int nl);
 extern void _insw_ns(volatile u16 *port, void *buf, int ns);
 extern void _outsw_ns(volatile u16 *port, const void *buf, int ns);
 extern void _insl_ns(volatile u32 *port, void *buf, int nl);
 extern void _outsl_ns(volatile u32 *port, const void *buf, int nl);
+#else
+
+static inline void _insb(volatile u8 * port, void *buf, int ns)
+{
+	u8 *data = (u8 *) buf;
+	while (ns--)
+		*data++ = *port;
+}
+
+static inline void _outsb(volatile u8 * port, const void *buf, int ns)
+{
+	u8 *data = (u8 *) buf;
+	while (ns--)
+		*port = *data++;
+}
+
+static inline void _insw_ns(volatile u16 * port, void *buf, int ns)
+{
+	u16 *data = (u16 *) buf;
+	while (ns--)
+		*data++ = *port;
+}
+
+static inline void _outsw_ns(volatile u16 * port, const void *buf, int ns)
+{
+	u16 *data = (u16 *) buf;
+	while (ns--) {
+		*port = *data++;
+	}
+}
+
+static inline void _insl_ns(volatile u32 * port, void *buf, int nl)
+{
+	u32 *data = (u32 *) buf;
+	while (nl--)
+		*data++ = *port;
+}
+
+static inline void _outsl_ns(volatile u32 * port, const void *buf, int nl)
+{
+	u32 *data = (u32 *) buf;
+	while (nl--) {
+		*port = *data;
+		data++;
+	}
+}
+
+#endif
+extern void _insl(volatile u32 *port, void *buf, int nl);
+extern void _outsl(volatile u32 *port, const void *buf, int nl);
+extern void _insw(volatile u16 *port, void *buf, int ns);
+extern void _outsw(volatile u16 *port, const void *buf, int ns);
 
 /*
  * The *_ns versions below don't do byte-swapping.

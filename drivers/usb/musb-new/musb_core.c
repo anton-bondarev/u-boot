@@ -63,7 +63,7 @@
  *
  * Most of the conditional compilation will (someday) vanish.
  */
-
+#define DEBUG
 #ifndef __UBOOT__
 #include <linux/module.h>
 #include <linux/kernel.h>

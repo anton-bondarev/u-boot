@@ -264,7 +264,7 @@ static bool sd_read_data(uint32_t src_adr, u8 * dst_ptr, uint len)
 	while ( len != 0 ) {
 		if ( ! sd_read_block(blk_adr, buf) ) {
 			debug("sd_read_block512 ERROR\n");
-			((void (*) (void)) 0xfffc0178)();			
+			((void (*) (void)) 0xfffc0178)();
 		}
 		uint32_t ofs = src_adr - blk_adr;
 		uint32_t part = BLOCK_SIZE - ofs;
