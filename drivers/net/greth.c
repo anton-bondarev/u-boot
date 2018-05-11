@@ -12,7 +12,7 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-// #define DEBUG
+//#define DEBUG
 
 #include <common.h>
 #include <dm.h>
@@ -20,7 +20,6 @@
 #include <memalign.h>
 #include <miiphy.h>
 #include <net.h>
-#include <netdev.h>
 #include "greth.h"
 #include <asm/io.h>
 
@@ -40,16 +39,7 @@
 #define GRETH_PHY_ADR_DEFAULT 0
 #endif
 
-/* ByPass Cache when reading regs */
-inline u32 GRETH_REGLOAD(volatile void* addr)	{
-#ifdef CONFIG_PPC	
-	asm volatile("dcbi 0,%0" : : "r" (addr) : "memory");
-#else
-	#error "Invalidate cache instruction should be defined here"
-#endif
-	return readl(addr);
-}	
-/* Write-through cache ==> no bypassing needed on writes */
+#define GRETH_REGLOAD(addr )readl(addr)
 #define GRETH_REGSAVE(addr,data) writel(data,addr)
 #define GRETH_REGORIN(addr,data) GRETH_REGSAVE(addr,GRETH_REGLOAD(addr)|data)
 #define GRETH_REGANDIN(addr,data) GRETH_REGSAVE(addr,GRETH_REGLOAD(addr)&data)
@@ -60,7 +50,7 @@ inline u32 GRETH_REGLOAD(volatile void* addr)	{
 #define GRETH_RXBUF_SIZE 1540
 #define GRETH_BUF_ALIGN 4
 #define GRETH_RXBUF_EFF_SIZE \
-	( (GRETH_RXBUF_SIZE&~(GRETH_BUF_ALIGN-1))+GRETH_BUF_ALIGN )
+	( (GRETH_RXBUF_SIZE&~(GRETH_BUF_ALIGN-1))+GRETH_BUF_ALIGN*2 )
 
 typedef struct {
 	greth_regs *regs;
@@ -138,6 +128,22 @@ static void write_mii(int phyaddr, int regaddr, int data, volatile greth_regs * 
 
 }
 
+int fix_endian (int data_in){
+
+#ifdef CONFIG_MPW7705
+    int data_out = 0;
+    
+    data_out = data_in << 24 & 0xff000000;
+    data_out = data_out | (data_in << 8  & 0x00ff0000);
+    data_out = data_out | (data_in >> 8  & 0x0000ff00);
+    data_out = data_out | (data_in >> 24 & 0x000000ff);
+    
+    return data_out;
+#else
+	return data_in;
+#endif
+}
+
 /* init/start hardware and allocate descriptor buffers for rx side
  *
  */
@@ -175,13 +181,13 @@ int greth_init(struct udevice *dev)
 
 	/* initate rx decriptors */
 	for (i = 0; i < GRETH_RXBD_CNT; i++) {
-		greth->rxbd_base[i].addr = (unsigned int)
-		    greth->rxbuf_base + (GRETH_RXBUF_EFF_SIZE * i);
+		greth->rxbd_base[i].addr = fix_endian((unsigned int)
+		    greth->rxbuf_base + (GRETH_RXBUF_EFF_SIZE * i));
 		/* enable desciptor & set wrap bit if last descriptor */
 		if (i >= (GRETH_RXBD_CNT - 1)) {
-			greth->rxbd_base[i].stat = GRETH_BD_EN | GRETH_BD_WR;
+			greth->rxbd_base[i].stat = fix_endian(GRETH_BD_EN | GRETH_BD_WR);
 		} else {
-			greth->rxbd_base[i].stat = GRETH_BD_EN;
+			greth->rxbd_base[i].stat = fix_endian(GRETH_BD_EN);
 		}
 	}
 
@@ -199,7 +205,7 @@ int greth_init(struct udevice *dev)
 		greth->txbd_base[i].addr = 0;
 		/* enable desciptor & set wrap bit if last descriptor */
 		if (i >= (GRETH_TXBD_CNT - 1)) {
-			greth->txbd_base[i].stat = GRETH_BD_WR;
+			greth->txbd_base[i].stat = fix_endian(GRETH_BD_WR);
 		} else {
 			greth->txbd_base[i].stat = 0;
 		}
@@ -387,18 +393,19 @@ void greth_halt(struct udevice *dev)
 	/* reset rx/tx descriptors */
 	if (greth->rxbd_base) {
 		for (i = 0; i < GRETH_RXBD_CNT; i++) {
-			greth->rxbd_base[i].stat =
-			    (i >= (GRETH_RXBD_CNT - 1)) ? GRETH_BD_WR : 0;
+			greth->rxbd_base[i].stat = fix_endian(
+			    (i >= (GRETH_RXBD_CNT - 1)) ? GRETH_BD_WR : 0);
 		}
 	}
 
 	if (greth->txbd_base) {
 		for (i = 0; i < GRETH_TXBD_CNT; i++) {
-			greth->txbd_base[i].stat =
-			    (i >= (GRETH_TXBD_CNT - 1)) ? GRETH_BD_WR : 0;
+			greth->txbd_base[i].stat = fix_endian(
+			    (i >= (GRETH_TXBD_CNT - 1)) ? GRETH_BD_WR : 0);
 		}
 	}
 }
+
 
 int greth_send(struct udevice *dev, void *eth_data, int data_length)
 {
@@ -411,19 +418,59 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 
 
 	debug("greth_send\n");
+#ifdef DEBUG
+	debug("packet (%d):\n", data_length);
+	unsigned char *p = eth_data;
+	int i=0;
+	while(p < (eth_data+data_length))
+	{
+		debug("%02X ", *p++);
+		if(++i == 16)
+		{
+			debug("\n");
+			i = 0;
+		}
+	}
+	debug("\n");
+#endif
 
+#ifdef DEBUG
+	debug("packet after conversion (%d):\n", data_length);
+	p = eth_data;
+	i=0;
+	while(p < (eth_data+data_length))
+	{
+		debug("%02X ", *p++);
+		if(++i == 16)
+		{
+			debug("\n");
+			i = 0;
+		}
+	}
+	debug("\n");
+#endif
+#ifndef CONFIG_MPW7705
 	/* send data, wait for data to be sent, then return */
 	if (((unsigned int)eth_data & (GRETH_BUF_ALIGN - 1))
 	    && !greth->gbit_mac) {
 		/* data not aligned as needed by GRETH 10/100, solve this by allocating 4 byte aligned buffer
 		 * and copy data to before giving it to GRETH.
 		 */
+#endif		
 		if (!greth->txbuf) {
-			greth->txbuf = malloc(GRETH_RXBUF_SIZE);
+			greth->txbuf = malloc(GRETH_RXBUF_EFF_SIZE);
 		}
 
 		txbuf = greth->txbuf;
 
+#ifdef CONFIG_MPW7705
+		// HW bug? swap everything
+		int j = 0;
+		u32* data = (u32*) eth_data;
+		u32* outdata = (u32*) txbuf;
+		for(j = 0; j <= ((data_length/sizeof(u32))+1); j++)
+			*outdata++ = fix_endian(*data++);
+#else
 		/* copy data info buffer */
 		memcpy((char *)txbuf, (char *)eth_data, data_length);
 
@@ -431,12 +478,13 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	} else {
 		txbuf = (void *)eth_data;
 	}
+#endif		
 	/* get descriptor to use, only 1 supported... hehe easy */
 	txbd = greth->txbd_base;
 
 	/* setup descriptor to wrap around to it self */
-	txbd->addr = (unsigned int)txbuf;
-	txbd->stat = GRETH_BD_EN | GRETH_BD_WR | data_length;
+	txbd->addr = fix_endian((unsigned int)txbuf);
+	txbd->stat = fix_endian(GRETH_BD_EN | GRETH_BD_WR | data_length);
 
 	/* Remind Core which descriptor to use when sending */
 
@@ -449,7 +497,7 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	timeout = GRETH_SEND_TIMEOUT_MS;
 
 	/* Wait for data to be sent */
-	while ((status = GRETH_REGLOAD(&txbd->stat)) & GRETH_BD_EN) {
+	while ((status = fix_endian(GRETH_REGLOAD(&txbd->stat))) & GRETH_BD_EN) {
 		if (get_timer(start) > timeout) {
 			debug("greth_send: hangs on status wait, Stat: %x\n", GRETH_REGLOAD(&regs->status));
 			return -2;	/* Fail */
@@ -501,7 +549,7 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 		rxbd = greth->rxbd_curr;
 
 		/* get status of next received packet */
-		status = GRETH_REGLOAD(&rxbd->stat);
+		status = fix_endian(GRETH_REGLOAD(&rxbd->stat));
 
 		bad = 0;
 
@@ -538,13 +586,13 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			/* print all rx descriptors */
 			for (i = 0; i < GRETH_RXBD_CNT; i++) {
 				printf("[%d]: Stat=0x%lx, Addr=0x%lx\n", i,
-				       (long)GRETH_REGLOAD(&greth->rxbd_base[i].stat),
-				       (long)GRETH_REGLOAD(&greth->rxbd_base[i].addr));
+				       (unsigned long) fix_endian((long)GRETH_REGLOAD(&greth->rxbd_base[i].stat)),
+				       (unsigned long) fix_endian((long)GRETH_REGLOAD(&greth->rxbd_base[i].addr)));
 			}
 		} else {
 			/* Process the incoming packet. */
 			len = status & GRETH_BD_LEN;
-			d = (char *)rxbd->addr;
+			d = (char *)fix_endian(rxbd->addr);
 
 			debug
 			    ("greth_recv: new packet, length: %d. data: %x %x %x %x %x %x %x %x\n",
@@ -554,6 +602,16 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			/* flush all data cache to make sure we're not reading old packet data */
 			//sparc_dcache_flush_all();
 
+#ifdef CONFIG_MPW7705
+			// HW bug? swap everything
+			int j = 0;
+			u32* data = (u32*) d;
+			for(j = 0; j <= ((len/sizeof(u32))+1); j++)
+			{
+				*data = fix_endian(*data);
+				data++;
+			}
+#endif
 			/* pass packet on to network subsystem */
 			net_process_received_packet((void *)d, len);
 
@@ -565,9 +623,9 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 
 		/* reenable descriptor to receive more packet with this descriptor, wrap around if needed */
 		rxbd->stat =
-		    GRETH_BD_EN |
+		    fix_endian(GRETH_BD_EN |
 		    (((unsigned int)greth->rxbd_curr >=
-		      (unsigned int)greth->rxbd_max) ? GRETH_BD_WR : 0);
+		      (unsigned int)greth->rxbd_max) ? GRETH_BD_WR : 0));
 		enable = 1;
 
 		/* increase index */
@@ -592,9 +650,9 @@ int greth_set_hwaddr(struct udevice *dev)
 	struct eth_pdata *pdata = dev_get_platdata(dev);
 	uchar *mac = pdata->enetaddr;
 
-	greth->regs->esa_msb = (mac[0] << 8) | mac[1];
-	greth->regs->esa_lsb =
-	    (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5];
+	greth->regs->esa_msb = ((mac[0] << 8) | mac[1]);
+	greth->regs->esa_lsb = (
+	    (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5]);
 
 	debug("GRETH: New MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 	       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -602,110 +660,8 @@ int greth_set_hwaddr(struct udevice *dev)
 	return 0;
 }
 
-//int greth_initialize(bd_t * bis)
-//{
-//	greth_priv *greth;
-//	ambapp_apbdev apbdev;
-//	struct eth_device *dev;
-//	int i;
-//	char *addr_str, *end;
-//	unsigned char addr[6];
-//
-//	debug("Scanning for GRETH\n");
-//
-//	/* Find Device & IRQ via AMBA Plug&Play information */
-//	if (ambapp_apb_first(VENDOR_GAISLER, GAISLER_ETHMAC, &apbdev) != 1) {
-//		return -1;	/* GRETH not found */
-//	}
-//
-//	greth = (greth_priv *) malloc(sizeof(greth_priv));
-//	dev = (struct eth_device *)malloc(sizeof(struct eth_device));
-//	memset(dev, 0, sizeof(struct eth_device));
-//	memset(greth, 0, sizeof(greth_priv));
-//
-//	greth->regs = (greth_regs *) apbdev.address;
-//	greth->irq = apbdev.irq;
-//	debug("Found GRETH at %p, irq %d\n", greth->regs, greth->irq);
-//	dev->priv = (void *)greth;
-//	dev->iobase = (unsigned int)greth->regs;
-//	dev->init = greth_init;
-//	dev->halt = greth_halt;
-//	dev->send = greth_send;
-//	dev->recv = greth_recv;
-//	greth->dev = dev;
-//
-//	/* Reset Core */
-//	GRETH_REGSAVE(&greth->regs->control, GRETH_RESET);
-//
-//	/* Wait for core to finish reset cycle */
-//	while (GRETH_REGLOAD(&greth->regs->control) & GRETH_RESET) ;
-//
-//	/* Get the phy address which assumed to have been set
-//	   correctly with the reset value in hardware */
-//	greth->phyaddr = (GRETH_REGLOAD(&greth->regs->mdio) >> 11) & 0x1F;
-//
-//	/* Check if mac is gigabit capable */
-//	greth->gbit_mac = (GRETH_REGLOAD(&greth->regs->control) >> 27) & 1;
-//
-//	/* Make descriptor string */
-//	if (greth->gbit_mac) {
-//		sprintf(dev->name, "GRETH_10/100/GB");
-//	} else {
-//		sprintf(dev->name, "GRETH_10/100");
-//	}
-//
-//	/* initiate PHY, select speed/duplex depending on connected PHY */
-//	if (greth_init_phy(greth, bis)) {
-//		/* Failed to init PHY (timedout) */
-//		debug("GRETH[%p]: Failed to init PHY\n", greth->regs);
-//		return -1;
-//	}
-//
-//	/* Register Device to EtherNet subsystem  */
-//	eth_register(dev);
-//
-//	/* Get MAC address */
-//	if ((addr_str = getenv("ethaddr")) != NULL) {
-//		for (i = 0; i < 6; i++) {
-//			addr[i] =
-//			    addr_str ? simple_strtoul(addr_str, &end, 16) : 0;
-//			if (addr_str) {
-//				addr_str = (*end) ? end + 1 : end;
-//			}
-//		}
-//	} else {
-//		/* HW Address not found in environment, Set default HW address */
-//		addr[0] = GRETH_HWADDR_0;	/* MSB */
-//		addr[1] = GRETH_HWADDR_1;
-//		addr[2] = GRETH_HWADDR_2;
-//		addr[3] = GRETH_HWADDR_3;
-//		addr[4] = GRETH_HWADDR_4;
-//		addr[5] = GRETH_HWADDR_5;	/* LSB */
-//	}
-//
-//	/* set and remember MAC address */
-//	greth_set_hwaddr(greth, addr);
-//
-//	debug("GRETH[%p]: Initialized successfully\n", greth->regs);
-//	return 0;
-//}
-
-
 static int greth_probe(struct udevice *dev)
 {
-
-	// tmp - enable everything 
-
-    writel(0xff, 0x3C060000 + 0x420);
-    writel(0xff, 0x3C061000 + 0x420);
-    writel(0xff, 0x3C062000 + 0x420);
-    writel(0xff, 0x3C063000 + 0x420);
-    writel(0xff, 0x3C064000 + 0x420);
-    writel(0xff, 0x3C065000 + 0x420);
-    writel(0xff, 0x3C066000 + 0x420);
-    writel(0xff, 0x3C067000 + 0x420);
- 
-
 	//struct eth_pdata *pdata = dev_get_platdata(dev);
 	greth_priv *greth = dev_get_priv(dev);
  
@@ -729,26 +685,27 @@ static int greth_probe(struct udevice *dev)
 		return -1;
 	}
 
-	debug("GRETH[%p]: Status after reset: 0x%x\n", greth->regs, GRETH_REGLOAD(&greth->regs->status));
-	// reset status
- 	GRETH_REGSAVE(&greth->regs->status, 0xffffffff);
-	debug("GRETH[%p]: Status: 0x%x\n", greth->regs, GRETH_REGLOAD(&greth->regs->status));
- 
 	debug("GRETH[%p]: Initialized successfully\n", greth->regs);
 
 	return 0;
-
 }
-
-///////////////////
-
 
 
 static int greth_remove(struct udevice *dev)
 {
-        //struct greth_priv *priv = dev_get_priv(dev);
+	greth_priv *priv = dev_get_priv(dev);
 
-        return 0;
+	if(priv->rxbuf_base)
+	{
+		free(priv->rxbuf_base);
+		priv->rxbuf_base = 0;
+	}
+	if(priv->txbuf)
+	{
+		free(priv->txbuf);
+		priv->txbuf = 0;
+	}
+	return 0;
 }
 
 
@@ -759,11 +716,18 @@ static int greth_ofdata_to_platdata(struct udevice *dev)
 		const char *mac;
 		int len;
 
-        priv->regs = devfdt_get_addr(dev);
+        priv->regs = (greth_regs*) devfdt_get_addr(dev);
 
 		mac = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "mac-address", &len);
 		if (mac && is_valid_ethaddr((u8 *)mac))
-			memcpy(pdata->enetaddr , mac , 6);
+		{
+			pdata->enetaddr[0] = mac[0];
+			pdata->enetaddr[1] = mac[1];
+			pdata->enetaddr[2] = mac[2];
+			pdata->enetaddr[3] = mac[3];
+			pdata->enetaddr[4] = mac[4];
+			pdata->enetaddr[5] = mac[5];
+		}
 
 //        pdata->phy_interface = -1;
 //        phy_mode = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "phy-mode",

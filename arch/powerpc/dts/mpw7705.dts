@@ -92,7 +92,7 @@
 		    u-boot,dm-pre-reloc;
 
 		    spi_flash@0 {
-			    compatible = "st,m25w32", "spi-flash";
+			    compatible = "st,m25p32", "spi-flash";
 			    reg = <0>;
 			    u-boot,dm-pre-reloc;
 		    };
@@ -316,7 +316,8 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>;
 		};
-/*
+
+/*		
 		greth1: greth1@0x3C051000 {
 			compatible = "rc-module,greth";
             reg = <0x3C051000 0x1000>;			
@@ -324,8 +325,6 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_greth1_1_default>, <&pinctrl_greth1_2_default>, <&pinctrl_greth1_3_default>, <&pinctrl_greth1_4_default>;
 		};
-*/
-
+*/	
 	};
-	
 };
