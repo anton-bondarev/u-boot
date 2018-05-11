@@ -97,4 +97,6 @@
 /* todo - count by freq values */
 #define TIMER_TICKS_PER_US  800
 
+#define CONFIG_USB_MUSB_PIO_ONLY
+
 #endif /* __MPW7705_H */

@@ -18,7 +18,7 @@
 
 	aliases {
 		spi0 = &spi0;
-		mmc1 = &mmc1;
+		mmc0 = &mmc0;
 	} ; 
 
 	lsif0 {
@@ -299,7 +299,7 @@
 		};
 
 
-		mmc1: mmc1@0x3C06A000 {
+		mmc0: mmc0@0x3C06A000 {
 			compatible = "rc-module,mmc-0.2";
 			reg = <0x3C06A000 0x1000>;
 			u-boot,dm-pre-reloc;
@@ -326,5 +326,12 @@
 			pinctrl-0 = <&pinctrl_greth1_1_default>, <&pinctrl_greth1_2_default>, <&pinctrl_greth1_3_default>, <&pinctrl_greth1_4_default>;
 		};
 */	
+        usb: musb@0x3C052000 {
+                compatible = "rc-module,musbmhdrc";
+                reg = <0x3C052000 0x1000>,
+                      <0x3C05e000 0x1000>;
+                reg-names = "mc", "control";
+        };
+
 	};
 };

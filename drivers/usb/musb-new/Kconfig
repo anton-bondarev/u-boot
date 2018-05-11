@@ -32,6 +32,12 @@ config USB_MUSB_PIC32
 	  Say y to enable PIC32 USB DRC controller support
 	  if it is available on your Microchip PIC32 platform.
 
+config USB_MUSB_MODULE
+	bool "Enable MPW7705 MUSB controller"
+	depends on DM_USB
+	help
+	  Say y to enable MPW7705 USB controller support
+
 config USB_MUSB_SUNXI
 	bool "Enable sunxi OTG / DRC USB controller"
 	depends on ARCH_SUNXI
