@@ -541,6 +541,10 @@ config SYS_ALT_MEMTEST
 	  Use a more complete alternative memory test.
 
 endif
+config CMD_MEMMAP
+	bool "memmap"
+	help
+	  Phys memory mapping.
 
 config CMD_MX_CYCLIC
 	bool "mdc, mwc"

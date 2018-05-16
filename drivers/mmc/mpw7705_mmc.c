@@ -441,10 +441,10 @@ int mpw7705_mmc_bind(struct udevice *dev)
 	return mmc_bind(dev, & pdata->mmc, & pdata->cfg);
 }
 
-static int mpw7705_dm_mmc_set_ios(struct udevice *dev)
+static int mpw7705_dm_mmc_set_ios(struct udevice * dev)
 {
-	debug(">mpw7705_dm_mmc_set_ios\n");
-	
+	struct mmc * mmc = mmc_get_mmc_dev(dev);
+	debug(">>mpw7705_dm_mmc_set_ios: clock=%d, bus_width=%d\n", mmc->clock, mmc->bus_width);
 	return 0;
 }
 
@@ -581,16 +581,20 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 				delay_loop(100000);
 			}
 			//!!! cannot yet
-			/*
-			if ( res ) {								
+			if ( res ) {
+/*				
+				delay_loop(1000000);
 				u8 buf[512];
 				PREP_BUF(buf);
 				res = buf2axi(0, (uint32_t) buf, len);
+				debug(">>>BUF: res=%d\n", res);
+				print_buf(buf, len);
+*/
+				uint8_t buf[8] = { 0x02, 0x35, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00 };
 				print_buf(buf, len);
 				if ( res )
 					memcpy(data->dest, buf, len);
 			}
-			*/
 		}
 		break;
 
@@ -613,21 +617,29 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 				delay_loop(100000);
 			}
 			//!!! cannot yet
-			/*
-			if ( res ) {								
+			if ( res ) {					
+/*			
+				delay_loop(1000000);
 				u8 buf[512];
 				PREP_BUF(buf);
 				res = buf2axi(0, (uint32_t) buf, len);
 				debug(">>>BUF: res=%d\n", res);
+*/				
+				uint8_t buf[64] = { 0x80, 0x00, 0x00, 0x00,   0x02, 0x00, 0x00, 0x00,   0x03, 0x03, 0x90, 0x00,   0x08, 0x05, 0x00, 0x00,  
+														0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,    
+														0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,    
+														0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00 };
 				print_buf(buf, len);
 				if ( res )
 					memcpy(data->dest, buf, data->blocks * data->blocksize);
 			}
-			*/
 		}
 		break;
 		
 	default:
+#ifdef DEBUG	
+		((void (*) (void)) 0xfffc0178)();
+#endif		
 		res = proc_cmd(SDIO_CTRL_NODATA(cmd->cmdidx, resp, crc, idx), cmd->cmdarg);
 		break;
 	}
