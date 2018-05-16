@@ -104,6 +104,8 @@ static int pl061_probe(struct udevice *dev)
 	struct pl061_platdata *plat = dev_get_platdata(dev);
 
 	struct pl061_regs *const regs = plat->regs;
+	uc_priv->gpio_count = plat->gpio_count;
+
 	if( (readb(&regs->pid0) == 0x61) && 
 		(readb(&regs->pid1) == 0x10) && 
 		(readb(&regs->pid2) == 0x04) && 
@@ -122,6 +124,7 @@ static int pl061_probe(struct udevice *dev)
 		readb(&regs->cid3)			
 	);
 
+
 	return -EINVAL;
 }
 
@@ -132,7 +135,8 @@ static int pl061_ofdata_to_platdata(struct udevice *dev)
 	plat->regs = map_physmem(devfdt_get_addr(dev),
 				 sizeof(struct pl061_regs),
 				 MAP_NOCACHE);
-//	plat->gpio_count = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),
+	plat->gpio_count = 8;
+	//	plat->gpio_count = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),
 //		"altr,gpio-bank-width", 32);
 //	plat->bank_name = fdt_getprop(gd->fdt_blob, dev_of_offset(dev),
 //		"gpio-bank-name", NULL);

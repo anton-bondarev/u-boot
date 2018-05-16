@@ -1225,6 +1225,8 @@ struct task_struct;
 void start_thread(struct pt_regs *regs, unsigned long nip, unsigned long sp);
 void release_thread(struct task_struct *);
 
+#define cpu_relax()	barrier()
+
 /*
  * Create a new kernel thread.
  */

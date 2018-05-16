@@ -7,8 +7,6 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-//#define DEBUG 1
-
 #include <common.h>
 #include <dm.h>
 #include <malloc.h>
@@ -35,6 +33,7 @@
 #define SSP_ITIP	0x084
 #define SSP_ITOP	0x088
 #define SSP_TDR		0x08C
+#define SSP_SPI_IRQ_MASK	0x0d8
 
 #define SSP_PID0	0xFE0
 #define SSP_PID1	0xFE4
@@ -123,7 +122,7 @@ static int pl022_spi_claim_bus(struct udevice *dev)
 {
 	debug("pl022_spi_claim_bus\n");
 
-	struct udevice *bus = dev->parent;
+	struct udevice *bus = dev_get_parent(dev);
 	struct pl022_spi_priv *priv = dev_get_priv(bus);
 	void *regs = priv->regs;
 
@@ -137,7 +136,7 @@ static int pl022_spi_claim_bus(struct udevice *dev)
 static int pl022_spi_release_bus(struct udevice *dev)
 {
 	debug("pl022_spi_release_bus\n");
-	struct udevice *bus = dev->parent;
+	struct udevice *bus = dev_get_parent(dev);
 	struct pl022_spi_priv *priv = dev_get_priv(bus);
 	void *regs = priv->regs;
 
@@ -146,10 +145,6 @@ static int pl022_spi_release_bus(struct udevice *dev)
 
 	return 0;
 }
-
-// ASTRO TODO: move to .h file
-//void spi_cs_activate(struct spi_slave *slave);
-//void spi_cs_deactivate(struct spi_slave *slave);
 
 static void spi_cs_activate(struct udevice *dev, uint cs)
 {
@@ -178,19 +173,15 @@ static void spi_cs_deactivate(struct udevice *dev, uint cs)
 static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		const void *dout, void *din, unsigned long flags)
 {
-	debug("pl022_spi_xfer %d, %d, 0x%x\n", bitlen, (int)flags, (int)dout);
 
-	struct udevice *bus = dev->parent;
+	struct udevice *bus = dev_get_parent(dev);
 	struct pl022_spi_priv *priv = dev_get_priv(bus);
-
 	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);	
 
 	u8 *regs = priv->regs;
 
-	//struct spi_slave slave;
+	debug("pl022_spi_xfer %d, %d, 0x%x, 0x%x, 0x%x\n", bitlen, (int)flags, (int)dout, (int) regs, (int)slave_plat);
 
-	// ASTRO TODO: choose cs
-	// slave.cs = 0;
 
 	u32		len_tx = 0, len_rx = 0, len;
 	u32		ret = 0;
@@ -209,7 +200,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	len = bitlen / 8;
 
 	if (flags & SPI_XFER_BEGIN)
-		spi_cs_activate(dev, slave_plat->cs);
+		spi_cs_activate(dev, 0);//slave_plat->cs);
 
 	debug("alive. len_tx = %d, len = %d\n", len_tx, len);
 
@@ -255,7 +246,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 out:
 	if (flags & SPI_XFER_END)
-		spi_cs_deactivate(dev, slave_plat->cs);
+		spi_cs_deactivate(dev, 0);//slave_plat->cs);
 
 	debug("Exit from pl022_spi_xfer!\n");
 
@@ -391,6 +382,9 @@ static int pl022_spi_probe(struct udevice *bus)
             | (0b0 << SSP_CR1_LBM_n);
 
 	writew(cr1, priv->regs + SSP_CR1);            
+
+	// disable GSPI DMA
+	//writel(0, priv->regs + SSP_SPI_IRQ_MASK);   
 
 	return 0;
 }
