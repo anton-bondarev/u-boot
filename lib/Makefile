@@ -21,7 +21,6 @@ obj-$(CONFIG_OPTEE) += optee/
 obj-$(CONFIG_AES) += aes.o
 obj-y += charset.o
 obj-$(CONFIG_USB_TTY) += circbuf.o
-obj-y += crc7.o
 obj-y += crc8.o
 obj-y += crc16.o
 obj-$(CONFIG_ERRNO_STR) += errno_str.o
@@ -44,6 +43,7 @@ obj-$(CONFIG_RBTREE)	+= rbtree.o
 obj-$(CONFIG_BITREVERSE) += bitrev.o
 obj-y += list_sort.o
 endif
+obj-y += crc7.o
 
 obj-$(CONFIG_RSA) += rsa/
 obj-$(CONFIG_SHA1) += sha1.o

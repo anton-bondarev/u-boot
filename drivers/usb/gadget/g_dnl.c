@@ -23,6 +23,10 @@
 #include "gadget_chips.h"
 #include "composite.c"
 
+#ifdef CONFIG_MPW7705
+#include <asm/io.h>
+#endif
+
 /*
  * One needs to define the following:
  * CONFIG_USB_GADGET_VENDOR_NUM

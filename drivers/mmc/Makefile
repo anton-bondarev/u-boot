@@ -41,6 +41,7 @@ obj-$(CONFIG_SH_MMCIF) += sh_mmcif.o
 obj-$(CONFIG_SH_SDHI) += sh_sdhi.o
 obj-$(CONFIG_STM32_SDMMC2) += stm32_sdmmc2.o
 obj-$(CONFIG_MMC_MPW7705) += mpw7705_mmc.o
+obj-$(CONFIG_MMC_MPW7705_SPI) += mpw7705_mmc_spi.o
 
 # SDHCI
 obj-$(CONFIG_MMC_SDHCI)			+= sdhci.o
