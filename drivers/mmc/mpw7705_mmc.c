@@ -14,6 +14,12 @@
 
 #define SDIO_TIMEOUT        2000000 
 
+#ifndef DEBUG 
+	// TODO: find a real place where we need this delay...
+	#undef  debug
+	#define debug(...)  delay_loop(100)
+#endif	
+
 DECLARE_GLOBAL_DATA_PTR;
 
 struct mpw7705_mmc_platdata {
@@ -443,7 +449,9 @@ int mpw7705_mmc_bind(struct udevice *dev)
 
 static int mpw7705_dm_mmc_set_ios(struct udevice * dev)
 {
+#ifdef DEBUG	
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
+#endif	
 	debug(">>mpw7705_dm_mmc_set_ios: clock=%d, bus_width=%d\n", mmc->clock, mmc->bus_width);
 	return 0;
 }
