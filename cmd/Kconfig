@@ -498,6 +498,11 @@ config CMD_MEMTEST
 	help
 	  Simple RAM read/write test.
 
+config CMD_MEMMAP
+	bool "memmap"
+	help
+	  Phys memory mapping.
+
 config CMD_MX_CYCLIC
 	bool "mdc, mwc"
 	help
