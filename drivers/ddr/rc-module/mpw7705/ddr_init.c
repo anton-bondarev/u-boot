@@ -384,13 +384,13 @@ static uint32_t invalidate_tlb_entry (void)
     return res;
 };
 
-static void write_tlb_entry_1stGB(void)
+static void write_tlb_entry_1st(void)
 {
     asm volatile
     (
         "addis r3, r0, 0x0000 \n\t"  // 0x0000
         "addis r4, r0, 0x4000 \n\t"  // 0x0000
-        "ori   r4, r4, 0x0BF0 \n\t"  // 0x0BF0  set 0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F (4K, 16K, 64K, 1M, 16M, 256M, 1GB)
+        "ori   r4, r4, 0x09F0 \n\t"  // 0x0BF0  set 0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F (4K, 16K, 64K, 1M, 16M, 256M, 1GB)
         "tlbwe r4, r3, 0      \n\t"
         
         "addis r4, r0, 0x0000 \n\t"  // 0x0000
@@ -406,144 +406,6 @@ static void write_tlb_entry_1stGB(void)
         :::
     );  
 };
-
-/*
-static void write_tlb_entry_2ndGB(void)
-{
-    asm volatile
-    (
-        "addis r3, r0, 0x0000 \n\t"  // 0x0000
-        "addis r4, r0, 0x4000 \n\t"  // 0x0000
-        "ori   r4, r4, 0x0BF0 \n\t"  // 0x0BF0  set 0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F (4K, 16K, 64K, 1M, 16M, 256M, 1GB)
-        "tlbwe r4, r3, 0      \n\t"
-        
-        "addis r4, r0, 0x4000 \n\t"  // 0x0000
-        "ori   r4, r4, 0x0000 \n\t"  // 0x0000
-        "tlbwe r4, r3, 1      \n\t"
-        
-        "addis r4, r0, 0x0003 \n\t"  // 0000
-        "ori   r4, r4, 0x043F \n\t"  // 023F
-        "tlbwe r4, r3, 2      \n\t"
-        
-        "isync \n\t"
-        "msync \n\t"
-        :::
-    );  
-};
-
-static void write_tlb_entry_3rdGB(void)
-{
-    asm volatile
-    (
-        "addis r3, r0, 0x0000 \n\t"  // 0x0000
-        "addis r4, r0, 0x4000 \n\t"  // 0x0000
-        "ori   r4, r4, 0x0BF0 \n\t"  // 0x0BF0  set 0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F (4K, 16K, 64K, 1M, 16M, 256M, 1GB)
-        "tlbwe r4, r3, 0      \n\t"
-        
-        "addis r4, r0, 0x8000 \n\t"  // 0x0000
-        "ori   r4, r4, 0x0000 \n\t"  // 0x0000
-        "tlbwe r4, r3, 1      \n\t"
-        
-        "addis r4, r0, 0x0003 \n\t"  // 0000
-        "ori   r4, r4, 0x043F \n\t"  // 023F
-        "tlbwe r4, r3, 2      \n\t"
-        
-        "isync \n\t"
-        "msync \n\t"
-        :::
-    );  
-};
-
-static void mem_check_1stGB(void)
-{
-    uint32_t EM_ptr_offset;
-    
-    invalidate_tlb_entry   ();
-    write_tlb_entry_1stGB  ();
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        *((uint32_t *) (EM_ptr_offset)) = 0x00000000;
-    }
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        *((uint32_t *) (EM_ptr_offset)) = EM_ptr_offset;
-    }
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        if (*((uint32_t *) (EM_ptr_offset)) != EM_ptr_offset)
-        {
-            *((uint32_t *) (0x00070000)) = 0xDEADBEEF;
-            *((uint32_t *) (0x00070004)) = EM_ptr_offset;
-			puts("mem_check_1stGB failed\n");
-            while (1);
-        }
-    }
-    *((uint32_t *) (0x00070000)) = 0x7A557A55;
-}
-
-static void mem_check_2ndGB(void)
-{
-    uint32_t EM_ptr_offset;
-    
-    invalidate_tlb_entry   ();
-    write_tlb_entry_2ndGB  ();
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        *((uint32_t *) (EM_ptr_offset)) = 0x00000000;
-    }
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        *((uint32_t *) (EM_ptr_offset)) = EM_ptr_offset + 0x40000000;
-    }
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        if (*((uint32_t *) (EM_ptr_offset)) != (EM_ptr_offset + 0x40000000))
-        {
-            *((uint32_t *) (0x00070010)) = 0xDEADBEEF;
-            *((uint32_t *) (0x00070014)) = EM_ptr_offset;
-			puts("mem_check_2ndGB failed\n");
-            while (1);
-        }
-    }
-    *((uint32_t *) (0x00070010)) = 0x7A557A55;
-}
-
-static void mem_check_3rdGB(void)
-{
-    uint32_t EM_ptr_offset;
-    
-    invalidate_tlb_entry   ();
-    write_tlb_entry_3rdGB  ();
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        *((uint32_t *) (EM_ptr_offset)) = 0x00000000;
-    }
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        *((uint32_t *) (EM_ptr_offset)) = EM_ptr_offset + 0x80000000;
-    }
-    
-    for (EM_ptr_offset = 0x40000000; EM_ptr_offset < 0x80000000; EM_ptr_offset += 4)
-    {
-        if (*((uint32_t *) (EM_ptr_offset)) != (EM_ptr_offset + 0x80000000))
-        {
-            *((uint32_t *) (0x00070020)) = 0xDEADBEEF;
-            *((uint32_t *) (0x00070024)) = EM_ptr_offset;
-			puts("mem_check_3rdGB failed\n");
-            while (1);
-        }
-    }
-    *((uint32_t *) (0x00070020)) = 0x7A557A55;
-}
-*/
 
 static void init_ppc(void)
 {
@@ -585,8 +447,8 @@ static void TLB_interconnect_init(void)
 void ddr_init(void)
 {
 	_ddr_init();
-    TLB_interconnect_init();
+	TLB_interconnect_init();
 
 	invalidate_tlb_entry();
-    write_tlb_entry_1stGB();
+	write_tlb_entry_1st();
 }

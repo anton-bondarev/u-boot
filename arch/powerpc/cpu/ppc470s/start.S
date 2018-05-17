@@ -93,4 +93,29 @@ dcache_status:
 trap_init:
 // all traps  initiated by romboot
     blr
- 
+
+		
+.global _invalidate_tlb_entry
+_invalidate_tlb_entry:
+	tlbsx. r4, r0, r3      // [r3] - EA, [r4] - Way, Index
+	bne    ite_end         // branch if not found
+	oris   r4, r4, 0x8000  // r4[0]=1, r4[4]=0
+	tlbwe  r3, r4, 0       // [r3] - EA[0:19], V[20], [r4]- Way[1:2], Index[8:15], index is NU
+ite_end:
+	or     r3, r4, r4      // return [r3]
+	
+	isync
+	msync
+	blr
+	
+.global _write_tlb_entry
+_write_tlb_entry:
+	addis r6, r0, 0x0000  // zero [r6]
+	tlbwe r3, r6, 0
+	tlbwe r4, r6, 1
+	tlbwe r5, r6, 2
+        
+	isync
+	msync
+	blr
+		
