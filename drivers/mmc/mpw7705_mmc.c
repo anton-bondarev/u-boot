@@ -15,7 +15,7 @@
 #define SDIO_TIMEOUT        2000000 
 
 #ifndef DEBUG 
-	// TODO: find a real place where we need this delay...
+	// ASTRO TODO: find a real place where we need this delay...
 	#undef  debug
 	#define debug(...)  delay_loop(100)
 #endif	
