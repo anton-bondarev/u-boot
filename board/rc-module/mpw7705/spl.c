@@ -2,28 +2,42 @@
 #include <spl.h>
 #include <spi.h>
 #include <spi_flash.h>
+#include <asm/io.h>
 
 DECLARE_GLOBAL_DATA_PTR;
-
-static gd_t global_data;
 
 void ddr_init (void);
 int testdramfromto(uint *pstart, uint *pend);
 
 #define CRGCPU__        0x38006000
-void failsafe()
+
+static void failsafe(void)
 {
-	*((volatile uint32_t*)(CRGCPU__ + 0xc)) = 0x1ACCE551;
-	*((volatile uint32_t*)(CRGCPU__ + 0x9)) = 0x02010050; // 500Mhz
-	*((volatile uint32_t*)(CRGCPU__ + 0x4)) = 0x1; 
+	writel(0x1ACCE551, CRGCPU__ + 0xc);
+	writel(0x02010050, CRGCPU__ + 0x9); // 500Mhz
+	writel(0x1, CRGCPU__ + 0x4);
 }
+
+static void patch_da_regs(void)
+{
+    writel(0x1f, 0x3c067000 + 0x420);
+    writel(0xff, 0x3C060000 + 0x420);
+    writel(0xff, 0x3C061000 + 0x420);
+    writel(0xff, 0x3C062000 + 0x420);
+    writel(0xff, 0x3C063000 + 0x420);
+    writel(0xff, 0x3C064000 + 0x420);
+    writel(0xff, 0x3C065000 + 0x420);
+    writel(0xff, 0x3C066000 + 0x420);
+    writel(0xff, 0x3C067000 + 0x420);
+}
+
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
 
 void board_init_f(ulong dummy)
 {
 	//failsafe();
-
+	patch_da_regs();
 	/* init dram */
 	ddr_init();
 
