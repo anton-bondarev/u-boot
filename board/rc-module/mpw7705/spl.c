@@ -22,7 +22,7 @@ void failsafe()
 
 void board_init_f(ulong dummy)
 {
-	failsafe();
+	//failsafe();
 
 	/* init dram */
 	ddr_init();
