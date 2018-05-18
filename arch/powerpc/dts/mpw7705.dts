@@ -309,6 +309,7 @@
 		mmc0: mmc0@0x3C06A000 {
 			compatible = "rc-module,mmc-0.2";
 			reg = <0x3C06A000 0x1000>;
+			carddetect-gpio = <&gpio1 1 0>;
 			u-boot,dm-pre-reloc;
 			status = "okay";
 			pinctrl-names = "default";
