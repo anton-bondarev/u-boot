@@ -121,9 +121,11 @@ static int g_dnl_do_config(struct usb_configuration *c)
 	const char *s = c->cdev->driver->name;
 	struct g_dnl_bind_callback *callback = g_dnl_bind_callback_first();
 
+#ifndef CONFIG_MPW7705
+	// memory fail?
 	debug("%s: configuration: 0x%p composite dev: 0x%p\n",
 	      __func__, c, c->cdev);
-
+#endif
 	for (; callback != g_dnl_bind_callback_end(); callback++)
 		if (!strcmp(s, callback->usb_function_name))
 			return callback->fptr(c);

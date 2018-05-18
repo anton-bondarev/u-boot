@@ -302,6 +302,20 @@ inline void clear_bit(int nr, volatile void *addr)
 	mask = 1 << (nr & 0x1f);
 	*a &= ~mask;
 }
+
+inline int test_and_clear_bit(int nr, volatile void *addr)
+{
+	int	mask;
+	int result;
+	unsigned int *a = (unsigned int *) addr;
+
+	a += nr >> 5;
+	mask = 1 << (nr & 0x1f);
+	result = *a &= mask;
+	*a &= ~mask;	
+	return result;
+}
+
 #endif
 struct fsg_dev;
 struct fsg_common;
@@ -569,6 +583,7 @@ static int fsg_setup(struct usb_function *f,
 		/* Raise an exception to stop the current operation
 		 * and reinitialize our state. */
 		DBG(fsg, "bulk reset request\n");
+		debug("bulk reset request\n");
 		raise_exception(fsg->common, FSG_STATE_RESET);
 		return DELAYED_STATUS;
 
@@ -2249,7 +2264,7 @@ reset:
 		goto reset;
 	fsg->bulk_out_enabled = 1;
 	common->bulk_out_maxpacket =
-				le16_to_cpu(get_unaligned(&d->wMaxPacketSize));
+				 le16_to_cpu(get_unaligned(&d->wMaxPacketSize));			
 	clear_bit(IGNORE_BULK_OUT, &fsg->atomic_bitflags);
 
 	/* Allocate the requests */

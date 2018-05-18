@@ -9,7 +9,7 @@
  * Based on the PIC32 "glue layer" code.
  */
 
-#define DEBUG
+//#define DEBUG
 #include <common.h>
 #include <linux/usb/musb.h>
 #include <linux/io.h>
@@ -38,35 +38,10 @@ static void module_musb_disable(struct musb *musb)
 	/* no way to shut the controller */
 }
 
-#define PIC32_TX_EP_MASK	0x0f		/* EP0 + 7 Tx EPs */
-#define PIC32_RX_EP_MASK	0x0e		/* 7 Rx EPs */
-
-#define MUSB_SOFTRST		0x7f
-#define  MUSB_SOFTRST_NRST	BIT(0)
-#define  MUSB_SOFTRST_NRSTX	BIT(1)
-
-#define USBCRCON		0
-#define  USBCRCON_USBWKUPEN	BIT(0)  /* Enable Wakeup Interrupt */
-#define  USBCRCON_USBRIE	BIT(1)  /* Enable Remote resume Interrupt */
-#define  USBCRCON_USBIE		BIT(2)  /* Enable USB General interrupt */
-#define  USBCRCON_SENDMONEN	BIT(3)  /* Enable Session End VBUS monitoring */
-#define  USBCRCON_BSVALMONEN	BIT(4)  /* Enable B-Device VBUS monitoring */
-#define  USBCRCON_ASVALMONEN	BIT(5)  /* Enable A-Device VBUS monitoring */
-#define  USBCRCON_VBUSMONEN	BIT(6)  /* Enable VBUS monitoring */
-#define  USBCRCON_PHYIDEN	BIT(7)  /* PHY ID monitoring enable */
-#define  USBCRCON_USBIDVAL	BIT(8)  /* USB ID value */
-#define  USBCRCON_USBIDOVEN	BIT(9)  /* USB ID override enable */
-#define  USBCRCON_USBWK		BIT(24) /* USB Wakeup Status */
-#define  USBCRCON_USBRF		BIT(25) /* USB Resume Status */
-#define  USBCRCON_USBIF		BIT(26) /* USB General Interrupt Status */
-
-
 static irqreturn_t module_interrupt(int irq, void *hci)
 {
-	debug("Interrupt %d\n", irq);
-	struct musb  *musb = hci;
-	irqreturn_t ret = IRQ_NONE;
-	u32 epintr, usbintr;
+	struct musb		*musb = hci;
+	irqreturn_t		retval = IRQ_NONE;
 
 	/* ack usb core interrupts */
 	musb->int_usb = musb_readb(musb->mregs, MUSB_INTRUSB);
@@ -74,13 +49,12 @@ static irqreturn_t module_interrupt(int irq, void *hci)
 		musb_writeb(musb->mregs, MUSB_INTRUSB, musb->int_usb);
 
 	/* ack endpoint interrupts */
-	musb->int_rx = musb_readw(musb->mregs, MUSB_INTRRX) & PIC32_RX_EP_MASK;
-	if (musb->int_rx)
-		musb_writew(musb->mregs, MUSB_INTRRX, musb->int_rx);
-
-	musb->int_tx = musb_readw(musb->mregs, MUSB_INTRTX) & PIC32_TX_EP_MASK;
+	musb->int_tx = musb_readw(musb->mregs, MUSB_INTRTX);
 	if (musb->int_tx)
 		musb_writew(musb->mregs, MUSB_INTRTX, musb->int_tx);
+	musb->int_rx = musb_readw(musb->mregs, MUSB_INTRRX);
+	if (musb->int_rx)
+		musb_writew(musb->mregs, MUSB_INTRRX, musb->int_rx);
 
 	/* drop spurious RX and TX if device is disconnected */
 	if (musb->int_usb & MUSB_INTR_DISCONNECT) {
@@ -88,11 +62,15 @@ static irqreturn_t module_interrupt(int irq, void *hci)
 		musb->int_rx = 0;
 	}
 
-	if (musb->int_tx || musb->int_rx || musb->int_usb)
-		ret = musb_interrupt(musb);
+	if (musb->int_usb || musb->int_tx || musb->int_rx)
+		retval |= musb_interrupt(musb);
 
-	return ret;
+	return retval;
 }
+
+#define MUSB_SOFTRST		0x7f
+#define  MUSB_SOFTRST_NRST	BIT(0)
+#define  MUSB_SOFTRST_NRSTX	BIT(1)
 
 
 #define MODULE_REGLOAD(addr )readl(addr)
@@ -145,8 +123,9 @@ typedef enum
     utmi_reset_phy_bit_num = 1,
     utmi_reset_musb_bit_num = 2,
     utmi_suspendm_en_bit_num = 3
-}usb0_reset_reg_bit_numbers;
+} usb0_reset_reg_bit_numbers;
 
+void usleep(uint32_t usec);
 
 static int module_musb_reset(struct musb *musb)
 {
@@ -186,8 +165,8 @@ static int module_musb_enable(struct musb *musb)
 	/* soft reset by NRSTx */
 	musb_writeb(musb->mregs, MUSB_SOFTRST, MUSB_SOFTRST_NRSTX);
 
-//	musb_ep_select(musb->mregs, 0);
-//	musb_writeb(musb->mregs, MUSB_FADDR, 0);
+	musb_ep_select(musb->mregs, 0);
+	musb_writeb(musb->mregs, MUSB_FADDR, 0);
 
 	/* set mode */
 	musb_platform_set_mode(musb, musb->board_mode);
@@ -232,15 +211,108 @@ static int module_musb_init(struct musb *musb)
 
 	musb->isr = module_interrupt;
 
-//	ctrl =  USBCRCON_USBIF | USBCRCON_USBRF |
-//		USBCRCON_USBWK | USBCRCON_USBIDOVEN |
-//		USBCRCON_PHYIDEN | USBCRCON_USBIE |
-//		USBCRCON_USBRIE | USBCRCON_USBWKUPEN |
-//		USBCRCON_VBUSMONEN;
-//	writel(ctrl, pdata->musb_ctrl + USBCRCON);
-
 	return 0;
 }
+/*
+static int fix_endian (int data_in){
+
+#ifdef CONFIG_MPW7705
+    int data_out = 0;
+    
+    data_out = data_in << 24 & 0xff000000;
+    data_out = data_out | (data_in << 8  & 0x00ff0000);
+    data_out = data_out | (data_in >> 8  & 0x0000ff00);
+    data_out = data_out | (data_in >> 24 & 0x000000ff);
+    
+    return data_out;
+#else
+	return data_in;
+#endif
+}
+*/
+
+// todo: speedup FIFO operations
+void musb_write_fifo(struct musb_hw_ep *hw_ep, u16 len, const u8 *src)
+{
+	struct musb *musb = hw_ep->musb;
+	void __iomem *fifo = hw_ep->fifo;
+
+	prefetch((u8 *)src);
+
+	debug("USB FIFO write %d\n\n", len);
+#if 0 //DEBUG
+	unsigned char *p = src;
+	int i=0;
+	while(p < (src+len))
+	{
+		debug("%02X ", *p++);
+		if(++i == 16)
+		{
+			debug("\n");
+			i = 0;
+		}
+	}
+	debug("\n");
+#endif	
+	writesb(fifo, src, len);
+	return;
+#if 0 
+	u32 val, rem = len % 4;
+	u32 nl = len/4; 
+
+	u32 *data = (u32 *) src;
+	while (nl--) {
+		*(volatile unsigned int *)fifo = fix_endian(*data);
+		data++;
+	}
+	if (rem) {
+		src += len & ~0x03;
+		writesb(fifo, src, rem);
+	}
+#endif	
+}
+
+void musb_read_fifo(struct musb_hw_ep *hw_ep, u16 len, u8 *dst)
+{
+	void __iomem *fifo = hw_ep->fifo;
+	u32 val, rem = len % 4;
+#ifdef DEBUG
+	u8* origdst = dst;
+#endif
+	debug("USB FIFO read %d\n\n", len);
+	readsb(fifo, dst, len);
+	return; 
+#if 0
+	u32 nl = len/4; 
+	
+	u32 *data = (u32 *) dst;
+	while (nl--) {
+		*data = fix_endian(*(volatile unsigned int *)fifo) ;
+		data++;
+	}
+	if (rem) {
+		dst += len & ~0x03;
+		readsb(fifo, dst, rem);
+	}
+#endif
+#if 0 // DEBUG
+	unsigned char *p = origdst;
+	int i=0;
+	while(p < (origdst+len))
+	{
+		debug("%02X ", *p++);
+		if(++i == 16)
+		{
+			debug("\n");
+			i = 0;
+		}
+	}
+	debug("\n");
+#endif	
+	
+
+}
+
 
 const struct musb_platform_ops module_musb_ops = {
 	.init		= module_musb_init,
@@ -249,27 +321,8 @@ const struct musb_platform_ops module_musb_ops = {
 	.enable		= module_musb_enable,
 };
 
-/* Module default FIFO config - fits in 8KB */
-static struct musb_fifo_cfg module_musb_fifo_config[] = {
-	{ .hw_ep_num = 1, .style = FIFO_TX, .maxpacket = 512, },
-	{ .hw_ep_num = 1, .style = FIFO_RX, .maxpacket = 512, },
-	{ .hw_ep_num = 2, .style = FIFO_TX, .maxpacket = 512, },
-	{ .hw_ep_num = 2, .style = FIFO_RX, .maxpacket = 512, },
-	{ .hw_ep_num = 3, .style = FIFO_TX, .maxpacket = 512, },
-	{ .hw_ep_num = 3, .style = FIFO_RX, .maxpacket = 512, },
-	{ .hw_ep_num = 4, .style = FIFO_TX, .maxpacket = 512, },
-	{ .hw_ep_num = 4, .style = FIFO_RX, .maxpacket = 512, },
-	{ .hw_ep_num = 5, .style = FIFO_TX, .maxpacket = 512, },
-	{ .hw_ep_num = 5, .style = FIFO_RX, .maxpacket = 512, },
-	{ .hw_ep_num = 6, .style = FIFO_TX, .maxpacket = 512, },
-	{ .hw_ep_num = 6, .style = FIFO_RX, .maxpacket = 512, },
-	{ .hw_ep_num = 7, .style = FIFO_TX, .maxpacket = 512, },
-	{ .hw_ep_num = 7, .style = FIFO_RX, .maxpacket = 512, },
-};
 
 static struct musb_hdrc_config module_musb_config = {
-	.fifo_cfg	= module_musb_fifo_config,
-	.fifo_cfg_size	= ARRAY_SIZE(module_musb_fifo_config),
 	.multipoint     = 1,
 	.dyn_fifo       = 1,
 	.num_eps        = 16,
@@ -278,7 +331,13 @@ static struct musb_hdrc_config module_musb_config = {
 
 /* MPW7705 has one MUSB controller which can be host or gadget */
 static struct musb_hdrc_platform_data module_musb_plat = {
-	.mode           = MUSB_HOST,
+#if defined(CONFIG_USB_MUSB_HOST)
+	.mode          = MUSB_HOST,
+#elif defined(CONFIG_USB_MUSB_GADGET)
+	.mode		= MUSB_PERIPHERAL,
+#else
+#error "Please define either CONFIG_USB_MUSB_HOST or CONFIG_USB_MUSB_GADGET"
+#endif
 	.config         = &module_musb_config,
 	.power          = 250,		/* 500mA */
 	.platform_ops	= &module_musb_ops,
@@ -336,7 +395,7 @@ static int musb_usb_probe(struct udevice *dev)
 
 	ret = musb_lowlevel_init(mdata);
 #else
-	module_musb_plat.mode = MUSB_PERIPHERAL;
+//	module_musb_plat.mode = MUSB_PERIPHERAL;
 	ret = musb_register(&module_musb_plat, &pdata->dev, mregs);
 #endif
 	if (ret == 0)
@@ -361,6 +420,10 @@ static const struct udevice_id module_musb_ids[] = {
 	{ }
 };
 
+struct dm_usb_ops musb_empy_ops = {
+
+};
+
 U_BOOT_DRIVER(usb_musb) = {
 	.name		= "module-musb",
 	.id		= UCLASS_USB,
@@ -369,6 +432,8 @@ U_BOOT_DRIVER(usb_musb) = {
 	.remove		= musb_usb_remove,
 #ifdef CONFIG_USB_MUSB_HOST
 	.ops		= &musb_usb_ops,
+#else
+	.ops 		= &musb_empy_ops,
 #endif
 	.platdata_auto_alloc_size = sizeof(struct usb_platdata),
 	.priv_auto_alloc_size = sizeof(struct module_musb_data),

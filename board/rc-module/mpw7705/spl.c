@@ -10,10 +10,20 @@ static gd_t global_data;
 void ddr_init (void);
 int testdramfromto(uint *pstart, uint *pend);
 
+#define CRGCPU__        0x38006000
+void failsafe()
+{
+	*((volatile uint32_t*)(CRGCPU__ + 0xc)) = 0x1ACCE551;
+	*((volatile uint32_t*)(CRGCPU__ + 0x9)) = 0x02010050; // 500Mhz
+	*((volatile uint32_t*)(CRGCPU__ + 0x4)) = 0x1; 
+}
+
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
 
 void board_init_f(ulong dummy)
 {
+	failsafe();
+
 	/* init dram */
 	ddr_init();
 
@@ -25,6 +35,7 @@ void board_init_f(ulong dummy)
 	preloader_console_init();
 
 	spl_set_bd();
+
 
 	board_init_r(NULL, 0);
 }

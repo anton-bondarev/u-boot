@@ -1,10 +1,13 @@
 #include <common.h>
 #include <mpw7705_baremetal.h>
+#include <usb.h>
+#include <dm.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
+typedef void (*voidcall)(void);
 
-void (*bootrom_enter_host_mode)() = BOOT_ROM_HOST_MODE;
+voidcall bootrom_enter_host_mode = (voidcall)BOOT_ROM_HOST_MODE;
 
 // ASTRO TODO
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
@@ -27,7 +30,8 @@ int dram_init(void)
 
 #define SPR_TBL_R           0x10C
 
-static uint32_t tcurrent(){
+static uint32_t tcurrent(void)
+{
   uint32_t value = 0;
 
   __asm volatile
@@ -41,11 +45,12 @@ static uint32_t tcurrent(){
   return value;
 }
 
-static uint32_t ucurrent(){
+static uint32_t ucurrent(void)
+{
   return (tcurrent()/TIMER_TICKS_PER_US);
 }
 
-static uint32_t mcurrent(){
+static uint32_t mcurrent(void){
   return (tcurrent()/(1000*TIMER_TICKS_PER_US));
 }
 
@@ -60,6 +65,21 @@ ulong get_timer(ulong base)
 	return mcurrent() - base;
 }
 
+#ifdef CONFIG_CMD_USB_MASS_STORAGE
+
+int board_usb_init(int index, enum usb_init_type init)
+{
+	if(init == USB_INIT_DEVICE)
+	{
+		struct udevice* dev;
+		debug("board_usb_init called\n");
+		int ret = uclass_get_device(UCLASS_USB, 0, &dev);
+		if(ret)
+			debug("unable to find USB device in FDT\n");
+	}
+}
+
+#endif
 
 #if defined(CONFIG_SYS_DRAM_TEST)
 
