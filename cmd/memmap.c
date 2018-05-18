@@ -60,7 +60,7 @@ static tlb_entr s_entr[1] = { { 0, 0, TLBS_ERR } };
 
 ////////////////////////////////////////////////////////////////
 
-TLB_SIZE get_tlb_size_by_name(const char * name)
+static TLB_SIZE get_tlb_size_by_name(const char * name)
 {
 	uint i;
 	for ( i = 0; size_names[i].size != TLBS_ERR; ++ i ) 
@@ -68,7 +68,7 @@ TLB_SIZE get_tlb_size_by_name(const char * name)
 			break;
 	return size_names[i].size;
 }
-const char * get_tlb_name_by_size(TLB_SIZE size)
+static const char * get_tlb_name_by_size(TLB_SIZE size)
 {
 	uint i;
 	for ( i = 0; size_names[i].size != TLBS_ERR; ++ i ) 
