@@ -236,7 +236,6 @@
  * into a header file plus about 3 separate .c files, to handle the details
  * of the Gadget, USB Mass Storage, and SCSI protocols.
  */
-#define DEBUG
 /* #define VERBOSE_DEBUG */
 /* #define DUMP_MSGS */
 

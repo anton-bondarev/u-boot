@@ -9,7 +9,9 @@
 
 #include <common.h>
 #include <command.h>
-#include <asm/processor.h>
+#include "ppc470s_itrpt.h"
+#include "ppc470s_itrpt_fields.h"
+#include "ppc470s_reg_access.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -19,11 +21,89 @@ struct irq_action {
 	ulong count;
 };
 
-void interrupt_init_cpu (unsigned *decrementer_count)
+//Declare all handlers
+void irq_handler__Critical_input(void);
+void irq_handler__Machine_check(void);
+void irq_handler__Data_storage(void);
+void irq_handler__Instruction_storage(void);
+void irq_handler__External_input(void);
+void irq_handler__Alignment(void);
+void irq_handler__Program(void);
+void irq_handler__FP_unavailable(void);
+void irq_handler__System_call(void);
+void irq_handler__AP_unavailable(void);
+void irq_handler__Decrementer(void);
+void irq_handler__FIT(void);
+void irq_handler__Watchdog_timer(void);
+void irq_handler__DTLB_miss(void);
+void irq_handler__ITLB_miss(void);
+void irq_handler__Debug(void);
+
+
+/*
+static inline void mpic128_set_interrupt_borders(uint32_t base_address, uint32_t mcb, uint32_t crb)
 {
-	// todo
+    write_MPIC128_VITC( base_address, (mcb << IBM_BIT_INDEX(32, MPIC128_VITC_MCB)) | (crb << IBM_BIT_INDEX(32, MPIC128_VITC_CRB)));
 }
 
+
+static inline void mpic128_setup_interrupt(uint32_t base_address, int vector)
+{
+    mtdcrx(base_address + mpic128_vector_table[vector].VP, mpic128_vector_table[vector].VP_val);
+}
+
+static inline void mpic128_disable_pass_through(uint32_t base_address)
+{
+    uint32_t tmp = read_MPIC128_GCF0(base_address);
+    tmp |= 1 << IBM_BIT_INDEX(32, MPIC128_GCF0_P);
+    write_MPIC128_GCF0( base_address, tmp );
+}
+*/
+
+void interrupt_init_cpu (unsigned *decrementer_count)
+{
+    //Disable interrupts on the current processor
+    write_SPR_MSR( read_SPR_MSR() & ~(
+               (0b1 << ITRPT_XSR_CE_i) //MSR[CE] - Critical interrupt.
+             | (0b1 << ITRPT_XSR_EE_i) //MSR[EE] - External interrupt.
+             | (0b1 << ITRPT_XSR_ME_i) //MSR[ME] - Machine check.
+             | (0b1 << ITRPT_XSR_DE_i) //MSR[DE] - Debug interrupt.
+             ));
+
+    //Setup interrupt handlers
+    SET_INTERRUPT_HANDLER( ITRPT_CRITICAL_INPUT,        irq_handler__Critical_input );
+    SET_INTERRUPT_HANDLER( ITRPT_MACHINE_CHECK,         irq_handler__Machine_check );
+    SET_INTERRUPT_HANDLER( ITRPT_DATA_STORAGE,          irq_handler__Data_storage );
+    SET_INTERRUPT_HANDLER( ITRPT_INSTRUCTION_STORAGE,   irq_handler__Instruction_storage );
+    SET_INTERRUPT_HANDLER( ITRPT_EXTERNAL_INPUT,        irq_handler__External_input );
+    SET_INTERRUPT_HANDLER( ITRPT_ALIGNMENT,             irq_handler__Alignment );
+    SET_INTERRUPT_HANDLER( ITRPT_PROGRAM,               irq_handler__Program );
+    SET_INTERRUPT_HANDLER( ITRPT_FP_UNAVAILABLE,        irq_handler__FP_unavailable );
+    SET_INTERRUPT_HANDLER( ITRPT_SYSTEM_CALL,           irq_handler__System_call );
+    SET_INTERRUPT_HANDLER( ITRPT_AP_UNAVAILABLE,        irq_handler__AP_unavailable );
+    SET_INTERRUPT_HANDLER( ITRPT_DECREMENTER,           irq_handler__Decrementer );
+    SET_INTERRUPT_HANDLER( ITRPT_FIXED_INTERVAL_TIMER,  irq_handler__FIT );
+    SET_INTERRUPT_HANDLER( ITRPT_WATCHDOG_TIMER,        irq_handler__Watchdog_timer );
+    SET_INTERRUPT_HANDLER( ITRPT_DATA_TLB_ERROR,        irq_handler__DTLB_miss );
+    SET_INTERRUPT_HANDLER( ITRPT_INSTRUCTION_TLB_ERROR, irq_handler__ITLB_miss );
+    SET_INTERRUPT_HANDLER( ITRPT_DEBUG,                 irq_handler__Debug );
+
+/*
+    mpic128_set_interrupt_borders( MPICx_DCR, MPIC128_INTERRUPT_TYPE__MACHINE_CHECK, MPIC128_INTERRUPT_TYPE__CRITICAL );
+
+    mpic128_disable_pass_through( MPICx_DCR );
+
+    //Setup interrupt lines on the MPIC controller
+    mpic128_vector vector;
+    for (vector = MPIC128_VECTOR__BEGIN; vector != MPIC128_VECTOR__END; ++vector)
+    {
+        mpic128_setup_interrupt(MPICx_DCR, vector);
+    }
+
+    //Permit all interrupts with priorities higher MPIC128_PRIORITY__0 to be passed to current processor
+    mpic128_set_current_processor_task_priority_level( MPICx_DCR, MPIC128_PRIORITY__0 );
+*/
+}
 
 /*
  * Handle external interrupts
@@ -70,3 +150,41 @@ do_irqinfo(cmd_tbl_t *cmdtp, bd_t *bd, int flag, int argc, char * const argv[])
 }
 
 #endif
+
+typedef void (*voidcall)(void);
+static voidcall bootrom_enter_host_mode = (voidcall)BOOT_ROM_HOST_MODE;
+static voidcall bootrom_main = (voidcall)BOOT_ROM_MAIN;
+
+__attribute__( ( always_inline ) ) static inline uint32_t __get_LR(void) 
+{ 
+  register uint32_t result; 
+
+  asm volatile ("lwz %0, 48(r1)\n" : "=r" (result) ); 
+//  asm volatile ("mflr %0\n" : "=r" (result) ); 
+  return(result); 
+} 
+
+#define DEFINE_INT_HANDLER(handler) \
+void irq_handler__##handler (void) 	\
+{					\
+	printf("\n\n !!! Interrupt happens (" #handler ") lr: 0x%x\n\n", __get_LR()); \
+	bootrom_main();\
+}					
+
+
+DEFINE_INT_HANDLER(Critical_input)
+DEFINE_INT_HANDLER(Machine_check)
+DEFINE_INT_HANDLER(Data_storage)
+DEFINE_INT_HANDLER(Instruction_storage)
+DEFINE_INT_HANDLER(External_input)
+DEFINE_INT_HANDLER(Alignment)
+DEFINE_INT_HANDLER(Program)
+DEFINE_INT_HANDLER(FP_unavailable)
+DEFINE_INT_HANDLER(System_call)
+DEFINE_INT_HANDLER(AP_unavailable)
+DEFINE_INT_HANDLER(Decrementer)
+DEFINE_INT_HANDLER(FIT)
+DEFINE_INT_HANDLER(Watchdog_timer)
+DEFINE_INT_HANDLER(DTLB_miss)
+DEFINE_INT_HANDLER(ITLB_miss)
+DEFINE_INT_HANDLER(Debug)
