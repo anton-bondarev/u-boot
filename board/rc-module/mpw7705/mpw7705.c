@@ -1,3 +1,4 @@
+#define DEBUG
 #include <common.h>
 #include <mpw7705_baremetal.h>
 #include <usb.h>
@@ -7,13 +8,15 @@ DECLARE_GLOBAL_DATA_PTR;
 
 typedef void (*voidcall)(void);
 
-voidcall bootrom_enter_host_mode = (voidcall)BOOT_ROM_HOST_MODE;
+static voidcall bootrom_enter_host_mode = (voidcall)BOOT_ROM_HOST_MODE;
+static voidcall bootrom_main = (voidcall)BOOT_ROM_MAIN;
 
 // ASTRO TODO
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	// for a while - enter host mode
 	bootrom_enter_host_mode();
+	//bootrom_main();
 	return 0;
 }
 
@@ -77,6 +80,7 @@ int board_usb_init(int index, enum usb_init_type init)
 		if(ret)
 			debug("unable to find USB device in FDT\n");
 	}
+	return 0;
 }
 
 #endif
