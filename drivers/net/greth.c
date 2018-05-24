@@ -468,7 +468,7 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 		int j = 0;
 		u32* data = (u32*) eth_data;
 		u32* outdata = (u32*) txbuf;
-		for(j = 0; j <= ((data_length/sizeof(u32))+1); j++)
+		for(j = 0; j < data_length; j+=sizeof(u32) )
 			*outdata++ = fix_endian(*data++);
 #else
 		/* copy data info buffer */
@@ -558,7 +558,7 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			goto done;
 		}
 
-		debug("greth_recv: packet 0x%x, 0x%x, len: %d\n",
+		debug("greth_recv: packet 0x%x, 0x%x, len: %d, ",
 		       (unsigned int)rxbd, status, status & GRETH_BD_LEN);
 
 		/* Check status for errors.
@@ -599,18 +599,29 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			     len, d[0], d[1], d[2], d[3], d[4], d[5], d[6],
 			     d[7]);
 
-			/* flush all data cache to make sure we're not reading old packet data */
-			//sparc_dcache_flush_all();
-
 #ifdef CONFIG_MPW7705
 			// HW bug? swap everything
 			int j = 0;
+			if(((u32)d)%4)
+				debug("Network unaligned access\n");
+			int setlen = len/4;
+			int rem = len%4;
 			u32* data = (u32*) d;
-			for(j = 0; j <= ((len/sizeof(u32))+1); j++)
+			
+			if(rem)
+			{
+				unsigned char* p = (data+setlen-1);
+				debug("Rem: %x %x %x %x %x %x %x %x\n", (unsigned)p[0], (unsigned)p[1], (unsigned)p[2], (unsigned)p[3],
+													   (unsigned)p[4], (unsigned)p[5], (unsigned)p[6], (unsigned)p[7]);
+				setlen++;
+				
+			}
+			for(j = 0; j < setlen; j++)
 			{
 				*data = fix_endian(*data);
 				data++;
 			}
+
 #endif
 			/* pass packet on to network subsystem */
 			net_process_received_packet((void *)d, len);
