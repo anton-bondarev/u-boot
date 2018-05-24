@@ -64,7 +64,6 @@
  *
  * Most of the conditional compilation will (someday) vanish.
  */
-#define DEBUG
 #ifndef __UBOOT__
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -209,7 +208,7 @@ static struct usb_phy_io_ops musb_ulpi_access = {
 
 /*-------------------------------------------------------------------------*/
 
-#if !defined(CONFIG_USB_MUSB_TUSB6010)
+#if !defined(CONFIG_USB_MUSB_TUSB6010) && !defined (CONFIG_USB_MUSB_MODULE)
 
 /*
  * Load an endpoint's FIFO
