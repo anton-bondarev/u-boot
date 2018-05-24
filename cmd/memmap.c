@@ -273,17 +273,23 @@ static void mem_map_inval(uint32_t cpu_adr, TLB_SIZE_ID tlb_sid)
 	_invalidate_tlb_entry(tlb_0.data);
 }
 
-static int mem_map_drop(uint32_t cpu_adr)
+static int mem_map_drop(uint32_t cpu_adr, TLB_SIZE_ID tlb_sid)
 {
-	int map_ind = find_map_entr(cpu_adr);
-	if ( map_ind == -1 ) {
-		printf("Map not found\n");
-		return 0;
+	int map_ind = -1;
+	
+	if ( tlb_sid == TLBSID_ERR ) {
+		map_ind = find_map_entr(cpu_adr);
+		if ( map_ind == -1 ) {
+			printf("Map not found\n");
+			return 0;
+		}
+		tlb_sid = s_maps[map_ind].sid;
 	}
 	
-	mem_map_inval(cpu_adr, s_maps[map_ind].sid);
+	mem_map_inval(cpu_adr, tlb_sid);
 	
-	s_maps[map_ind].sid = TLBSID_ERR;
+	if ( map_ind != -1 ) 
+		s_maps[map_ind].sid = TLBSID_ERR;
 	
 	return 0;
 }
@@ -384,21 +390,7 @@ static int mem_map_test(bool read_flag)
 
 ////////////////////////////////////////////////////////////////
 
-static int do_mem_map_help(int argc, char * const argv[])
-{
-	if ( argc != 1 || strcmp(argv[0], "set") == 0 ) 
-		printf("mmap set  cpu_adr { 4k | 16k | 64k | 1m | 16m | 256m | 1g } phys_adr\n");		
-	if ( argc != 1 || strcmp(argv[0], "drop") == 0 ) 
-		printf("mmap drop { cpu_adr | all }\n");
-	if ( argc != 1 || strcmp(argv[0], "list") == 0 ) 
-		printf("mmap list\n");
-	if ( argc != 1 || strcmp(argv[0], "tlb") == 0 ) 
-		printf("mmap tlb\n");
-		
-	return 0;
-}
-
-static char * s_sub_argv[][3] = 
+static char * s_sub_argv_1[][3] = 
 {
 	{ "C0000000", "1m", "10000000" },
 	{ "C0100000", "1m", "50000000" },
@@ -407,18 +399,29 @@ static char * s_sub_argv[][3] =
 	{ NULL, NULL, NULL }
 };
 
+static char * s_sub_argv_2[][3] = 
+{
+	{ "00000000", "256m", "10000000" },
+	{ "C0000000", "256m", "10000000" },
+	{ NULL, NULL, NULL }
+};
+
 static int do_mem_map_set(int argc, char * const argv[])
 {
 	if ( argc == 1 ) {
-		if ( strcmp(argv[0], "1") == 0 ) {
-			uint sub_arg_ind;
-			for ( sub_arg_ind = 0; !! s_sub_argv[sub_arg_ind][0]; ++ sub_arg_ind ) {			
-				int retcode = do_mem_map_set(countof(s_sub_argv[sub_arg_ind]), s_sub_argv[sub_arg_ind]);
-				if ( retcode != 0 ) 
-					return retcode;
-			}
-			return mem_map_list();
+		static char * (* s_sub_argv)[3];		
+		if      ( strcmp(argv[0], "1") == 0 ) s_sub_argv = s_sub_argv_1;
+		else if ( strcmp(argv[0], "2") == 0 ) s_sub_argv = s_sub_argv_2;
+		else 
+			return CMD_RET_USAGE;
+		
+		uint sub_arg_ind;
+		for ( sub_arg_ind = 0; !! s_sub_argv[sub_arg_ind][0]; ++ sub_arg_ind ) {			
+			int retcode = do_mem_map_set(countof(s_sub_argv[sub_arg_ind]), s_sub_argv[sub_arg_ind]);
+			if ( retcode != 0 ) 
+				return retcode;
 		}
+		return mem_map_list();
 	}
 
 	if ( argc == 3 ) {
@@ -448,7 +451,7 @@ static int do_mem_map_set(int argc, char * const argv[])
 
 static int do_mem_map_drop(int argc, char * const argv[])
 {
-	if ( argc != 1 ) 
+	if ( argc < 1 ) 
 		return CMD_RET_USAGE;
 	
 	if ( strcmp(argv[0], "all") == 0 ) 
@@ -459,8 +462,17 @@ static int do_mem_map_drop(int argc, char * const argv[])
 		printf("Bad cpu_adr\n");
 		return CMD_RET_USAGE;
 	}
+	
+	TLB_SIZE_ID tlb_sid = TLBSID_ERR;	
+	if ( argc == 2 ) {
+		tlb_sid = get_tlb_sid_by_name(argv[1]);
+		if ( tlb_sid == TLBSID_ERR ) {
+			printf("Bad size\n");
+			return CMD_RET_USAGE;
+		}
+	}
 		
-	return mem_map_drop(cpu_adr);
+	return mem_map_drop(cpu_adr, tlb_sid);
 }
 
 static int do_mem_map_list(int argc, char * const argv[])
@@ -486,6 +498,22 @@ static int do_mem_map_test(int argc, char * const argv[])
 		retcode = mem_map_test(true);
 	}
 	printf(retcode ? "Test failed\n" : "All right\n");	
+	return 0;
+}
+
+static int do_mem_map_help(int argc, char * const argv[])
+{
+	if ( argc != 1 || strcmp(argv[0], "set") == 0 ) {
+		printf("mmap set cpu_adr { 4k | 16k | 64k | 1m | 16m | 256m | 1g } phys_adr\n");		
+		printf("mmap set { 1 | 2 }\n");		
+	}
+	if ( argc != 1 || strcmp(argv[0], "drop") == 0 ) 
+		printf("mmap drop { cpu_adr [size_id] | all }\n");
+	if ( argc != 1 || strcmp(argv[0], "list") == 0 ) 
+		printf("mmap list\n");
+	if ( argc != 1 || strcmp(argv[0], "tlb") == 0 ) 
+		printf("mmap tlb\n");
+		
 	return 0;
 }
 
