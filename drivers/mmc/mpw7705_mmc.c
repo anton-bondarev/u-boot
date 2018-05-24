@@ -328,17 +328,26 @@ static bool isprintable(const char c)
 
 static void print_buf(const u8 * buf, uint size)
 {
-	uint len = (size < 512 ? size : 512);
+	uint len = (size < 512 ? size : 512), i;
 	debug("buf[%d]=", size);
-	while ( len -- ) {
-		char c = * buf ++;
-		if ( isprintable(c) ) debug("_%c", c);		
-		else                  debug("%02x", c);
-	}
+	bool is_zero = true;
+	for ( i = 0; i < len; ++ i ) 
+		if ( buf[i] != '\0' ) {
+			is_zero = false;
+			break;
+		}
+	if ( ! is_zero ) {	 
+		while ( len -- ) {
+			char c = * buf ++;
+			if ( isprintable(c) ) debug("_%c", c);		
+			else                  debug("%02x", c);
+		}
+	} else
+		debug("[ZERO]");		
 	debug("\n");
 }
 
-static void test_read(void)
+static void test_read(const struct mmc * mmc)
 {
 	static u8 block[512];
 	uint32_t adr = 0;//0x11800 - 10;
@@ -347,7 +356,7 @@ static void test_read(void)
 	for ( cnt = 0; cnt < 3; ++ cnt ) {
 		PREP_BUF(block);
 		debug("Read SD card (adr=%d) ... ", adr);		
-		bool res = sd_read_data(adr, block, 512/*sizeof(block)*/);
+		bool res = sd_read_data(mmc, adr, block, 512/*sizeof(block)*/);
 		debug("%s\n", res ? "ok" : "fail");
 		PRINT_BUF(block);
 			

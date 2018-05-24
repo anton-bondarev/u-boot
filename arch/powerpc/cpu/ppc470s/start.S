@@ -108,6 +108,7 @@ ite_end:
 	msync
 	blr
 	
+	
 .global _write_tlb_entry
 _write_tlb_entry:
 	addis r6, r0, 0x0000  // zero [r6]
@@ -119,3 +120,22 @@ _write_tlb_entry:
 	msync
 	blr
 		
+		
+.global _read_tlb_entry
+_read_tlb_entry:
+	tlbsx. r5, r0, r3  // [r3] - EA, [r5] - Way, Index
+	bne    rte_nf      // branch if not found
+	
+	tlbre r3, r5, 0
+	stw   r3, 0(r4)
+	tlbre r3, r5, 1
+	stw   r3, 4(r4)
+	tlbre r3, r5, 2
+	stw   r3, 8(r4)
+
+	add r3, r0, r5
+	blr
+	
+rte_nf:
+	addi r3, r0, 0
+	blr
