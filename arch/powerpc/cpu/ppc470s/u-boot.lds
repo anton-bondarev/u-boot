@@ -36,6 +36,7 @@ SECTIONS
     }
 
     . = ALIGN(4);
+   	__init_end = .;
     __image_copy_end = .;
 
     .end :

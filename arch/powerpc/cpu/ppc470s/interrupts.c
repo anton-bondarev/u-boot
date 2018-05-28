@@ -164,10 +164,62 @@ __attribute__( ( always_inline ) ) static inline uint32_t __get_LR(void)
   return(result); 
 } 
 
+__attribute__( ( always_inline ) ) static inline uint32_t __get_SRR0(void) 
+{ 
+  register uint32_t result; 
+
+  asm volatile ("mfspr %0, srr0\n" : "=r" (result) ); 
+  return(result); 
+} 
+
+__attribute__( ( always_inline ) ) static inline uint32_t __get_SRR1(void) 
+{ 
+  register uint32_t result; 
+
+  asm volatile ("mfspr %0, srr1\n" : "=r" (result) ); 
+  return(result); 
+} 
+
+
+__attribute__( ( always_inline ) ) static inline uint32_t __get_CSRR0(void) 
+{ 
+  register uint32_t result; 
+
+  asm volatile ("mfspr %0, 58\n" : "=r" (result) ); 
+  return(result); 
+} 
+
+__attribute__( ( always_inline ) ) static inline uint32_t __get_CSRR1(void) 
+{ 
+  register uint32_t result; 
+
+  asm volatile ("mfspr %0, 59\n" : "=r" (result) ); 
+  return(result); 
+} 
+
+__attribute__( ( always_inline ) ) static inline uint32_t __get_R1(void) 
+{ 
+  register uint32_t result; 
+
+  asm volatile ("mr %0, r1\n" : "=r" (result) ); 
+  return(result); 
+} 
+
+__attribute__( ( always_inline ) ) static inline uint32_t __get_R3(void) 
+{ 
+  register uint32_t result; 
+
+  asm volatile ("mr %0, r3\n" : "=r" (result) ); 
+  return(result); 
+} 
+
+
 #define DEFINE_INT_HANDLER(handler) \
 void irq_handler__##handler (void) 	\
 {					\
-	printf("\n\n !!! Interrupt happens (" #handler ") lr: 0x%x\n\n", __get_LR()); \
+	printf("\n\n !!! Interrupt happens (" #handler ")\n"); \
+    printf("\tR1:\t0x%08X\n\tR3:\t0x%08X\n\tLR:\t0x%08X\n\tSRR0:\t0x%08X\n\tSRR1:\t0x%08X\n\tCSRR0:\t0x%08X\n\tCSRR1:\t0x%08X\n\n", \
+                             __get_R1(), __get_R3(), __get_LR(), __get_SRR0(), __get_SRR1(), __get_CSRR0(), __get_CSRR1()); \
 	bootrom_main();\
 }					
 

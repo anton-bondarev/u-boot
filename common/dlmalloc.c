@@ -149,7 +149,7 @@ gAllocatedSize))
 			{
 				new_address = findRegion (new_address, new_size);
 
-				if (!new_address)
+				if (new_address == 0)
 					return (void*)-1;
 
 				gAddressBase = gNextAddress =
@@ -175,7 +175,7 @@ gAllocatedSize))
 								(size + gNextAddress -
 								 AlignPage (gNextAddress)),
 								MEM_COMMIT, PAGE_READWRITE);
-			if (!res)
+			if (res == 0)
 				return (void*)-1;
 		}
 		tmp = (void*)gNextAddress;
@@ -1461,7 +1461,7 @@ Void_t* mALLOc(bytes) size_t bytes;
 #if HAVE_MMAP
     /* If big and would otherwise need to extend, try to use mmap instead */
     if ((unsigned long)nb >= (unsigned long)mmap_threshold &&
-	(victim = mmap_chunk(nb)))
+	(victim = mmap_chunk(nb)) != 0)
       return chunk2mem(victim);
 #endif
 
@@ -1671,10 +1671,7 @@ Void_t* rEALLOc(oldmem, bytes) Void_t* oldmem; size_t bytes;
   mchunkptr fwd;              /* misc temp for linking */
 
 #ifdef REALLOC_ZERO_BYTES_FREES
-  if (!bytes) {
-	fREe(oldmem);
-	return NULL;
-  }
+  if (bytes == 0) { fREe(oldmem); return 0; }
 #endif
 
   if ((long)bytes < 0) return NULL;
@@ -1706,8 +1703,7 @@ Void_t* rEALLOc(oldmem, bytes) Void_t* oldmem; size_t bytes;
     if(oldsize - SIZE_SZ >= nb) return oldmem; /* do nothing */
     /* Must alloc, copy, free. */
     newmem = mALLOc(bytes);
-    if (!newmem)
-	return NULL; /* propagate failure */
+    if (newmem == 0) return 0; /* propagate failure */
     MALLOC_COPY(newmem, oldmem, oldsize - 2*SIZE_SZ);
     munmap_chunk(oldp);
     return newmem;

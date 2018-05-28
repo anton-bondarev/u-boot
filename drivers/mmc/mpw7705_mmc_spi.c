@@ -20,7 +20,7 @@
 #include <common.h>
 #include <dm.h>
 #include <fdtdec.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <malloc.h>
 #include <asm/io.h>
 #include <asm/gpio.h>
@@ -321,7 +321,7 @@ static int mpw7705_mmc_probe(struct udevice *dev)
 		return -EINVAL;
 	}
 
-	mmc_set_clock(mmc, cfg->f_min);
+	mmc_set_clock(mmc, cfg->f_min, false);
 	
 	if ( ! check_sd_card_present(dev) )
 		return -EINVAL;

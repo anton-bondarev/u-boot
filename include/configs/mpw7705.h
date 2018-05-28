@@ -13,9 +13,9 @@
  *      0x40000000 - Start of DDR (16Mb reserved for kernel loading)
  *      0x41000000 - Start of U-Boot header (1Mb for U-boot itself)
  *      0x41000040 - Start of U-Boot binary
- *      0x41100000 - Start of U-Boot RAM (heap - 4Mb)
- *      0x41500000 - End of U-Boot RAM (heap)
- *      0x41600000 - U-Boot stack
+ *      0x42000000 - Start of U-Boot RAM (heap - 16Mb)
+ *      0x43000000 - End of U-Boot RAM (heap)
+ *      0x44000000 - U-Boot stack
  *
  */
 
@@ -42,9 +42,9 @@
 
 /*		Start address of memory area that can be used for
 		initial data and stack; */        
-#define CONFIG_SYS_INIT_RAM_ADDR		0x41100000
+#define CONFIG_SYS_INIT_RAM_ADDR		0x42000000
 /*      4 Megabyte for U-boot           */
-#define CONFIG_SYS_INIT_RAM_SIZE		0x400000
+#define CONFIG_SYS_INIT_RAM_SIZE		0x1000000
 
 #ifdef CONFIG_SPL_BUILD
 #define CONFIG_SYS_MONITOR_BASE CONFIG_SPL_TEXT_BASE
@@ -52,7 +52,7 @@
 #define CONFIG_SYS_MONITOR_BASE CONFIG_SYS_TEXT_BASE
 #endif
 
-#define CONFIG_SPL_FRAMEWORK
+/* #define CONFIG_SPL_FRAMEWORK */
 
 #define CONFIG_SYS_MALLOC_LEN   (2*1024*1024)
 
@@ -100,12 +100,6 @@
 #define TIMER_TICKS_PER_US  800
 
 #define CONFIG_USB_MUSB_PIO_ONLY
-
-#ifdef CONFIG_USB_MUSB_GADGET
-#define CONFIG_USB_FUNCTION_MASS_STORAGE
-#endif /* CONFIG_USB_MUSB_GADGET */
-
-#define CONFIG_SYS_LONGHELP
 
 #define CONFIG_TFTP_BLOCKSIZE		1466
 #define CONFIG_TFTP_TSIZE

@@ -26,7 +26,7 @@ _start:
     load_const_link sp, CONFIG_SPL_STACK
 #endif
 #else
-    load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE
+    load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x1000000
 #endif
 
 clear_bss:
