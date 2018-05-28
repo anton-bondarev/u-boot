@@ -43,8 +43,8 @@
 /*		Start address of memory area that can be used for
 		initial data and stack; */        
 #define CONFIG_SYS_INIT_RAM_ADDR		0x41100000
-/*      2 Megabyte for U-boot           */
-#define CONFIG_SYS_INIT_RAM_SIZE		0x800000
+/*      4 Megabyte for U-boot           */
+#define CONFIG_SYS_INIT_RAM_SIZE		0x400000
 
 #ifdef CONFIG_SPL_BUILD
 #define CONFIG_SYS_MONITOR_BASE CONFIG_SPL_TEXT_BASE
@@ -54,7 +54,7 @@
 
 #define CONFIG_SPL_FRAMEWORK
 
-#define CONFIG_SYS_MALLOC_LEN   (1*1024*1024)
+#define CONFIG_SYS_MALLOC_LEN   (2*1024*1024)
 
 #define CONFIG_VERY_BIG_RAM
 #define CONFIG_MAX_MEM_MAPPED   ((phys_size_t)256 << 20)
@@ -64,7 +64,7 @@
 #define CONFIG_SYS_LOAD_ADDR    CONFIG_SYS_TEXT_BASE
 
 #define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)
-#define CONFIG_SYS_MEMTEST_END		(0x40000000u + (CONFIG_SYS_DDR_SIZE - 1))
+#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
 /*#define CONFIG_SYS_DRAM_TEST*/
                      
 
