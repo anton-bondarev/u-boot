@@ -434,21 +434,6 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	debug("\n");
 #endif
 
-#ifdef DEBUG
-	debug("packet after conversion (%d):\n", data_length);
-	p = eth_data;
-	i=0;
-	while(p < (eth_data+data_length))
-	{
-		debug("%02X ", *p++);
-		if(++i == 16)
-		{
-			debug("\n");
-			i = 0;
-		}
-	}
-	debug("\n");
-#endif
 #ifndef CONFIG_MPW7705
 	/* send data, wait for data to be sent, then return */
 	if (((unsigned int)eth_data & (GRETH_BUF_ALIGN - 1))
@@ -590,14 +575,12 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 				       (unsigned long) fix_endian((long)GRETH_REGLOAD(&greth->rxbd_base[i].addr)));
 			}
 		} else {
-			/* Process the incoming packet. */
+			/* Process the incoming packet. */			
 			len = status & GRETH_BD_LEN;
 			d = (char *)fix_endian(rxbd->addr);
 
-			debug
-			    ("greth_recv: new packet, length: %d. data: %x %x %x %x %x %x %x %x\n",
-			     len, d[0], d[1], d[2], d[3], d[4], d[5], d[6],
-			     d[7]);
+			// flush cache
+			flush_cache(d, len);
 
 #ifdef CONFIG_MPW7705
 			// HW bug? swap everything
@@ -623,6 +606,23 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			}
 
 #endif
+
+#ifdef DEBUG
+	debug("recv packet (%d):\n", len);
+	unsigned char *p = d;
+	int i=0;
+	while(p < (d+len))
+	{
+		debug("%02X ", *p++);
+		if(++i == 16)
+		{
+			debug("\n");
+			i = 0;
+		}
+	}
+	debug("\n");
+#endif
+
 			/* pass packet on to network subsystem */
 			net_process_received_packet((void *)d, len);
 

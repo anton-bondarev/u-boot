@@ -71,5 +71,4 @@ obj-$(CONFIG_VSC9953) += vsc9953.o
 obj-$(CONFIG_PIC32_ETH) += pic32_mdio.o pic32_eth.o
 obj-$(CONFIG_DWC_ETH_QOS) += dwc_eth_qos.o
 obj-$(CONFIG_FSL_PFE) += pfe_eth/
-obj-$(CONFIG_GRETH) += greth.o
 obj-$(CONFIG_GRETH_ETH) += greth.o
