@@ -11,12 +11,22 @@ typedef void (*voidcall)(void);
 static voidcall bootrom_enter_host_mode = (voidcall)BOOT_ROM_HOST_MODE;
 static voidcall bootrom_main = (voidcall)BOOT_ROM_MAIN;
 
-// ASTRO TODO
+
+#define SPRN_DBCR0_44X 0x134
+#define DBCR0_RST_SYSTEM 0x30000000
+
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	// for a while - enter host mode
-	bootrom_enter_host_mode();
-	//bootrom_main();
+
+	unsigned long tmp;
+
+	asm volatile (
+		"mfspr	%0,%1\n"
+		"oris	%0,%0,%2@h\n"
+		"mtspr	%1,%0"
+		: "=&r"(tmp) : "i"(SPRN_DBCR0_44X), "i"(DBCR0_RST_SYSTEM)
+		);
+
 	return 0;
 }
 
