@@ -10,6 +10,6 @@ config SYS_CONFIG_NAME
 	default "mpw7705"
 
 config SYS_TEXT_BASE
-	default 0x41000040
+	default 0x4D000040
 
 endif

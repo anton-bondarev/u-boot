@@ -10,12 +10,12 @@
  *      0x00078000 - End of SPL heap
  *      0x00080000 - initial stack pointer for main core
  *      
- *      0x40000000 - Start of DDR (16Mb reserved for kernel loading)
- *      0x41000000 - Start of U-Boot header (1Mb for U-boot itself)
- *      0x41000040 - Start of U-Boot binary
- *      0x42000000 - Start of U-Boot RAM (heap - 16Mb)
- *      0x43000000 - End of U-Boot RAM (heap)
- *      0x44000000 - U-Boot stack
+ *      0x40000000 - Start of DDR
+ *      0x4D000000 - Start of U-Boot header (8Mb for U-boot itself)
+ *      0x4D000040 - Start of U-Boot binary
+ *      0x4D800000 - Start of U-Boot RAM (heap - 16Mb)
+ *      0x4E800000 - End of U-Boot RAM (heap)
+ *      0x4FFFFFFF - U-Boot stack
  *
  */
 
@@ -42,9 +42,9 @@
 
 /*		Start address of memory area that can be used for
 		initial data and stack; */        
-#define CONFIG_SYS_INIT_RAM_ADDR		0x42000000
-/*      4 Megabyte for U-boot           */
-#define CONFIG_SYS_INIT_RAM_SIZE		0x1000000
+#define CONFIG_SYS_INIT_RAM_ADDR		0x4D800000
+/*      16 Megabyte for U-boot           */
+#define CONFIG_SYS_INIT_RAM_SIZE		0x01000000
 
 #ifdef CONFIG_SPL_BUILD
 #define CONFIG_SYS_MONITOR_BASE CONFIG_SPL_TEXT_BASE
@@ -103,5 +103,7 @@
 
 #define CONFIG_TFTP_BLOCKSIZE		1466
 #define CONFIG_TFTP_TSIZE
+
+#define CONFIG_SYS_BOOTM_LEN 0x1000000
 
 #endif /* __MPW7705_H */
