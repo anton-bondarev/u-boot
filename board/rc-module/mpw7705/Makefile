@@ -1,5 +1,3 @@
-obj-y +=  io.o
-
 ifdef CONFIG_SPL_BUILD
 obj-y  += spl.o
 else

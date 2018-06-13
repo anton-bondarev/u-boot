@@ -3,7 +3,6 @@
  * (C) Copyright 2000-2009
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  */
-#define DEBUG
 #include <common.h>
 #include <bootm.h>
 #include <fdt_support.h>

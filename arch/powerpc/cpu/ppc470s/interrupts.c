@@ -9,9 +9,9 @@
 
 #include <common.h>
 #include <command.h>
-#include "ppc470s_itrpt.h"
-#include "ppc470s_itrpt_fields.h"
-#include "ppc470s_reg_access.h"
+#include <asm/arch-ppc4xx/ppc470s_itrpt.h>  
+#include <asm/arch-ppc4xx/ppc470s_itrpt_fields.h>
+#include <asm/arch-ppc4xx/ppc470s_reg_access.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -152,7 +152,6 @@ do_irqinfo(cmd_tbl_t *cmdtp, bd_t *bd, int flag, int argc, char * const argv[])
 #endif
 
 typedef void (*voidcall)(void);
-static voidcall bootrom_enter_host_mode = (voidcall)BOOT_ROM_HOST_MODE;
 static voidcall bootrom_main = (voidcall)BOOT_ROM_MAIN;
 
 __attribute__( ( always_inline ) ) static inline uint32_t __get_LR(void) 

@@ -580,7 +580,7 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			d = (char *)fix_endian(rxbd->addr);
 
 			// flush cache
-			flush_cache(d, len);
+			flush_cache((unsigned long)d, len);
 
 #ifdef CONFIG_MPW7705
 			// HW bug? swap everything
@@ -593,7 +593,7 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			
 			if(rem)
 			{
-				unsigned char* p = (data+setlen-1);
+				unsigned char* p = (unsigned char*)(data+setlen-1);
 				debug("Rem: %x %x %x %x %x %x %x %x\n", (unsigned)p[0], (unsigned)p[1], (unsigned)p[2], (unsigned)p[3],
 													   (unsigned)p[4], (unsigned)p[5], (unsigned)p[6], (unsigned)p[7]);
 				setlen++;

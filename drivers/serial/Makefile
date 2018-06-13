@@ -68,4 +68,3 @@ obj-$(CONFIG_NULLDEV_SERIAL) += serial_nulldev.o
 ifndef CONFIG_SPL_BUILD
 obj-$(CONFIG_USB_TTY) += usbtty.o
 endif
-

@@ -11,12 +11,14 @@ int testdramfromto(uint *pstart, uint *pend);
 
 #define CRGCPU__        0x38006000
 
+/*
 static void failsafe(void)
 {
 	writel(0x1ACCE551, CRGCPU__ + 0xc);
 	writel(0x02010050, CRGCPU__ + 0x9); // 500Mhz
 	writel(0x1, CRGCPU__ + 0x4);
 }
+*/
 
 static void patch_da_regs(void)
 {

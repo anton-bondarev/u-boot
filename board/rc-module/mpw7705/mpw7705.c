@@ -1,6 +1,5 @@
 #define DEBUG
 #include <common.h>
-#include <mpw7705_baremetal.h>
 #include <usb.h>
 #include <dm.h>
 
@@ -8,8 +7,6 @@ DECLARE_GLOBAL_DATA_PTR;
 
 typedef void (*voidcall)(void);
 
-static voidcall bootrom_enter_host_mode = (voidcall)BOOT_ROM_HOST_MODE;
-static voidcall bootrom_main = (voidcall)BOOT_ROM_MAIN;
 
 
 #define SPRN_DBCR0_44X 0x134
@@ -56,11 +53,6 @@ static uint32_t tcurrent(void)
   );
 
   return value;
-}
-
-static uint32_t ucurrent(void)
-{
-  return (tcurrent()/TIMER_TICKS_PER_US);
 }
 
 static uint32_t mcurrent(void){

@@ -28,10 +28,9 @@ void hang(void)
 	bootstage_error(BOOTSTAGE_ID_NEED_RESET);
 #ifdef DEBUG_MPW7705
 	/* go to host mode */
-	void (*bootrom_enter_host_mode)() = 0xfffc0178;
+	void (*bootrom_enter_host_mode)(void) = (void (*)(void)) 0xfffc0178;
 	bootrom_enter_host_mode();
-#else
+#endif
 	for (;;)
 		;
-#endif
 }

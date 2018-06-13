@@ -6,7 +6,7 @@
 #ifndef PPC470S_REG_ACCESS_H_
 #define PPC470S_REG_ACCESS_H_
 
-#include <asm/ppc470s_regs.h>
+#include <asm/arch-ppc4xx/ppc470s_regs.h>
 
 //SPR access
 #define READ_SPR_REG(REG)                           \

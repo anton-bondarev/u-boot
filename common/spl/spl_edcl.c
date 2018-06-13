@@ -12,13 +12,14 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-static void (*bootrom_enter_host_mode)() = BOOT_ROM_HOST_MODE;
+static void (*bootrom_enter_host_mode)(void) = (void (*)(void)) BOOT_ROM_HOST_MODE;
 
 static int spl_edcl_load_image(struct spl_image_info *spl_image,
 			      struct spl_boot_device *bootdev)
 {
 	debug("Enter HOST mode for EDCL loading\n");
 	bootrom_enter_host_mode();
+	return 0; /* never happens */
 }
 
 SPL_LOAD_IMAGE_METHOD("EDCL", 0, BOOT_DEVICE_EDCL, spl_edcl_load_image);

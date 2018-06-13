@@ -6,7 +6,7 @@
 #ifndef __PPC_476FP_ITRPT_H__
 #define __PPC_476FP_ITRPT_H__
 
-#include "ppc470s_regs.h"
+#include <asm/arch-ppc4xx/ppc470s_regs.h>
 
 #define ITRPT_TUPLE_SIZE    2
 #define ITRPT_TUPLE_IVO_i(X, Y) X
