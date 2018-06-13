@@ -37,6 +37,11 @@ obj-$(CONFIG_PHYLIB) += miiphyutil.o
 ifdef CONFIG_CMD_USB
 obj-y += usb.o usb_hub.o
 obj-$(CONFIG_USB_STORAGE) += usb_storage.o
+else
+ifdef CONFIG_USB_GADGET
+obj-y += usb.o usb_hub.o
+obj-$(CONFIG_USB_STORAGE) += usb_storage.o
+endif
 endif
 
 # others
