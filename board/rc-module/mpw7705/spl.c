@@ -33,12 +33,16 @@ static void patch_da_regs(void)
     writel(0xff, 0x3C067000 + 0x420);
 }
 
+uint32_t *magic = (0x00040000 + 0x00020000 - 4);
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
 
 void board_init_f(ulong dummy)
 {
 	//failsafe();
+	// clean up dark magic 
+	*magic = 0;
+	
 	patch_da_regs();
 	/* init dram */
 	ddr_init();
