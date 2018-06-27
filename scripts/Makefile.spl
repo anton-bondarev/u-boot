@@ -241,10 +241,12 @@ PACKIMAGEFLAGS_$(SPL_BIN).edcl = -t hostimage
 
 # cmd to create romboot image
 quiet_cmd_packimage = PACK    $@
-cmd_packimage = $(objtree)/tools/rumboot-packimage $(PACKIMAGEFLAGS_$(@F)) -i $< -o $@ >/dev/null
+cmd_packimage = $(objtree)/tools/rumboot-packimage \
+		-E 0x$(shell $(OBJDUMP) -t $(word 2,$^) | grep _start_secondary | cut -d " " -f1)\
+		$(PACKIMAGEFLAGS_$(@F)) -i $< -o $@ >/dev/null
 
 # create rumboot image
-$(obj)/$(SPL_BIN).rbi $(obj)/$(SPL_BIN).edcl: $(obj)/$(SPL_BIN).bin
+$(obj)/$(SPL_BIN).rbi $(obj)/$(SPL_BIN).edcl: $(obj)/$(SPL_BIN).bin $(obj)/$(SPL_BIN)
 	$(call if_changed,packimage)
 
 # Create a file that pads from the end of u-boot-spl-nodtb.bin to bss_end

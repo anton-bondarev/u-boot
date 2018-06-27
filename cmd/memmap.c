@@ -1,4 +1,5 @@
 #include <common.h>
+#include <asm/tlb47x.h>
 //#include <console.h>
 //#include <bootretry.h>
 //#include <cli.h>
@@ -14,27 +15,9 @@
 
 #ifdef CONFIG_CMD_MEMMAP
 
-extern uint32_t _invalidate_tlb_entry(uint32_t tlb);
-extern void _write_tlb_entry(uint32_t tlb0, uint32_t tlb1, uint32_t tlb2, uint32_t zero);
-extern int _read_tlb_entry(uint32_t ea, uint32_t * tlb, uint32_t dummy);
-
-typedef enum 
-{
-	TLBSID_4K   = 0x00,
-	TLBSID_16K  = 0x01,
-	TLBSID_64K  = 0x03,
-	TLBSID_1M   = 0x07,
-	TLBSID_16M  = 0x0F,
-	TLBSID_256M = 0x1F,
-	TLBSID_1G   = 0x3F,
-	TLBSID_ERR  = 0xFF
-} TLB_SIZE_ID;
-
-////////////////////////////////////////////////////////////////
-
 typedef struct 
 {
-	TLB_SIZE_ID sid;
+	tlb_size_id sid;
 	const char * name;
 } tlb_sid_name;
 
@@ -50,7 +33,7 @@ static const tlb_sid_name tlb_sid_names[] =
 	{ TLBSID_ERR,  ""     }
 };	
 
-static TLB_SIZE_ID get_tlb_sid_by_name(const char * name)
+static tlb_size_id get_tlb_sid_by_name(const char * name)
 {
 	uint i;
 	for ( i = 0; tlb_sid_names[i].sid != TLBSID_ERR; ++ i ) 
@@ -59,7 +42,7 @@ static TLB_SIZE_ID get_tlb_sid_by_name(const char * name)
 	return tlb_sid_names[i].sid;
 }
 
-static const char * get_tlb_sid_name(TLB_SIZE_ID tlb_sid)
+static const char * get_tlb_sid_name(tlb_size_id tlb_sid)
 {
 	uint i;
 	for ( i = 0; tlb_sid_names[i].sid != TLBSID_ERR; ++ i ) 
@@ -68,7 +51,7 @@ static const char * get_tlb_sid_name(TLB_SIZE_ID tlb_sid)
 	return tlb_sid_names[i].name;
 }
 
-static const uint get_tlb_sid_size(TLB_SIZE_ID tlb_sid)
+static const uint get_tlb_sid_size(tlb_size_id tlb_sid)
 {
 	switch ( tlb_sid ) {
 	case TLBSID_4K :   return 4 * 1024;
@@ -96,64 +79,17 @@ static const uint get_tlb_sid_size(TLB_SIZE_ID tlb_sid)
  fff00 1  0   1m  f fff00 3  3ff 2000  1   1  0   5  BE  0   0    5
 */
 
-typedef struct 
-{
-  uint32_t epn   : 20;  // [0:19]
-  uint32_t v     : 1;   // [20]
-  uint32_t ts    : 1;   // [21]
-  uint32_t dsiz  : 6;   // [22:27]  set 0x0, 0x1, 0x3, 0x7, 0xF, 0x1F, 0x3F (4K, 16K, 64K, 1M, 16M, 256M, 1GB) 
-  uint32_t blank : 4;   // [28:31]
-} tlb_entr_0;
-
-typedef union
-{
-	tlb_entr_0 entr;
-	uint32_t   data;
-} tlb_entr_data_0;
-
 static void print_tlb_entr_0(tlb_entr_0 * tlb, bool header)
 {
-	if ( ! header ) printf(" %05x %d  %d %4s  %01x", tlb->epn, tlb->v, tlb->ts, get_tlb_sid_name((TLB_SIZE_ID) tlb->dsiz), tlb->blank);
+	if ( ! header ) printf(" %05x %d  %d %4s  %01x", tlb->epn, tlb->v, tlb->ts, get_tlb_sid_name((tlb_size_id) tlb->dsiz), tlb->blank);
 	else            printf("  epn  v ts  sz   _");
 }
-
-typedef struct 
-{
-  uint32_t rpn   : 20;  // [0:19]
-  uint32_t blank : 2;   // [20:21]
-  uint32_t erpn  : 10;  // [22:31]
-} tlb_entr_1;
-
-typedef union
-{
-	tlb_entr_1 entr;
-	uint32_t   data;
-} tlb_entr_data_1;
 
 static void print_tlb_entr_1(tlb_entr_1 * tlb, bool header)
 {
 	if ( ! header ) printf(" %05x %01x  %03x", tlb->rpn, tlb->blank, tlb->erpn);
 	else            printf("  rpn  _ erpn"); 
 }
-
-typedef struct 
-{
-  uint32_t blank1 : 14;  // [0:13]
-  uint32_t il1i   : 1;   // [14]
-  uint32_t il1d   : 1;   // [15]
-  uint32_t u      : 4;   // [16:19]
-  uint32_t wimg   : 4;   // [20:23]
-  uint32_t e      : 1;   // [24]  0-BE, 1-LE
-  uint32_t blank2 : 1;   // [25]
-  uint32_t uxwr   : 3;   // [26:28]
-  uint32_t sxwr   : 3;   // [29:31]
-} tlb_entr_2;
-
-typedef union
-{
-	tlb_entr_2 entr;
-	uint32_t   data;
-} tlb_entr_data_2;
 
 static void print_tlb_entr_2(tlb_entr_2 * tlb, bool header)
 {
@@ -210,7 +146,7 @@ typedef struct
 {
 	uint32_t phys_adr;
 	uint32_t cpu_adr;
-	TLB_SIZE_ID sid;
+	tlb_size_id sid;
 } map_entr;
 
 #define MEM_MAPS_QTY  50
@@ -261,19 +197,7 @@ static int find_empty_map_entr(void)
 	return -1;
 }
 
-static void mem_map_inval(uint32_t cpu_adr, TLB_SIZE_ID tlb_sid)
-{
-	tlb_entr_data_0 tlb_0;
-	tlb_0.data = 0x00000000;
-	tlb_0.entr.epn = (cpu_adr >> 12);
-	tlb_0.entr.v = 0;
-	tlb_0.entr.ts = 0;
-	tlb_0.entr.dsiz = tlb_sid;
-		
-	_invalidate_tlb_entry(tlb_0.data);
-}
-
-static int mem_map_drop(uint32_t cpu_adr, TLB_SIZE_ID tlb_sid)
+static int mem_map_drop(uint32_t cpu_adr, tlb_size_id tlb_sid)
 {
 	int map_ind = -1;
 	
@@ -286,7 +210,7 @@ static int mem_map_drop(uint32_t cpu_adr, TLB_SIZE_ID tlb_sid)
 		tlb_sid = s_maps[map_ind].sid;
 	}
 	
-	mem_map_inval(cpu_adr, tlb_sid);
+	tlb47x_inval(cpu_adr, tlb_sid);
 	
 	if ( map_ind != -1 ) 
 		s_maps[map_ind].sid = TLBSID_ERR;
@@ -301,14 +225,14 @@ static int mem_map_drop_all(void)
 		if ( s_maps[map_ind].sid == TLBSID_ERR ) 
 			continue;		
 
-		mem_map_inval(s_maps[map_ind].cpu_adr, s_maps[map_ind].sid);
+		tlb47x_inval(s_maps[map_ind].cpu_adr, s_maps[map_ind].sid);
 		
 		s_maps[map_ind].sid = TLBSID_ERR;
 	}
 	return 0;
 }
 
-static int mem_map_set(uint32_t phys_adr, uint32_t cpu_adr, TLB_SIZE_ID tlb_sid)
+static int mem_map_set(uint32_t phys_adr, uint32_t cpu_adr, tlb_size_id tlb_sid)
 {
 	int map_ind;
 	
@@ -324,29 +248,7 @@ static int mem_map_set(uint32_t phys_adr, uint32_t cpu_adr, TLB_SIZE_ID tlb_sid)
 		return 0;	
 	}
 
-	tlb_entr_data_0 tlb_0;
-	tlb_0.data = 0x00000000;
-  tlb_0.entr.epn = (cpu_adr >> 12);
-  tlb_0.entr.v = 1;
-  tlb_0.entr.ts = 0;
-  tlb_0.entr.dsiz = tlb_sid;
-
-	tlb_entr_data_1 tlb_1;
-	tlb_1.data = 0x00000000;
-  tlb_1.entr.rpn = (phys_adr >> 12);
-  tlb_1.entr.erpn = 0x000;
-
-	tlb_entr_data_2 tlb_2;
-	tlb_2.data = 0x00000000;
-  tlb_2.entr.il1i = 1;
-  tlb_2.entr.il1d = 1;
-  tlb_2.entr.u = 0;
-  tlb_2.entr.wimg = 0x4;
-  tlb_2.entr.e = 0;  // BE   
-  tlb_2.entr.uxwr = 0x7;     
-  tlb_2.entr.sxwr = 0x7;     
-	
-	_write_tlb_entry(tlb_0.data, tlb_1.data, tlb_2.data, 0); 
+	tlb47x_map(phys_adr, cpu_adr, 0x4, tlb_sid);
 	
 	s_maps[map_ind].phys_adr = phys_adr;
 	s_maps[map_ind].cpu_adr = cpu_adr;
@@ -431,7 +333,7 @@ static int do_mem_map_set(int argc, char * const argv[])
 			return CMD_RET_USAGE;
 		}
 		
-		TLB_SIZE_ID tlb_sid = get_tlb_sid_by_name(argv[1]);
+		tlb_size_id tlb_sid = get_tlb_sid_by_name(argv[1]);
 		if ( tlb_sid == TLBSID_ERR ) {
 			printf("Bad size\n");
 			return CMD_RET_USAGE;
@@ -463,7 +365,7 @@ static int do_mem_map_drop(int argc, char * const argv[])
 		return CMD_RET_USAGE;
 	}
 	
-	TLB_SIZE_ID tlb_sid = TLBSID_ERR;	
+	tlb_size_id tlb_sid = TLBSID_ERR;	
 	if ( argc == 2 ) {
 		tlb_sid = get_tlb_sid_by_name(argv[1]);
 		if ( tlb_sid == TLBSID_ERR ) {

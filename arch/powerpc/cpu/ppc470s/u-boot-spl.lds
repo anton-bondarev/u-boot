@@ -7,6 +7,7 @@ SECTIONS
     .text :
     {
        KEEP(*(.text.start))
+       KEEP(*(.text.start_secondary))
     *(.text)
     }
 

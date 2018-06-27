@@ -141,3 +141,15 @@ _read_tlb_entry:
 rte_nf:
 	addi r3, r0, 0
 	blr
+
+
+#ifdef CONFIG_SPL_BUILD
+
+.section ".text.start_secondary","ax",@progbits
+.global _start_secondary
+_start_secondary:
+    load_const_link sp, MPW_SPL_STACK_SECONDARY
+	bl	process_spintable    
+
+#endif
+
