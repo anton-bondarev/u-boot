@@ -11,39 +11,24 @@ int testdramfromto(uint *pstart, uint *pend);
 
 #define CRGCPU__        0x38006000
 
-/*
-static void failsafe(void)
+
+static void slowdown(void)
 {
 	writel(0x1ACCE551, CRGCPU__ + 0xc);
 	writel(0x02010050, CRGCPU__ + 0x9); // 500Mhz
 	writel(0x1, CRGCPU__ + 0x4);
 }
-*/
 
-static void patch_da_regs(void)
-{
-    writel(0x1f, 0x3c067000 + 0x420);
-    writel(0xff, 0x3C060000 + 0x420);
-    writel(0xff, 0x3C061000 + 0x420);
-    writel(0xff, 0x3C062000 + 0x420);
-    writel(0xff, 0x3C063000 + 0x420);
-    writel(0xff, 0x3C064000 + 0x420);
-    writel(0xff, 0x3C065000 + 0x420);
-    writel(0xff, 0x3C066000 + 0x420);
-    writel(0xff, 0x3C067000 + 0x420);
-}
-
-uint32_t *magic = (0x00040000 + 0x00020000 - 4);
+uint32_t *magic = (uint32_t *)(0x00040000 + 0x00020000 - 4);
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
 
 void board_init_f(ulong dummy)
 {
-	//failsafe();
 	// clean up dark magic 
 	*magic = 0;
-	
-	patch_da_regs();
+	slowdown();
+
 	/* init dram */
 	ddr_init();
 
@@ -62,7 +47,7 @@ void board_init_f(ulong dummy)
 
 u32 spl_boot_device(void)
 {
-	return BOOT_DEVICE_SPI;
+	return BOOT_DEVICE_MMC1;
 }
 
 void spl_board_init(void)
