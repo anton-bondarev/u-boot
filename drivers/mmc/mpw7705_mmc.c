@@ -21,12 +21,15 @@
 
 #include "mpw7705_sysreg.h"
 
+#define BUS_CLOCK  100000000
+#define CLKDIV_MAX 255
+
 #define SDIO_TIMEOUT        2000000 
 
 #ifndef DEBUG 
 	// ASTRO TODO: find a real place where we need this delay...
 	#undef  debug
-	#define debug(...)  delay_loop(100)
+	#define debug(...)  delay_loop(5000)
 #endif	
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -34,13 +37,14 @@ DECLARE_GLOBAL_DATA_PTR;
 struct mpw7705_mmc_platdata {
 	struct mmc_config cfg;
 	struct mmc mmc;
-	uint32_t regbase;
+	uint32_t reg_base;
 	struct gpio_desc card_detect;
+	uint bus_width;
 };
 
-static inline uint32_t get_regbase(const struct mmc * mmc)
+static inline struct mpw7705_mmc_platdata * mmc_get_platdata(const struct mmc * mmc)
 {
-	return ((struct mpw7705_mmc_platdata *) mmc->priv)->regbase;
+	return (struct mpw7705_mmc_platdata *) mmc->priv;
 }
 
 static uint32_t wait_tick(void) 
@@ -93,40 +97,40 @@ static void mpw7705_print_op(char * func, uint32_t adr, int reg, uint val)
 
 static inline void mpw7705_writel(const struct mmc * mmc, int reg, u32 val)
 {
-	uint32_t regbase = get_regbase(mmc);
+	uint32_t regbase = mmc_get_platdata(mmc)->reg_base;
 	mpw7705_print_op("mpw7705_writeL", regbase, reg, val);
 	writel(val, regbase + reg);
 }
 static inline void mpw7705_writew(const struct mmc * mmc, int reg, u16 val)
 {
-	uint32_t regbase = get_regbase(mmc);
+	uint32_t regbase = mmc_get_platdata(mmc)->reg_base;
 	mpw7705_print_op("mpw7705_writeW", regbase, reg, val);
 	writew(val, regbase + reg);
 }
 static inline void mpw7705_writeb(const struct mmc * mmc, int reg, u8 val)
 {
-	uint32_t regbase = get_regbase(mmc);
+	uint32_t regbase = mmc_get_platdata(mmc)->reg_base;
 	mpw7705_print_op("mpw7705_writeB", regbase, reg, val);
 	writeb(val, regbase + reg);
 }
 
 static inline u32 mpw7705_readl(const struct mmc * mmc, int reg)
 {
-	uint32_t regbase = get_regbase(mmc);
+	uint32_t regbase = mmc_get_platdata(mmc)->reg_base;
 	u32 retval = readl(regbase + reg);
 	mpw7705_print_op("mpw7705_readL", regbase, reg, retval);
 	return retval;
 }
 static inline u16 mpw7705_sdhci_readw(const struct mmc * mmc, int reg)
 {
-	uint32_t regbase = get_regbase(mmc);
+	uint32_t regbase = mmc_get_platdata(mmc)->reg_base;
 	u16 retval = readw(regbase + reg);
 	mpw7705_print_op("mpw7705_readW", regbase, reg, retval);
 	return retval;
 }
 static inline u8 mpw7705_readb(const struct mmc * mmc, int reg)
 {
-	uint32_t regbase = get_regbase(mmc);
+	uint32_t regbase = mmc_get_platdata(mmc)->reg_base;
 	u8 retval = readb(regbase + reg);
 	mpw7705_print_op("mpw7705_readB", regbase, reg, retval);
 	return retval;
@@ -141,7 +145,7 @@ static bool wait_cmd_done_handle(const struct mmc * mmc)
 		int status = mpw7705_readl(mmc, SPISDIO_SDIO_INT_STATUS);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
 			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_ERR);
-			debug(" ECMD<0x%x>", status);
+			debug(" ECMD<0x%x>\n", status);
 			return false;
 		} else if ( status & SPISDIO_SDIO_INT_STATUS_CMD_DONE ) {
 			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_CMD_DONE);
@@ -160,7 +164,7 @@ static bool wait_tran_done_handle(const struct mmc * mmc)
 		int status = mpw7705_readl(mmc, SPISDIO_SDIO_INT_STATUS);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
 			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_ERR);
-			debug(" ETRN<0x%x>", status);
+			debug(" ETRN<0x%x>\n", status);
 			return false;
 		} else if ( status & SPISDIO_SDIO_INT_STATUS_TRAN_DONE ) {
 			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_DAT_DONE);
@@ -179,7 +183,7 @@ static bool wait_ch1_dma_done_handle(const struct mmc * mmc)
 		int status = mpw7705_readl(mmc, SPISDIO_SDIO_INT_STATUS);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
 			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_ERR);
-			debug(" EDMA<0x%x>", status);
+			debug(" EDMA<0x%x>\n", status);
 			return false;
 		} else if ( status & SPISDIO_SDIO_INT_STATUS_CH1_FINISH ) {
 			mpw7705_writel(mmc, SDIO_DCCR_1, DSSR_CHANNEL_TR_DONE);
@@ -198,7 +202,7 @@ static bool wait_buf_tran_finish_handle(const struct mmc * mmc)
 		int status = mpw7705_readl(mmc, SPISDIO_SDIO_INT_STATUS);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
 			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_ERR);
-			debug(" EBLK<0x%x>", status);
+			debug(" EBLK<0x%x>\n", status);
 			return false;
 		} else if ( status & SPISDIO_SDIO_INT_STATUS_BUF_FINISH ) {
 			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_FIFO_FINISH);
@@ -211,14 +215,6 @@ static bool wait_buf_tran_finish_handle(const struct mmc * mmc)
 }
 //-------------------------------------
 
-#define SDIO_RESPONSE_NONE  0
-#define SDIO_RESPONSE_R2    1
-#define SDIO_RESPONSE_R1367 2
-#define SDIO_RESPONSE_R1b   3
-
-#define SDIO_CTRL_NODATA(_cmd, _resp, _crc, _idx)          \
-   ( _cmd << 16 | (_idx << 12) | (_crc << 13)  | (_resp << 10) | (0x11))
-
 static bool sd_send_cmd(const struct mmc * mmc, uint32_t cmd_ctrl, uint32_t arg)
 {
 	debug("SEND CMD_%d(%x)[%x]", cmd_ctrl >> 16, cmd_ctrl & 0xFFFF, arg);
@@ -226,12 +222,12 @@ static bool sd_send_cmd(const struct mmc * mmc, uint32_t cmd_ctrl, uint32_t arg)
 	mpw7705_writel(mmc, SDIO_SDR_CTRL_REG, cmd_ctrl);
 	bool result = wait_cmd_done_handle(mmc);
 	debug(" res=%s", (result ? "ok" : "err"));
-	delay_loop(20);
+	delay_loop(200);
 	return result;
 }
 ////////////////////////////////////////////////////////////////
 
-#define CMD17_CTRL  0x00117911
+#define CMD17_CTRL  0x00117910
 
 static bool SD2buf(const struct mmc * mmc, int buf_num, int idx, uint len)
 {
@@ -240,14 +236,12 @@ static bool SD2buf(const struct mmc * mmc, int buf_num, int idx, uint len)
 	mpw7705_writel(mmc, SDIO_SDR_CMD_ARGUMENT_REG, idx);
 	mpw7705_writel(mmc, SDIO_SDR_CTRL_REG, CMD17_CTRL);
 
-	if ( ! wait_cmd_done_handle(mmc) ) {
-		debug("TIMEOUT:CMD DONE at function SD2buf\n");
+	if ( ! wait_cmd_done_handle(mmc) ) 
 		return false;
-	}
-	if ( ! wait_tran_done_handle(mmc) ) {
-		debug("TIMEOUT:TRANSFER DONE at function SD2buf\n");
+	
+	if ( ! wait_tran_done_handle(mmc) ) 
 		return false;
-	}
+	
 	return true;
 }
 //----------------------------
@@ -260,14 +254,12 @@ static bool buf2axi(const struct mmc * mmc, int buf_num, int dma_addr, uint len)
 	mpw7705_writel(mmc, SDIO_DCDSAR_1, dma_addr);
 	mpw7705_writel(mmc, SDIO_DCCR_1, DCCR_1_VAL);
 
-	if ( ! wait_ch1_dma_done_handle(mmc) ) {
-		debug("TIMEOUT:DMA DONE at function buf2axi.\n");
+	if ( ! wait_ch1_dma_done_handle(mmc) ) 
 		return false;
-	}
-	if ( ! wait_buf_tran_finish_handle(mmc) ) {
-		debug("TIMEOUT:BUF TRAN FINISH at function buf2axi.\n");
+	
+	if ( ! wait_buf_tran_finish_handle(mmc) ) 
 		return false;
-	}
+	
 	return true;
 }
 //------------------------------------------
@@ -380,10 +372,6 @@ static int mpw7705_dm_mmc_get_cd(struct udevice * dev)
 	return carddetected ? 1 : 0;
 }
 
-#define SDIO_CLK_DIV_400KHz   124
-#define SDIO_CLK_DIV_10MHz    4
-#define SDIO_CLK_DIV_50MHz    0
-
 static int mpw7705_mmc_probe(struct udevice * dev)
 {
 	debug(">mpw7705_mmc_probe\n");
@@ -395,8 +383,8 @@ static int mpw7705_mmc_probe(struct udevice * dev)
 
 	cfg->voltages = MMC_VDD_33_34 | MMC_VDD_32_33 | MMC_VDD_31_32 | MMC_VDD_165_195;	
 	cfg->host_caps = MMC_MODE_8BIT | MMC_MODE_4BIT | MMC_MODE_HS_52MHz | MMC_MODE_HS;
-	cfg->f_min = DIV_ROUND_UP(24000000, 63);
-	cfg->f_max = 52000000; 
+	cfg->f_min = 400000;
+	cfg->f_max = 25000000; 
 	cfg->b_max = 511; /* max 512 - 1 blocks */
 	cfg->name = dev->name;
 
@@ -410,8 +398,6 @@ static int mpw7705_mmc_probe(struct udevice * dev)
 	}
 
 	mmc_set_clock(mmc, cfg->f_min, false);
-	
-	mpw7705_writel(mmc, SPISDIO_SDIO_CLK_DIVIDE, SDIO_CLK_DIV_10MHz);
 
 	mpw7705_writel(mmc, SPISDIO_ENABLE, 0x1);  //sdio-on, spi-off
 
@@ -443,7 +429,7 @@ static int mpw7705_mmc_ofdata_to_platdata(struct udevice *dev)
 	if ( sdio_addr == FDT_ADDR_T_NONE )
 		return -EINVAL;
 	
-	pdata->regbase = sdio_addr;
+	pdata->reg_base = sdio_addr;
 
 	return 0;
 }
@@ -456,12 +442,26 @@ int mpw7705_mmc_bind(struct udevice *dev)
 	return mmc_bind(dev, & pdata->mmc, & pdata->cfg);
 }
 
+static void set_clock(struct udevice * dev, uint clock)
+{
+	struct mmc * mmc = mmc_get_mmc_dev(dev);
+	
+	uint32_t m = DIV_ROUND_UP(BUS_CLOCK, clock) - 1;		
+	if ( m > CLKDIV_MAX )
+		m = CLKDIV_MAX;
+	
+	mpw7705_writel(mmc, SPISDIO_SDIO_CLK_DIVIDE, m);  
+}
+
 static int mpw7705_dm_mmc_set_ios(struct udevice * dev)
 {
-#ifdef DEBUG	
+	struct mpw7705_mmc_platdata * pdata = dev_get_platdata(dev);	
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
-#endif	
 	debug(">>mpw7705_dm_mmc_set_ios: clock=%d, bus_width=%d\n", mmc->clock, mmc->bus_width);
+	
+	pdata->bus_width = mmc->bus_width;	
+	set_clock(dev, mmc->clock);
+
 	return 0;
 }
 
@@ -491,67 +491,66 @@ static bool proc_cmd(const struct mmc * mmc, uint code, uint arg)
 	return false;
 }
 
+#define SDIO_RESPONSE_NONE  0
+#define SDIO_RESPONSE_R2    1
+#define SDIO_RESPONSE_R1367 2
+#define SDIO_RESPONSE_R1b   3
+
+#define SDIO_CTRL_NODATA(_cmd, _resp, _crc, _idx, _bw)  \
+   (((_cmd) << 16) | ((_idx) << 12) | ((_crc) << 13)  | ((_resp) << 10) | (0x10) | ((_bw) << 0))
+
+#define CMD_HAS_DATA   0x4000
+#define CMD_DATA_READ  0x0100
+
 static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, struct mmc_data *data)
 {
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
 	int ret = 0;
 
-	debug(">CMD: cmd=%d, resp= 0x%x, arg=0x%x", cmd->cmdidx, cmd->resp_type, cmd->cmdarg);
+	int resp = SDIO_RESPONSE_NONE;	
+	if ( cmd->resp_type & MMC_RSP_PRESENT ) {
+		if ( cmd->resp_type & MMC_RSP_136 )
+			resp = SDIO_RESPONSE_R2;
+		else if ( cmd->resp_type & MMC_RSP_BUSY ) 
+			resp = SDIO_RESPONSE_R1b;
+		else 
+			resp = SDIO_RESPONSE_R1367;
+	}
+
+	debug(">CMD: cmd=%d, resp= 0x%x(0x%x), arg=0x%x", cmd->cmdidx, cmd->resp_type, resp, cmd->cmdarg);
 	if ( data ) 
 		debug(" %s bqty=%d, bsz=%d", (data->flags == MMC_DATA_READ ? "read" : "write"), data->blocks, data->blocksize);
 	debug(" ...\n");
 
-	int resp = SDIO_RESPONSE_NONE;	
-	if (cmd->resp_type & MMC_RSP_PRESENT) {
-		if (cmd->resp_type & MMC_RSP_136)
-			resp = SDIO_RESPONSE_R1367;
-
-		if (cmd->resp_type & MMC_RSP_BUSY)
-			resp = SDIO_RESPONSE_R1b;
-		
-		if (cmd->resp_type & MMC_RSP_R2)
-			resp = SDIO_RESPONSE_R2;
-	} 
-	resp = SDIO_RESPONSE_R1367;
 	int crc = (cmd->resp_type & MMC_RSP_CRC) ? 1 : 0; 
 	int idx = (cmd->resp_type & MMC_RSP_OPCODE) ? 1 : 0; 
+	uint bw = 0; // !!! (mmc->bus_width == 4 ? 1 : 0);
+	bool is_data_cmd = (!! data && (cmd->cmdidx == 6 || cmd->cmdidx == 13 || cmd->cmdidx == 51));
+	uint data_len = 0;
+	uint32_t cmd_code = SDIO_CTRL_NODATA(cmd->cmdidx, resp, crc, idx, bw);
+	if ( is_data_cmd ) {
+		cmd_code |= (CMD_HAS_DATA | CMD_DATA_READ);
+		data_len = data->blocks * data->blocksize;
+		mpw7705_writel(mmc, SDIO_SDR_ADDRESS_REG, (0 << 2));
+		mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (data_len << 16) | 0x01);
+	}
 	
 	bool res = false;
 	switch ( cmd->cmdidx ) {
 	case MMC_CMD_GO_IDLE_STATE :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(0, 0, 0, 0), cmd->cmdarg);
-		break;
 	case MMC_CMD_SEND_EXT_CSD :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(8, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
-		break;
 	case MMC_CMD_APP_CMD :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(55, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
-		break;
 	case SD_CMD_APP_SEND_OP_COND :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(41, resp, crc, idx), cmd->cmdarg);
-		break;
 	case MMC_CMD_ALL_SEND_CID :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(2, SDIO_RESPONSE_R2, crc, idx), cmd->cmdarg);
-		break;		
 	case MMC_CMD_SET_RELATIVE_ADDR :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(3, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
-		break;
 	case MMC_CMD_SEND_CSD :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(9, SDIO_RESPONSE_R2, crc, idx), cmd->cmdarg);
-		break;
 	case MMC_CMD_SELECT_CARD :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(7, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
-		break;
-	case SD_CMD_APP_SET_BUS_WIDTH :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(6, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
-		break;
 	case MMC_CMD_SET_BLOCKLEN :
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(16, SDIO_RESPONSE_R1367, crc, idx), 512/*cmd->cmdarg*/);  //!!!
-		break;		
-	case MMC_CMD_STOP_TRANSMISSION :
-		res = true;  //!!! no need		
-		//res = proc_cmd(mmc, SDIO_CTRL_NODATA(12, SDIO_RESPONSE_R1367, crc, idx), cmd->cmdarg);
-		break;		
+	case 6 :  // MMC_CMD_SWITCH, SD_CMD_SWITCH_FUNC, SD_CMD_APP_SET_BUS_WIDTH
+	case 13 :  // MMC_CMD_SEND_STATUS, SD_CMD_APP_SD_STATUS	
+	case 51 :  // SD_CMD_APP_SEND_SCR
+		res = proc_cmd(mmc, cmd_code, cmd->cmdarg);
+		break;
 		
 	case MMC_CMD_READ_SINGLE_BLOCK :	
 	case MMC_CMD_READ_MULTIPLE_BLOCK :	
@@ -580,92 +579,35 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 		}
 		break;
 		
-	case SD_CMD_APP_SEND_SCR :
-		{
-			uint len = data->blocks * data->blocksize;
-			uint attempt;
-			for ( attempt = 0; attempt < 5; ++ attempt ) {
-				//res = true;
-				mpw7705_writel(mmc, SDIO_SDR_ADDRESS_REG, (0 << 2));
-				mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (len << 16) | 0x01);
-				resp = SDIO_RESPONSE_R1367;
-				uint32_t cmd_code = (51 << 16) | 0x7811;				
-				res = sd_send_cmd(mmc, cmd_code, cmd->cmdarg);
-				if ( res )
-					res = wait_tran_done_handle(mmc);
-				if ( res )
-					break;
-				debug("+");
-				delay_loop(100000);
-			}
-			//!!! cannot yet
-			if ( res ) {
-/*				
-				delay_loop(1000000);
-				u8 buf[512];
-				PREP_BUF(buf);
-				res = buf2axi(0, (uint32_t) buf, len);
-				debug(">>>BUF: res=%d\n", res);
-				print_buf(buf, len);
-*/
-				uint8_t buf[8] = { 0x02, 0x35, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00 };
-				print_buf(buf, len);
-				if ( res )
-					memcpy(data->dest, buf, len);
-			}
-		}
-		break;
-
-	case SD_CMD_APP_SD_STATUS :
-		{
-			uint len = data->blocks * data->blocksize;
-			uint attempt;
-			for ( attempt = 0; attempt < 5; ++ attempt ) {
-				//res = true;
-				mpw7705_writel(mmc, SDIO_SDR_ADDRESS_REG, (0 << 2));
-				mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (len << 16) | 0x01);
-				resp = SDIO_RESPONSE_R1367;
-				uint32_t cmd_code = (13 << 16) | 0x7811;				
-				res = sd_send_cmd(mmc, cmd_code, cmd->cmdarg);
-				if ( res )
-					res = wait_tran_done_handle(mmc);
-				if ( res )
-					break;
-				debug("+");
-				delay_loop(100000);
-			}
-			//!!! cannot yet
-			if ( res ) {					
-/*			
-				delay_loop(1000000);
-				u8 buf[512];
-				PREP_BUF(buf);
-				res = buf2axi(0, (uint32_t) buf, len);
-				debug(">>>BUF: res=%d\n", res);
-*/				
-				uint8_t buf[64] = { 0x80, 0x00, 0x00, 0x00,   0x02, 0x00, 0x00, 0x00,   0x03, 0x03, 0x90, 0x00,   0x08, 0x05, 0x00, 0x00,  
-														0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,    
-														0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,    
-														0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00 };
-				print_buf(buf, len);
-				if ( res )
-					memcpy(data->dest, buf, data->blocks * data->blocksize);
-			}
-		}
-		break;
+	case MMC_CMD_STOP_TRANSMISSION :
+		res = true;  // !!! no need		
+		break;		
 		
 	default:
 #ifdef DEBUG	
 		((void (*) (void)) 0xfffc0178)();
 #endif		
-		res = proc_cmd(mmc, SDIO_CTRL_NODATA(cmd->cmdidx, resp, crc, idx), cmd->cmdarg);
+		res = proc_cmd(mmc, SDIO_CTRL_NODATA(cmd->cmdidx, resp, crc, idx, bw), cmd->cmdarg);
 		break;
 	}
 	debug(" %s", res ? "ok" : "error");
 	
+	if ( res && is_data_cmd ) {
+		res = wait_tran_done_handle(mmc);
+		if ( res ) {				
+			u8 buf[512];
+			BUG_ON(data_len > sizeof(buf));
+			PREP_BUF(buf);
+			res = buf2axi(mmc, 0, (uint32_t) buf, data_len);
+			debug(">>>BUF: res=%d\n", res);
+			print_buf(buf, data_len);
+			memcpy(data->dest, buf, data_len);
+		}
+	}
+	
 	if ( ! res )
 		ret = -EIO;
-	
+
 	mpw7705_mmc_read_response(mmc, cmd);
 	
 	return ret;
