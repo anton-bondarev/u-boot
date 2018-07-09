@@ -234,7 +234,7 @@ static bool SD2buf(const struct mmc * mmc, int buf_num, int idx, uint len)
 	mpw7705_writel(mmc, SDIO_SDR_ADDRESS_REG, (buf_num << 2));
 	mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (len == 512 ? BLOCK_512_DATA_TRANS : (len << 16) | 0x0001));
 	mpw7705_writel(mmc, SDIO_SDR_CMD_ARGUMENT_REG, idx);
-	mpw7705_writel(mmc, SDIO_SDR_CTRL_REG, CMD17_CTRL);
+	mpw7705_writel(mmc, SDIO_SDR_CTRL_REG, CMD17_CTRL | mmc_get_platdata(mmc)->bus_width);
 
 	if ( ! wait_cmd_done_handle(mmc) ) 
 		return false;
@@ -459,7 +459,7 @@ static int mpw7705_dm_mmc_set_ios(struct udevice * dev)
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
 	debug(">>mpw7705_dm_mmc_set_ios: clock=%d, bus_width=%d\n", mmc->clock, mmc->bus_width);
 	
-	pdata->bus_width = mmc->bus_width;	
+	pdata->bus_width = (mmc->bus_width == 4 ? 1 : 0);
 	set_clock(dev, mmc->clock);
 
 	return 0;
@@ -524,7 +524,7 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 
 	int crc = (cmd->resp_type & MMC_RSP_CRC) ? 1 : 0; 
 	int idx = (cmd->resp_type & MMC_RSP_OPCODE) ? 1 : 0; 
-	uint bw = 0; // !!! (mmc->bus_width == 4 ? 1 : 0);
+	uint bw = mmc_get_platdata(mmc)->bus_width;
 	bool is_data_cmd = (!! data && (cmd->cmdidx == 6 || cmd->cmdidx == 13 || cmd->cmdidx == 51));
 	uint data_len = 0;
 	uint32_t cmd_code = SDIO_CTRL_NODATA(cmd->cmdidx, resp, crc, idx, bw);
