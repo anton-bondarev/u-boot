@@ -280,22 +280,34 @@ static bool sd_read_block(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr
 
 static bool sd_read_data(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr, uint len)
 {
-	uint32_t blk_adr = src_adr - (src_adr % BLOCK_SIZE);
-	u8 buf[BLOCK_SIZE];
+	if ( ! mmc->high_capacity ) {	
+		u8 buf[BLOCK_SIZE];
+		uint32_t blk_adr = src_adr - (src_adr % BLOCK_SIZE);
 	
-	while ( len != 0 ) {
-		if ( ! sd_read_block(mmc, blk_adr, buf) ) {
-			debug("sd_read_block512 ERROR\n");
-			((void (*) (void)) 0xfffc0178)();
+		while ( len != 0 ) {
+			if ( ! sd_read_block(mmc, blk_adr, buf) ) {
+				debug("sd_read_block512 ERROR\n");
+				((void (*) (void)) 0xfffc0178)();
+			}
+			uint32_t ofs = src_adr - blk_adr;
+			uint32_t part = BLOCK_SIZE - ofs;
+			if ( part > len )
+				part = len;
+			memcpy(dst_ptr, & buf[ofs], part);
+			dst_ptr += part;
+			blk_adr += BLOCK_SIZE;
+			len -= part;
 		}
-		uint32_t ofs = src_adr - blk_adr;
-		uint32_t part = BLOCK_SIZE - ofs;
-		if ( part > len )
-			part = len;
-		memcpy(dst_ptr, & buf[ofs], part);
-		dst_ptr += part;
-		blk_adr += BLOCK_SIZE;
-		len -= part;
+	} else {
+		while ( len != 0 ) {
+			if ( ! sd_read_block(mmc, src_adr, dst_ptr) ) {
+				debug("sd_read_block512 ERROR\n");
+				((void (*) (void)) 0xfffc0178)();
+			}
+			dst_ptr += BLOCK_SIZE;
+			src_adr += 1;
+			len -= BLOCK_SIZE;
+		}
 	}
 	
 	return true;
@@ -569,7 +581,7 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 						print_buf(dst_ptr, data->blocksize);
 					if ( ! res )
 						break;
-					src_adr += data->blocksize;
+					src_adr += (! mmc->high_capacity ? data->blocksize : 1);
 					dst_ptr += data->blocksize;
 					-- blk_qty;
 				}
