@@ -26,7 +26,7 @@ _start:
     load_const_link sp, CONFIG_SPL_STACK
 #endif
 #else
-    load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x400000
+    load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
 #endif
 
 clear_bss:
@@ -46,11 +46,17 @@ clear_bss:
     cmplw   0, r3, r4
     bne     5b
 6:
+#ifndef CONFIG_SPL_BUILD
+    /* now copy data to new place */
+    load_const_link r3, CONFIG_SYS_INIT_RAM_ADDR
+    load_const_link r4, __init_start
+    load_const_link r5, __init_size
+    bl memcpy
+#endif 
 
 	bl	cpu_init_early_f
 
-    lis	r3,(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)@h
-	ori	r3,r3,(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)@l
+    load_const_link r3, (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)
 
     bl board_init_f_alloc_reserve
     ori r2, r3, r3

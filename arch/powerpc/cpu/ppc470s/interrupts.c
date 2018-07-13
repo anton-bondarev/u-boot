@@ -12,6 +12,7 @@
 #include <asm/arch-ppc4xx/ppc470s_itrpt.h>  
 #include <asm/arch-ppc4xx/ppc470s_itrpt_fields.h>
 #include <asm/arch-ppc4xx/ppc470s_reg_access.h>
+#include <asm/tlb47x.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -60,6 +61,8 @@ static inline void mpic128_disable_pass_through(uint32_t base_address)
 }
 */
 
+int add_code_guard(void);
+
 void interrupt_init_cpu (unsigned *decrementer_count)
 {
     //Disable interrupts on the current processor
@@ -103,6 +106,7 @@ void interrupt_init_cpu (unsigned *decrementer_count)
     //Permit all interrupts with priorities higher MPIC128_PRIORITY__0 to be passed to current processor
     mpic128_set_current_processor_task_priority_level( MPICx_DCR, MPIC128_PRIORITY__0 );
 */
+  add_code_guard();
 }
 
 /*
@@ -216,6 +220,7 @@ __attribute__( ( always_inline ) ) static inline uint32_t __get_R3(void)
 #define DEFINE_INT_HANDLER(handler) \
 void irq_handler__##handler (void) 	\
 {					\
+  tlb47x_map(0, CONFIG_SYS_DDR_BASE, TLBSID_256M, TLB_MODE_RWX); \
 	printf("\n\n !!! Interrupt happens (" #handler ")\n"); \
     printf("\tR1:\t0x%08X\n\tR3:\t0x%08X\n\tLR:\t0x%08X\n\tSRR0:\t0x%08X\n\tSRR1:\t0x%08X\n\tCSRR0:\t0x%08X\n\tCSRR1:\t0x%08X\n\n", \
                              __get_R1(), __get_R3(), __get_LR(), __get_SRR0(), __get_SRR1(), __get_CSRR0(), __get_CSRR1()); \

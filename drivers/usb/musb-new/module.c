@@ -38,15 +38,22 @@ static void module_musb_disable(struct musb *musb)
 	/* no way to shut the controller */
 }
 
+static int module_musb_reset(struct musb *musb);
+static int module_musb_enable(struct musb *musb);
+
 static irqreturn_t module_interrupt(int irq, void *hci)
 {
 	struct musb		*musb = hci;
 	irqreturn_t		retval = IRQ_NONE;
+	static int skipResetInt = 2;
 
 	/* ack usb core interrupts */
 	musb->int_usb = musb_readb(musb->mregs, MUSB_INTRUSB);
 	if (musb->int_usb)
 		musb_writeb(musb->mregs, MUSB_INTRUSB, musb->int_usb);
+
+// skip SoF because it not processed
+	musb->int_usb &= ~MUSB_INTR_SOF;
 
 	/* ack endpoint interrupts */
 	musb->int_tx = musb_readw(musb->mregs, MUSB_INTRTX);
@@ -56,11 +63,6 @@ static irqreturn_t module_interrupt(int irq, void *hci)
 	if (musb->int_rx)
 		musb_writew(musb->mregs, MUSB_INTRRX, musb->int_rx);
 
-	/* drop spurious RX and TX if device is disconnected */
-	if (musb->int_usb & MUSB_INTR_DISCONNECT) {
-		musb->int_tx = 0;
-		musb->int_rx = 0;
-	}
 
 	if (musb->int_usb || musb->int_tx || musb->int_rx)
 		retval |= musb_interrupt(musb);
@@ -281,7 +283,6 @@ void musb_read_fifo(struct musb_hw_ep *hw_ep, u16 len, u8 *dst)
 #endif
 	debug("USB FIFO read %d\n\n", len);
 	readsb(fifo, dst, len);
-	return; 
 #if 0
 	u32 nl = len/4; 
 	
@@ -416,11 +417,11 @@ static int musb_usb_remove(struct udevice *dev)
 }
 
 static const struct udevice_id module_musb_ids[] = {
-	{ .compatible = "rc-module,musbmhdrc" },
+	{ .compatible = "rc-module,musb" },
 	{ }
 };
 
-struct dm_usb_ops musb_empy_ops = {
+struct dm_usb_ops musb_empty_ops = {
 
 };
 
@@ -433,7 +434,7 @@ U_BOOT_DRIVER(usb_musb) = {
 #ifdef CONFIG_USB_MUSB_HOST
 	.ops		= &musb_usb_ops,
 #else
-	.ops 		= &musb_empy_ops,
+	.ops 		= &musb_empty_ops,
 #endif
 	.platdata_auto_alloc_size = sizeof(struct usb_platdata),
 	.priv_auto_alloc_size = sizeof(struct module_musb_data),

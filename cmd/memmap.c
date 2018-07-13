@@ -248,7 +248,7 @@ static int mem_map_set(uint32_t phys_adr, uint32_t cpu_adr, tlb_size_id tlb_sid)
 		return 0;	
 	}
 
-	tlb47x_map(phys_adr, cpu_adr, 0x4, tlb_sid);
+	tlb47x_map(phys_adr, cpu_adr, tlb_sid, TLB_MODE_RWX);
 	
 	s_maps[map_ind].phys_adr = phys_adr;
 	s_maps[map_ind].cpu_adr = cpu_adr;

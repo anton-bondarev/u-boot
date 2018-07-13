@@ -20,6 +20,10 @@
 #define SDIO_SDR_RESPONSE3_REG       0x20
 #define SDIO_SDR_RESPONSE4_REG       0x24
 
+#define SDIO_DCCR_0                  0x28
+#define SDIO_DCSSAR_0                0x2C
+#define SDIO_DCDTR_0                 0x34
+
 #define SDIO_DCCR_1                  0x38
 #define SDIO_DCDSAR_1                0x40
 #define SDIO_DCDTR_1                 0x44
@@ -29,6 +33,8 @@
 #define SPISDIO_SDIO_INT_STATUS  0x308
 #define SPISDIO_SDIO_INT_MASKS   0x30C
 
+
+#define SPISDIO_SDIO_INT_STATUS_CH0_FINISH  0x01
 #define SPISDIO_SDIO_INT_STATUS_CH1_FINISH  0x02
 #define SPISDIO_SDIO_INT_STATUS_BUF_FINISH  0x04
 #define SPISDIO_SDIO_INT_STATUS_CAR_ERR     0x40

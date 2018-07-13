@@ -15,6 +15,17 @@ typedef enum
 	TLBSID_ERR  = 0xFF
 } tlb_size_id;
 
+typedef enum
+{
+  TLB_MODE_NONE = 0x0,
+  TLB_MODE_R  = 0x1,
+  TLB_MODE_W  = 0x2,
+  TLB_MODE_RW = 0x3,
+  TLB_MODE_X  = 0x4,
+  TLB_MODE_RX = 0x5,
+  TLB_MODE_WX  = 0x6,
+  TLB_MODE_RWX = 0x7
+} tlb_rwx_mode;
 
 typedef struct 
 {
@@ -69,6 +80,9 @@ void _write_tlb_entry(uint32_t tlb0, uint32_t tlb1, uint32_t tlb2, uint32_t zero
 int _read_tlb_entry(uint32_t ea, uint32_t * tlb, uint32_t dummy);
 
 void tlb47x_inval(uint32_t cpu_adr, tlb_size_id tlb_sid);
-void tlb47x_map(uint64_t physical, uint32_t logical, uint32_t wimg, tlb_size_id size);
+
+void tlb47x_map(uint64_t physical, uint32_t logical, tlb_size_id size, tlb_rwx_mode smode);
+
+void tlb47x_map_nocache(uint64_t physical, uint32_t logical, tlb_size_id size, tlb_rwx_mode smode);
 
 #endif

@@ -13,9 +13,9 @@
  *      0x40000000 - Start of DDR
  *      0x4D000000 - Start of U-Boot header (8Mb for U-boot itself)
  *      0x4D000040 - Start of U-Boot binary
- *      0x4D800000 - Start of U-Boot RAM (heap - 16Mb)
- *      0x4E800000 - End of U-Boot RAM (heap)
- *      0x4FFFFFFF - U-Boot stack
+ *      0x4E000000 - Start of U-Boot RAM (heap - 16Mb)
+ *      0x4F000000 - End of U-Boot RAM (heap)
+ *      0x4F100000 - Initial stack (1Mb)
  *
  */
 
@@ -49,14 +49,12 @@
 
 /*		Start address of memory area that can be used for
 		initial data and stack; */        
-#define CONFIG_SYS_INIT_RAM_ADDR		0x4D800000
+#define CONFIG_SYS_INIT_RAM_ADDR		0x4E000000
 /*      16 Megabyte for U-boot           */
 #define CONFIG_SYS_INIT_RAM_SIZE		0x01000000
 
-#ifdef CONFIG_SPL_BUILD
-#define CONFIG_SYS_MONITOR_BASE CONFIG_SPL_TEXT_BASE
-#else
-#define CONFIG_SYS_MONITOR_BASE CONFIG_SYS_TEXT_BASE
+#ifndef CONFIG_SPL_BUILD
+#define CONFIG_SYS_MONITOR_LEN  SZ_256K
 #endif
 
 /* #define CONFIG_SPL_FRAMEWORK */
