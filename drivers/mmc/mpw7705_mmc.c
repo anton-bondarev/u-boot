@@ -68,9 +68,11 @@ static void delay_loop(uint count)
 
 #define DSSR_CHANNEL_TR_DONE    0x00080000
 
-#define BLOCK_512_DATA_TRANS        0x00000101
-#define BUFER_TRANS_START           0x04
-#define DCCR_1_VAL                  0x00020F01
+#define BLOCK_512_DATA_TRANS    0x00000101
+#define BUFER_TRANS_WRITE       0x02
+#define BUFER_TRANS_START       0x04
+#define DCCR_VAL_READ           0x00020F01
+#define DCCR_VAL_WRITE          0x000020F1
 
 //-------------------------------------
 
@@ -94,6 +96,48 @@ static void mpw7705_print_op(char * func, uint32_t adr, int reg, uint val)
 #else
 	#define mpw7705_print_op(func, adr, reg, val)
 #endif
+
+#define PREP_BUF(buf)  prep_buf((buf), sizeof(buf))
+#define PRINT_BUF(buf)  print_buf((buf), sizeof(buf))
+#ifdef DEBUG_BUF
+static void prep_buf(u8 * buf, uint size)
+{
+	uint i;
+	for ( i = 0; i < size; ++ i )
+		buf[i] = i;
+}
+
+static bool isprintable(const char c)
+{
+	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '!' && c <= '?') || c == ' ') ? true : false;
+}
+
+static void print_buf(const u8 * buf, uint size)
+{
+	uint len = (size < 512 ? size : 512), i;
+	debug("buf[%d]=", size);
+	bool is_zero = true;
+	for ( i = 0; i < len; ++ i ) 
+		if ( buf[i] != '\0' ) {
+			is_zero = false;
+			break;
+		}
+	if ( ! is_zero ) {	 
+		while ( len -- ) {
+			char c = * buf ++;
+			if ( isprintable(c) ) debug("_%c", c);		
+			else                  debug("%02x", c);
+		}
+	} else
+		debug("[ZERO]");		
+	debug("\n");
+}
+#else
+	#define prep_buf(buf, size)
+	#define print_buf(buf, size)
+#endif
+
+////////////////////////////////////////////////////////////////
 
 static inline void mpw7705_writel(const struct mmc * mmc, int reg, u32 val)
 {
@@ -176,6 +220,25 @@ static bool wait_tran_done_handle(const struct mmc * mmc)
 	return false;
 }
 
+static bool wait_ch0_dma_done_handle(const struct mmc * mmc)
+{
+	uint32_t start = wait_tick();
+	do {
+		int status = mpw7705_readl(mmc, SPISDIO_SDIO_INT_STATUS);
+		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
+			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_ERR);
+			debug(" EDMA_0<0x%x>\n", status);
+			return false;
+		} else if ( status & SPISDIO_SDIO_INT_STATUS_CH0_FINISH ) {
+			mpw7705_writel(mmc, SDIO_DCCR_0, DSSR_CHANNEL_TR_DONE);
+			return true;
+		}
+	} while ( wait_tick() - start < SDIO_TIMEOUT );
+
+	debug("DMA_0 ERROR: TIMEOUT\n");
+	return false;
+}
+
 static bool wait_ch1_dma_done_handle(const struct mmc * mmc)
 {
 	uint32_t start = wait_tick();
@@ -183,7 +246,7 @@ static bool wait_ch1_dma_done_handle(const struct mmc * mmc)
 		int status = mpw7705_readl(mmc, SPISDIO_SDIO_INT_STATUS);
 		if ( status & SPISDIO_SDIO_INT_STATUS_CAR_ERR ) {
 			mpw7705_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_ERR);
-			debug(" EDMA<0x%x>\n", status);
+			debug(" EDMA_1<0x%x>\n", status);
 			return false;
 		} else if ( status & SPISDIO_SDIO_INT_STATUS_CH1_FINISH ) {
 			mpw7705_writel(mmc, SDIO_DCCR_1, DSSR_CHANNEL_TR_DONE);
@@ -191,7 +254,7 @@ static bool wait_ch1_dma_done_handle(const struct mmc * mmc)
 		}
 	} while ( wait_tick() - start < SDIO_TIMEOUT );
 
-	debug("DMA ERROR: TIMEOUT\n");
+	debug("DMA_1 ERROR: TIMEOUT\n");
 	return false;
 }
 
@@ -228,13 +291,14 @@ static bool sd_send_cmd(const struct mmc * mmc, uint32_t cmd_ctrl, uint32_t arg)
 ////////////////////////////////////////////////////////////////
 
 #define CMD17_CTRL  0x00117910
+#define CMD24_CTRL  0x00187810
 
-static bool SD2buf(const struct mmc * mmc, int buf_num, int idx, uint len)
+static bool SD_buf(const struct mmc * mmc, uint cmd_ctrl, int buf_num, int idx, uint len)
 {
 	mpw7705_writel(mmc, SDIO_SDR_ADDRESS_REG, (buf_num << 2));
 	mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (len == 512 ? BLOCK_512_DATA_TRANS : (len << 16) | 0x0001));
 	mpw7705_writel(mmc, SDIO_SDR_CMD_ARGUMENT_REG, idx);
-	mpw7705_writel(mmc, SDIO_SDR_CTRL_REG, CMD17_CTRL | mmc_get_platdata(mmc)->bus_width);
+	mpw7705_writel(mmc, SDIO_SDR_CTRL_REG, cmd_ctrl | mmc_get_platdata(mmc)->bus_width);
 
 	if ( ! wait_cmd_done_handle(mmc) ) 
 		return false;
@@ -244,15 +308,31 @@ static bool SD2buf(const struct mmc * mmc, int buf_num, int idx, uint len)
 	
 	return true;
 }
-//----------------------------
-//dma_addr is a physical address
-//Hi [35:32] must be set through LSIF1 reg
-static bool buf2axi(const struct mmc * mmc, int buf_num, int dma_addr, uint len)
+
+static inline bool SD2buf(const struct mmc * mmc, int buf_num, int idx, uint len)
 {
-	mpw7705_writel(mmc, SDIO_BUF_TRAN_CTRL_REG, BUFER_TRANS_START | buf_num);
-	mpw7705_writel(mmc, SDIO_DCDTR_1, len);
-	mpw7705_writel(mmc, SDIO_DCDSAR_1, dma_addr);
-	mpw7705_writel(mmc, SDIO_DCCR_1, DCCR_1_VAL);
+	return SD_buf(mmc, CMD17_CTRL, buf_num, idx, len);
+}
+
+static inline bool buf2SD(const struct mmc * mmc, int buf_num, int idx, uint len)
+{
+	return SD_buf(mmc, CMD24_CTRL, buf_num, idx, len);
+}
+
+//----------------------------
+
+typedef enum 
+{
+	DATA_READ,
+	DATA_WRITE
+} data_dir;
+
+static bool AXI_buf(const struct mmc * mmc, data_dir dir, uint buf_num, uint32_t dma_addr, uint len)
+{
+	mpw7705_writel(mmc, SDIO_BUF_TRAN_CTRL_REG, BUFER_TRANS_START | (dir == DATA_WRITE ? BUFER_TRANS_WRITE : 0x0) | buf_num);
+	mpw7705_writel(mmc, (dir == DATA_WRITE ? SDIO_DCDTR_0 : SDIO_DCDTR_1), len);
+	mpw7705_writel(mmc, (dir == DATA_WRITE ? SDIO_DCSSAR_0 : SDIO_DCDSAR_1), dma_addr);
+	mpw7705_writel(mmc, (dir == DATA_WRITE ? SDIO_DCCR_0 : SDIO_DCCR_1), (dir == DATA_WRITE ? DCCR_VAL_WRITE : DCCR_VAL_READ));
 
 	if ( ! wait_ch1_dma_done_handle(mmc) ) 
 		return false;
@@ -262,118 +342,92 @@ static bool buf2axi(const struct mmc * mmc, int buf_num, int dma_addr, uint len)
 	
 	return true;
 }
+
+static inline bool buf2axi(const struct mmc * mmc, uint buf_num, uint32_t dma_addr, uint len)
+{
+	return AXI_buf(mmc, DATA_READ, buf_num, dma_addr, len);
+}
+
+static inline bool axi2buf(const struct mmc * mmc, uint buf_num, uint32_t dma_addr, uint len)
+{
+	return AXI_buf(mmc, DATA_WRITE, buf_num, dma_addr, len);
+}
+
 //------------------------------------------
-#define BLOCK_SIZE  512
 
-//dest_addr is a physical address
-//Hi [35:32] must be set through LSIF1 reg
-static bool sd_read_block(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr)
+static bool sd_read_block(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr, uint len)
 {
-	if ( ! SD2buf(mmc, 0, src_adr, BLOCK_SIZE) )
+	if ( ! SD2buf(mmc, 0, src_adr, len) )
 		return false;
 	
-	if ( ! buf2axi(mmc, 0, (uint32_t) dst_ptr, BLOCK_SIZE) )
+	if ( ! buf2axi(mmc, 0, (uint32_t) dst_ptr, len) )
 		return false;
 
 	return true;
 }
 
-static bool sd_read_data(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr, uint len)
+static bool sd_write_block(const struct mmc * mmc, uint32_t dst_adr, u8 * src_ptr, uint len)
 {
-	if ( ! mmc->high_capacity ) {	
-		u8 buf[BLOCK_SIZE];
-		uint32_t blk_adr = src_adr - (src_adr % BLOCK_SIZE);
+	mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (len == 512 ? BLOCK_512_DATA_TRANS : (len << 16) | 0x0001));
+	mpw7705_writel(mmc, SDIO_BUF_TRAN_CTRL_REG, BUFER_TRANS_START | BUFER_TRANS_WRITE | 0);
+	mpw7705_writel(mmc, SDIO_DCDTR_0, len);
+	mpw7705_writel(mmc, SDIO_DCSSAR_0, (uint32_t) src_ptr);
+	mpw7705_writel(mmc, SDIO_DCCR_0, DCCR_VAL_WRITE);
 	
-		while ( len != 0 ) {
-			if ( ! sd_read_block(mmc, blk_adr, buf) ) {
-				debug("sd_read_block512 ERROR\n");
-				((void (*) (void)) 0xfffc0178)();
+	if ( ! wait_ch0_dma_done_handle(mmc) ) 
+		return false;
+	
+	if ( ! wait_buf_tran_finish_handle(mmc) ) 
+		return false;
+
+	mpw7705_writel(mmc, SDIO_SDR_ADDRESS_REG, (0 << 2));
+	mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (len == 512 ? BLOCK_512_DATA_TRANS : (len << 16) | 0x0001));
+	mpw7705_writel(mmc, SDIO_SDR_CMD_ARGUMENT_REG, dst_adr);
+	mpw7705_writel(mmc, SDIO_SDR_CTRL_REG, CMD24_CTRL | mmc_get_platdata(mmc)->bus_width);
+	
+	if ( ! wait_cmd_done_handle(mmc) ) 
+		return false;
+	
+	if ( ! wait_tran_done_handle(mmc) ) 
+		return false;
+
+	return true;
+}
+
+typedef bool (* sd_data_oper)(const struct mmc * mmc, uint32_t sdc_adr, u8 * mem_ptr, uint len);
+
+static bool sd_trans_data(const struct mmc * mmc, sd_data_oper oper, uint32_t sdc_adr, u8 * mem_ptr, uint blk_qty, uint blk_len)
+{
+	while ( blk_qty -- ) {
+			if ( ! (* oper)(mmc, sdc_adr, mem_ptr, blk_len) ) {
+				debug("sd_trans_data ERROR\n");
+				return false;
 			}
-			uint32_t ofs = src_adr - blk_adr;
-			uint32_t part = BLOCK_SIZE - ofs;
-			if ( part > len )
-				part = len;
-			memcpy(dst_ptr, & buf[ofs], part);
-			dst_ptr += part;
-			blk_adr += BLOCK_SIZE;
-			len -= part;
-		}
-	} else {
-		while ( len != 0 ) {
-			if ( ! sd_read_block(mmc, src_adr, dst_ptr) ) {
-				debug("sd_read_block512 ERROR\n");
-				((void (*) (void)) 0xfffc0178)();
-			}
-			dst_ptr += BLOCK_SIZE;
-			src_adr += 1;
-			len -= BLOCK_SIZE;
-		}
+#ifdef DEBUG_BUF
+			debug(">>%d:", blk_qty);
+			print_buf(mem_ptr, blk_len);
+#endif					
+			mem_ptr += blk_len;
+			sdc_adr += (mmc->high_capacity ? 1 : blk_len);			
 	}
-	
+#ifdef DEBUG_BUF
+	debug("\n");
+#endif					
 	return true;
 }
 
+static inline bool sd_read_data(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr, uint blk_qty, uint blk_len)
+{
+	return sd_trans_data(mmc, sd_read_block, src_adr, dst_ptr, blk_qty, blk_len);
+}
+
+static inline bool sd_write_data(const struct mmc * mmc, uint32_t dst_adr, u8 * src_ptr, uint blk_qty, uint blk_len)
+{
+	return sd_trans_data(mmc, sd_write_block, dst_adr, src_ptr, blk_qty, blk_len);
+}
+	
 ////////////////////////////////////////////////////////////////
 
-#define PREP_BUF(buf)  prep_buf((buf), sizeof(buf))
-#define PRINT_BUF(buf)  print_buf((buf), sizeof(buf))
-#ifdef DEBUG_BUF
-static void prep_buf(u8 * buf, uint size)
-{
-	uint i;
-	for ( i = 0; i < size; ++ i )
-		buf[i] = i;
-}
-
-static bool isprintable(const char c)
-{
-	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '!' && c <= '?') || c == ' ') ? true : false;
-}
-
-static void print_buf(const u8 * buf, uint size)
-{
-	uint len = (size < 512 ? size : 512), i;
-	debug("buf[%d]=", size);
-	bool is_zero = true;
-	for ( i = 0; i < len; ++ i ) 
-		if ( buf[i] != '\0' ) {
-			is_zero = false;
-			break;
-		}
-	if ( ! is_zero ) {	 
-		while ( len -- ) {
-			char c = * buf ++;
-			if ( isprintable(c) ) debug("_%c", c);		
-			else                  debug("%02x", c);
-		}
-	} else
-		debug("[ZERO]");		
-	debug("\n");
-}
-
-static void test_read(const struct mmc * mmc)
-{
-	static u8 block[512];
-	uint32_t adr = 0;//0x11800 - 10;
-	uint cnt;
-
-	for ( cnt = 0; cnt < 3; ++ cnt ) {
-		PREP_BUF(block);
-		debug("Read SD card (adr=%d) ... ", adr);		
-		bool res = sd_read_data(mmc, adr, block, 512/*sizeof(block)*/);
-		debug("%s\n", res ? "ok" : "fail");
-		PRINT_BUF(block);
-			
-		adr += 512;
-	}
-	
-	//((void (*) (void)) 0xfffc0178)();
-}
-#else
-	#define prep_buf(buf, size)
-	#define print_buf(buf, size)
-#endif
-	
 static int mpw7705_dm_mmc_get_cd(struct udevice * dev)
 {
 	struct mpw7705_mmc_platdata * pdata = dev_get_platdata(dev);
@@ -382,6 +436,13 @@ static int mpw7705_dm_mmc_get_cd(struct udevice * dev)
 	debug(">mpw7705_dm_mmc_get_cd: %d\n", carddetected);
 
 	return carddetected ? 1 : 0;
+}
+
+static int mpw7705_dm_mmc_get_wp(struct udevice * dev)
+{
+	debug(">mpw7705_dm_mmc_get_cd:\n");
+
+	return 0;
 }
 
 static int mpw7705_mmc_probe(struct udevice * dev)
@@ -518,7 +579,7 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 {
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
 	int ret = 0;
-
+	
 	int resp = SDIO_RESPONSE_NONE;	
 	if ( cmd->resp_type & MMC_RSP_PRESENT ) {
 		if ( cmd->resp_type & MMC_RSP_136 )
@@ -537,14 +598,14 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 	int crc = (cmd->resp_type & MMC_RSP_CRC) ? 1 : 0; 
 	int idx = (cmd->resp_type & MMC_RSP_OPCODE) ? 1 : 0; 
 	uint bw = mmc_get_platdata(mmc)->bus_width;
-	bool is_data_cmd = (!! data && (cmd->cmdidx == 6 || cmd->cmdidx == 13 || cmd->cmdidx == 51));
+	bool is_int_data_cmd = (!! data && (cmd->cmdidx == 6 || cmd->cmdidx == 13 || cmd->cmdidx == 51));
 	uint data_len = 0;
 	uint32_t cmd_code = SDIO_CTRL_NODATA(cmd->cmdidx, resp, crc, idx, bw);
-	if ( is_data_cmd ) {
+	if ( is_int_data_cmd ) {
 		cmd_code |= (CMD_HAS_DATA | CMD_DATA_READ);
 		data_len = data->blocks * data->blocksize;
 		mpw7705_writel(mmc, SDIO_SDR_ADDRESS_REG, (0 << 2));
-		mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (data_len << 16) | 0x01);
+		mpw7705_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (data_len << 16) | 0x0001);
 	}
 	
 	bool res = false;
@@ -566,29 +627,11 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 		
 	case MMC_CMD_READ_SINGLE_BLOCK :	
 	case MMC_CMD_READ_MULTIPLE_BLOCK :	
-		if ( data ) {
-			if ( data->flags == MMC_DATA_READ ) {
-				debug(">>READ: src=0x%x, dst=0x%x, bqty=%d, bsz=%d\n", cmd->cmdarg, (uint32_t) data->dest, data->blocks, data->blocksize);
-				uint blk_qty = data->blocks;
-				ulong src_adr = cmd->cmdarg;
-				u8 * dst_ptr = (u8 *) data->dest;
-				while ( blk_qty != 0 ) {				
-#ifdef DEBUG_BUF
-					debug(">>>%d:", blk_qty);
-#endif					
-					res = sd_read_data(mmc, src_adr, dst_ptr, data->blocksize);
-					if ( res ) 
-						print_buf(dst_ptr, data->blocksize);
-					if ( ! res )
-						break;
-					src_adr += (! mmc->high_capacity ? data->blocksize : 1);
-					dst_ptr += data->blocksize;
-					-- blk_qty;
-				}
-				debug("\n");
-			} else
-				debug("Bad flag in MMC_CMD_READ\n");				
-		}
+	case MMC_CMD_WRITE_SINGLE_BLOCK :	
+	case MMC_CMD_WRITE_MULTIPLE_BLOCK :	
+		BUG_ON(! data);
+		debug(">>>%s: sdc=0x%x, mem=0x%x, bqty=%d, bsz=%d\n", (data->flags == MMC_DATA_READ ? "READ" : "WRITE"), cmd->cmdarg, (uint32_t) data->dest, data->blocks, data->blocksize);
+		res = (data->flags == MMC_DATA_READ ? sd_read_data : sd_write_data)(mmc, cmd->cmdarg, (u8 *) data->dest, data->blocks, data->blocksize);
 		break;
 		
 	case MMC_CMD_STOP_TRANSMISSION :
@@ -604,7 +647,7 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 	}
 	debug(" %s", res ? "ok" : "error");
 	
-	if ( res && is_data_cmd ) {
+	if ( res && is_int_data_cmd ) {
 		res = wait_tran_done_handle(mmc);
 		if ( res ) {				
 			u8 buf[512];
@@ -633,7 +676,8 @@ static const struct udevice_id mpw7705_mmc_match[] = {
 static const struct dm_mmc_ops mpw7705_dm_mmc_ops = {
 	.send_cmd = mpw7705_dm_mmc_send_cmd,
 	.set_ios = mpw7705_dm_mmc_set_ios,
-	.get_cd = mpw7705_dm_mmc_get_cd
+	.get_cd = mpw7705_dm_mmc_get_cd,
+	.get_wp = mpw7705_dm_mmc_get_wp
 };
 
 U_BOOT_DRIVER(mpw7705_mmc_drv) = {
