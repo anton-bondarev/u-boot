@@ -1,18 +1,18 @@
-#define DEBUG 1
 #include <common.h>
 #include <asm/tlb47x.h>
 
 
-// ASTRO TODO
 int checkcpu(void)
 {
-    return 0;
-}
+    uint pvr = get_pvr();
 
-void print_reginfo(void)
-{
-    debug("ToDo register print\n");
-// ASTRO TODO
+    puts("CPU:   ");
+    if(pvr == 0x7ff520c0)
+        printf("RC Module PowerPC 476FP core\n");
+    else
+        printf("Unknown, PVR: %08X\n", pvr);
+
+    return 0;
 }
 
 void tlb47x_inval(uint32_t cpu_adr, tlb_size_id tlb_sid)

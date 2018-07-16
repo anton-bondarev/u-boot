@@ -38,7 +38,6 @@ config MPC8xx
 
 config PPC470S
 	bool "PPC470S"
-	imply CMD_REGINFO
 
 endchoice
 

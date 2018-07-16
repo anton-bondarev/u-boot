@@ -248,6 +248,13 @@ config CMD_BOOTEFI_HELLO
 	  for testing that EFI is working at a basic level, and for bringing
 	  up EFI support on a new architecture.
 
+config CMD_BOOTEDCL
+	bool "Support boot via EDCL"
+	depends on TARGET_MPW7705
+	default y
+	help
+	  Boot with EDCL tool.
+
 source lib/efi_selftest/Kconfig
 
 config CMD_BOOTMENU
@@ -261,6 +268,7 @@ config CMD_ELF
 	default y
 	help
 	  Boot an ELF/vxWorks image from the memory.
+
 
 config CMD_FDT
 	bool "Flattened Device Tree utility commands"
