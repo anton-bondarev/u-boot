@@ -1,4 +1,4 @@
-#define DEBUG
+#undef DEBUG
 #include <common.h>
 #include <usb.h>
 #include <dm.h>

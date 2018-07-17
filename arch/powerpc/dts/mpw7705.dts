@@ -94,6 +94,7 @@
 			    compatible = "st,m25p32", "spi-flash";
 			    reg = <0>;
 			    u-boot,dm-pre-reloc;
+				
 		    };
 	    };
 
@@ -113,6 +114,7 @@
                 clock = <100000000>;
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_uart1_default>;
+				status = "disabled";
 		};		
 	};
 
@@ -320,17 +322,19 @@
 			mac-address = [ EC 17 66 77 05 00 ];
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>;
+			status = "okay";
 		};
 
-/*		
+		
 		greth1: greth1@0x3C051000 {
 			compatible = "rc-module,greth";
             reg = <0x3C051000 0x1000>;			
 			mac-address = [ EC 17 66 77 05 01 ];
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_greth1_1_default>, <&pinctrl_greth1_2_default>, <&pinctrl_greth1_3_default>, <&pinctrl_greth1_4_default>;
+			status = "disabled";
 		};
-*/	
+	
         usb: musb@0x3C052000 {
                 compatible = "rc-module,musb";
                 reg = <0x3C052000 0x1000>,
@@ -349,33 +353,7 @@
 		    cs-gpios = <&gpio1 4 0>;
 		    spi-max-frequency = <400000>;
 			u-boot,dm-pre-reloc;
-/*
-			mmc1: mmc1@0 {
-				compatible = "rc-module,mmc-spi-0.2";
-				reg = <0x3C06A000 0x1000>;
-				carddetect-gpio = <&gpio1 1 0>;
-				u-boot,dm-pre-reloc;
-				status = "okay";
-			};
-*/			
-	    };
-/*
-	    spi2: spi2@0x3C059000 {
-		    compatible = "rc-module,pl022-spi";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_sdio_default>;
-			
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C059000 0x1000>;
-		    //cs-gpios = <&gpio1 4 1>;
-		    spi-max-frequency = <12500000>;		
-			u-boot,dm-pre-reloc;
-
-				
-	    };
-*/
-		
-
+			status = "disabled";
+	    };	
 	};
 };

@@ -31,10 +31,6 @@ ifeq ($(CROSS_COMPILE),powerpc-openbsd-)
 PLATFORM_CPPFLAGS+= -D__PPC__
 endif
 
-#ifeq ($(CROSS_COMPILE),powerpc-module-linux-gnu-)
-#PLATFORM_CPPFLAGS+= -mcpu=476fp -gdwarf-2 -ffreestanding -Os -mbig-endian -mstrict-align -Wall -fdata-sections -ffunction-sections -Wa,-mregnames
-#endif
-
 
 # Only test once
 ifneq ($(CONFIG_SPL_BUILD),y)

@@ -317,9 +317,9 @@ void musb_read_fifo(struct musb_hw_ep *hw_ep, u16 len, u8 *dst)
 
 const struct musb_platform_ops module_musb_ops = {
 	.init		= module_musb_init,
-	.set_mode	= module_musb_set_mode,
-	.disable	= module_musb_disable,
-	.enable		= module_musb_enable,
+//	.set_mode	= module_musb_set_mode,
+//	.disable	= module_musb_disable,
+//	.enable		= module_musb_enable,
 };
 
 
@@ -399,8 +399,6 @@ static int musb_usb_probe(struct udevice *dev)
 //	module_musb_plat.mode = MUSB_PERIPHERAL;
 	ret = musb_register(&module_musb_plat, &pdata->dev, mregs);
 #endif
-	if (ret == 0)
-		printf("MODULE MUSB OTG\n");
 
 	return ret;
 }

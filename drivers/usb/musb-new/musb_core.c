@@ -836,6 +836,15 @@ b_host:
 			}
 		}
 	}
+#else
+	if (int_usb & MUSB_INTR_RESET) {
+		handled = IRQ_HANDLED;
+		if(is_peripheral_capable())
+		{
+				musb_g_reset(musb);
+		}
+	}
+
 #endif
 
 #if 0

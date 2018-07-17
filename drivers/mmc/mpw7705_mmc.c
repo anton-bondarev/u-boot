@@ -3,7 +3,7 @@
 //#define DEBUG_REG
 
 #include <common.h>
-#include <errno.h>
+#include <errno.h> 
 #include <malloc.h>
 #include <part.h>
 #include <mmc.h>
@@ -21,6 +21,9 @@
 
 #include "mpw7705_sysreg.h"
 
+// !!! Checking possible DMA problem with memory 
+//#define DMA_PAD  (4 * 1024)
+
 #define BUS_CLOCK  100000000
 #define CLKDIV_MAX 255
 
@@ -29,7 +32,7 @@
 #ifndef DEBUG 
 	// ASTRO TODO: find a real place where we need this delay...
 	#undef  debug
-	#define debug(...)  delay_loop(5000)
+	#define debug(...)  delay_loop(1000)
 #endif	
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -327,11 +330,11 @@ typedef enum
 	DATA_WRITE
 } data_dir;
 
-static bool AXI_buf(const struct mmc * mmc, data_dir dir, uint buf_num, uint32_t dma_addr, uint len)
+static bool AXI_buf(const struct mmc * mmc, data_dir dir, uint buf_num, u8 * mem_ptr, uint len) 
 {
 	mpw7705_writel(mmc, SDIO_BUF_TRAN_CTRL_REG, BUFER_TRANS_START | (dir == DATA_WRITE ? BUFER_TRANS_WRITE : 0x0) | buf_num);
 	mpw7705_writel(mmc, (dir == DATA_WRITE ? SDIO_DCDTR_0 : SDIO_DCDTR_1), len);
-	mpw7705_writel(mmc, (dir == DATA_WRITE ? SDIO_DCSSAR_0 : SDIO_DCDSAR_1), dma_addr);
+	mpw7705_writel(mmc, (dir == DATA_WRITE ? SDIO_DCSSAR_0 : SDIO_DCDSAR_1), (uint32_t) mem_ptr);
 	mpw7705_writel(mmc, (dir == DATA_WRITE ? SDIO_DCCR_0 : SDIO_DCCR_1), (dir == DATA_WRITE ? DCCR_VAL_WRITE : DCCR_VAL_READ));
 
 	if ( ! wait_ch1_dma_done_handle(mmc) ) 
@@ -343,14 +346,27 @@ static bool AXI_buf(const struct mmc * mmc, data_dir dir, uint buf_num, uint32_t
 	return true;
 }
 
-static inline bool buf2axi(const struct mmc * mmc, uint buf_num, uint32_t dma_addr, uint len)
+static inline bool buf2axi(const struct mmc * mmc, uint buf_num, u8 * mem_ptr, uint len)
 {
-	return AXI_buf(mmc, DATA_READ, buf_num, dma_addr, len);
+#ifdef DMA_PAD	
+	u8 buf[3 * DMA_PAD], * ptr = & buf[DMA_PAD];
+	ptr = (u8 *) ((uint32_t) ptr & ~0xF);
+	
+	bool res = AXI_buf(mmc, DATA_READ, buf_num, ptr, len);
+	if ( ! res ) 
+		return false;
+	
+	memcpy(mem_ptr, ptr, len);
+	
+	return true;
+#else
+	return AXI_buf(mmc, DATA_READ, buf_num, mem_ptr, len);
+#endif	
 }
 
-static inline bool axi2buf(const struct mmc * mmc, uint buf_num, uint32_t dma_addr, uint len)
+static inline bool axi2buf(const struct mmc * mmc, uint buf_num, u8 * mem_ptr, uint len)
 {
-	return AXI_buf(mmc, DATA_WRITE, buf_num, dma_addr, len);
+	return AXI_buf(mmc, DATA_WRITE, buf_num, mem_ptr, len);
 }
 
 //------------------------------------------
@@ -360,7 +376,7 @@ static bool sd_read_block(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr
 	if ( ! SD2buf(mmc, 0, src_adr, len) )
 		return false;
 	
-	if ( ! buf2axi(mmc, 0, (uint32_t) dst_ptr, len) )
+	if ( ! buf2axi(mmc, 0, dst_ptr, len) )
 		return false;
 
 	return true;
@@ -653,7 +669,7 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 			u8 buf[512];
 			BUG_ON(data_len > sizeof(buf));
 			PREP_BUF(buf);
-			res = buf2axi(mmc, 0, (uint32_t) buf, data_len);
+			res = buf2axi(mmc, 0, buf, data_len);
 			debug(">>>BUF: res=%d\n", res);
 			print_buf(buf, data_len);
 			memcpy(data->dest, buf, data_len);
