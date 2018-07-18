@@ -94,7 +94,7 @@
 			    compatible = "st,m25p32", "spi-flash";
 			    reg = <0>;
 			    u-boot,dm-pre-reloc;
-				
+								
 		    };
 	    };
 
