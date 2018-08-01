@@ -94,6 +94,15 @@ static void ddr_init_crg_pll (uint32_t ddr3_speed)
     usleep(5); //let's wait 5us
     dcrwrite32(0x1, EM0_PHY_DCR_BASE + DDR3PHY_PHYREGEF); //Clock source = PHY internal PLL
 }
+
+
+static void ddr_init_lsif_pll (uint32_t lsif_speed)
+{
+    iowrite32(0x1ACCE551, CRG_DDR_BASE + CRG_DDR_WR_LOCK);
+    iowrite32((800000000/lsif_speed) -1, CRG_DDR_BASE + CRG_DDR_CKDIVMODE_LSIF);
+    iowrite32(0x1, CRG_DDR_BASE + CRG_DDR_UPD_CK);
+}
+
 //*****************************************************************************
 
 //*****************************************************************************
@@ -381,6 +390,7 @@ static void ddr_burst4 (void)
 static void _ddr_init (void)
 {
     ddr_init_crg_pll (DDR_ddr3_speed);
+    ddr_init_lsif_pll (DDR_lsif_speed);
     ddr_plb6mcif2_init (EM0_PLB6MCIF2_DCR_BASE, 0x00000000);
     ddr_aximcif2_init (EM0_AXIMCIF2_DCR_BASE);
     dcrwrite32 ((0b0000 << 28) | (0b1 << 27) | (0b00 << 8), EM0_MCIF2ARB_DCR_BASE + MCIF2ARB4_MACR);

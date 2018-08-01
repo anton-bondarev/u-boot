@@ -24,7 +24,7 @@
 // !!! Checking possible DMA problem with memory 
 //#define DMA_PAD  (4 * 1024)
 
-#define BUS_CLOCK  100000000
+#define BUS_CLOCK  57142857
 #define CLKDIV_MAX 255
 
 #define SDIO_TIMEOUT        2000000 

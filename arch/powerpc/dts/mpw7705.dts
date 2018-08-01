@@ -101,7 +101,7 @@
 		uart0: uart0@3C034000 {  /* console */
                 compatible = "arm,pl011", "arm,primecell";
                 reg = <0x3C034000 0x1000>;
-                clock = <100000000>;
+                clock = <57142857>;
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_uart0_default>;
 
@@ -111,7 +111,7 @@
 		uart1: uart1@3C035000 { 
                 compatible = "arm,pl011", "arm,primecell";
                 reg = <0x3C035000 0x1000>;
-                clock = <100000000>;
+                clock = <57142857>;
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_uart1_default>;
 				status = "disabled";
