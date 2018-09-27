@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
-
+#define DEBUG
 #include <common.h>
 #include <spl.h>
 #include <asm/io.h>
@@ -14,19 +14,6 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 #ifdef CONFIG_MPW7705
-// enable etherner for possible edcl boot
-static void enable_ethernet(void)
-{
-    writel(0x1f, 0x3c067000 + 0x420);
-    writel(0xff, 0x3C060000 + 0x420);
-    writel(0xff, 0x3C061000 + 0x420);
-    writel(0xff, 0x3C062000 + 0x420);
-    writel(0xff, 0x3C063000 + 0x420);
-    writel(0xff, 0x3C064000 + 0x420);
-    writel(0xff, 0x3C065000 + 0x420);
-    writel(0xff, 0x3C066000 + 0x420);
-    writel(0xff, 0x3C067000 + 0x420);
-}
 
 
 static void (*bootrom_enter_host_mode)(void) = (void (*)(void)) BOOT_ROM_HOST_MODE;
@@ -37,7 +24,6 @@ static int spl_edcl_load_image(struct spl_image_info *spl_image,
 {
 #ifdef CONFIG_MPW7705
 	debug("Enter HOST mode for EDCL loading\n");
-	enable_ethernet();
 	bootrom_enter_host_mode();
 #else
 	debug("EDCL loading not supported. Halt\n");

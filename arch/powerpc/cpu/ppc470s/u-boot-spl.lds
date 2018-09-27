@@ -6,6 +6,12 @@ SECTIONS
     . = CONFIG_SPL_TEXT_BASE;
     .text :
     {
+       LONG(0xbeefc0de);                              /* magic */
+       LONG(0);                                       /* length filled by rumboot-packimage */
+       LONG(_start);                                  /* entry 0 */
+       LONG(0 /*_start_secondary*/);                  /* entry 1 */
+       LONG(0);                                       /* checksum1 filled by rumboot-packimage */
+       LONG(0);                                       /* checksum2 filled by rumboot-packimage */
        KEEP(*(.text.start))
        KEEP(*(.text.start_secondary))
     *(.text)
@@ -20,12 +26,12 @@ SECTIONS
     }
 
     .data : {
-            *(.data*)
+        *(.data*)
 	    *(.rodata*)
-            *(.sdata*)
-            _GOT2_TABLE_ = .;
-            KEEP(*(.got2))
-            KEEP(*(.got))
+        *(.sdata*)
+        _GOT2_TABLE_ = .;
+        KEEP(*(.got2))
+        KEEP(*(.got))
     }
     __got2_entries = ((_GLOBAL_OFFSET_TABLE_ - _GOT2_TABLE_) >> 2) - 1;
 

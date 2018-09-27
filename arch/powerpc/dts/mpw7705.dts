@@ -12,12 +12,13 @@
     };
 
 	chosen {
-		stdout-path = &uart0;
+		stdout-path = "uart0";
 	};
 
 	aliases {
 		spi0 = &spi0;
 		mmc0 = &mmc0;
+		uart0 = &uart0;
 	} ; 
 
 	lsif0 {
@@ -26,26 +27,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		gpio0: gpio0@0x3C03B000 	{
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C03B000 0x1000>;
-
-			u-boot,dm-pre-reloc;
-		};
-
-		gpio1: gpio1@0x3C03C000 	{
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C03C000 0x1000>;
-			#gpio-cells = <2>;
-			gpio-controller;
-
-			u-boot,dm-pre-reloc;
-		};
-
+/*
 		mgpio0: mgpio0@0x3C040000 {
 		    compatible = "rc-module,pl061";
 		    #address-cells = <1>;
@@ -57,81 +39,9 @@
 					compatible = "rc-module,pl061-pinctrl";
 					u-boot,dm-pre-reloc;
 					
-					pinctrl_spi0_default: spi0_default {
-						u-boot,dm-pre-reloc;
-						pinmux = 	<SPI0_SCLK>,
-									<SPI0_MOSI>,
-									<SPI0_MISO>;
-					};					
-
-					pinctrl_uart0_default: uart0_default {
-						u-boot,dm-pre-reloc;
-						pinmux = 	<UART0_RXD>,
-									<UART0_TXD>;
-					};					
-					pinctrl_uart1_default: uart1_default {
-						pinmux = 	<UART1_RXD>,
-									<UART1_TXD>;
-					};					
-
 
 			};
-		};
 
-	    spi0: spi0@0x3C03E000 {
-		    compatible = "rc-module,pl022-spi";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_spi0_default>;
-			
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C03E000 0x1000>;
-		    cs-gpios = <&gpio1 2 0>, <0>, <0>, <0>;
-		    spi-max-frequency = <12500000>;			
-		    u-boot,dm-pre-reloc;
-
-		    spi_flash@0 {
-			    compatible = "st,m25p32", "spi-flash";
-			    reg = <0>;
-			    u-boot,dm-pre-reloc;
-								
-		    };
-	    };
-
-		uart0: uart0@3C034000 {  /* console */
-                compatible = "arm,pl011", "arm,primecell";
-                reg = <0x3C034000 0x1000>;
-                clock = <57142857>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_uart0_default>;
-
- 			    u-boot,dm-pre-reloc;
-		};		
-
-		uart1: uart1@3C035000 { 
-                compatible = "arm,pl011", "arm,primecell";
-                reg = <0x3C035000 0x1000>;
-                clock = <57142857>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_uart1_default>;
-				status = "disabled";
-		};		
-	};
-
-	lsif1 {
-	    u-boot,dm-pre-reloc;
-	    compatible = "simple-bus";
-		reg = <0x3C05E000 0x1000>;
-		reg-names = "ctrlreg";
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		mgpio0_1: mgpio0_1@0x3C060000 {
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C060000 0x1000>;
-		
 			pinctrl {
 					compatible = "rc-module,pl061-pinctrl";
 					
@@ -144,19 +54,7 @@
 									<GBETH0_RX_CRS>,
 									<GBETH0_TXD0>,
 									<GBETH0_TXD1>;
-					};					
-			};
-		};
-
-		mgpio1_1: mgpio1_1@0x3C061000 {
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C061000 0x1000>;
-		
-			pinctrl {
-					compatible = "rc-module,pl061-pinctrl";
-					
+					};	
 					pinctrl_greth0_2_default: greth0_2_default {
 						pinmux = 	<GBETH0_TXD2>,
 									<GBETH0_TXD3>,
@@ -166,19 +64,8 @@
 									<GBETH0_TXD7>,
 									<GBETH0_RXD0>,
 									<GBETH0_RXD1>;
-					};					
-			};
-		};
+					};		
 
-		mgpio2_1: mgpio2_1@0x3C062000 {
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C062000 0x1000>;
-		
-			pinctrl {
-					compatible = "rc-module,pl061-pinctrl";
-					
 					pinctrl_greth0_3_default: greth0_3_default {
 						pinmux = 	<GBETH0_RXD2>,
 									<GBETH0_RXD3>,
@@ -189,130 +76,9 @@
 									<GBETH0_MDC>,
 									<GBETH0_MDIO>;
 					};					
-			};
-		};
 
-		mgpio3_1: mgpio3_1@0x3C063000 {
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C063000 0x1000>;
-		    u-boot,dm-pre-reloc;
-		
-			pinctrl {
-				    u-boot,dm-pre-reloc;
-					compatible = "rc-module,pl061-pinctrl";
-					
-					pinctrl_spi1_default: spi1_default {
-						u-boot,dm-pre-reloc;
 
-						pinmux = 	<SPI1_SCLK>,
-									<SPI1_MOSI>,
-									<SPI1_MISO>;
-					};		
-
-					pinctrl_greth1_1_default: greth1_1_default {
-						pinmux = 	<GBETH1_TX_EN>,
-									<GBETH1_TX_ER>,
-									<GBETH1_RX_DV>,
-									<GBETH1_RX_ER>,
-									<GBETH1_RX_COL>;
-					};					
-								
 			};
-		};
-		mgpio4_1: mgpio4_1@0x3C064000 {
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C064000 0x1000>;
-		
-			pinctrl {
-					compatible = "rc-module,pl061-pinctrl";
-					
-					pinctrl_greth1_2_default: greth1_2_default {
-						pinmux = 	<GBETH1_RX_CRS>,
-									<GBETH1_TXD0>,
-									<GBETH1_TXD1>,
-									<GBETH1_TXD2>,
-									<GBETH1_TXD3>,
-									<GBETH1_TXD4>,
-									<GBETH1_TXD5>,
-									<GBETH1_TXD6>;
-					};					
-			};
-		};		
-		mgpio5_1: mgpio5_1@0x3C065000 {
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C065000 0x1000>;
-		
-			pinctrl {
-					compatible = "rc-module,pl061-pinctrl";
-					
-					pinctrl_greth1_3_default: greth1_3_default {
-						pinmux = 	<GBETH1_TXD7>,
-									<GBETH1_RXD0>,
-									<GBETH1_RXD1>,
-									<GBETH1_RXD2>,
-									<GBETH1_RXD3>,
-									<GBETH1_RXD4>,
-									<GBETH1_RXD5>,
-									<GBETH1_RXD6>;
-					};					
-			};
-		};
-		mgpio6_1: mgpio6_1@0x3C066000 {
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C066000 0x1000>;
-		
-			pinctrl {
-					compatible = "rc-module,pl061-pinctrl";
-					
-					pinctrl_greth1_4_default: greth1_4_default {
-						pinmux = 	<GBETH1_RXD7>,
-									<GBETH1_MDC>,
-									<GBETH1_MDIO>;
-					};					
-					pinctrl_uart2_default: uart2_default {
-						pinmux = 	<UART2_RXD>,
-									<UART2_TXD>;
-					};										
-			};
-		};
-		mgpio7_1: mgpio7_1@0x3C067000 {
-		    compatible = "rc-module,pl061";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C067000 0x1000>;
-			u-boot,dm-pre-reloc;
-		
-			pinctrl {
-					compatible = "rc-module,pl061-pinctrl";
-					u-boot,dm-pre-reloc;
-					
-					pinctrl_sdio_default: sdio_default {
-						u-boot,dm-pre-reloc;
-						pinmux = 	<SDIO_CMD>,
-									<SDIO_D0>,
-									<SDIO_D1>,
-									<SDIO_D2>,
-									<SDIO_D3>;
-					};					
-			};
-		};
-
-		mmc0: mmc0@0x3C06A000 {
-			compatible = "rc-module,mmc-0.2";
-			reg = <0x3C06A000 0x1000>;
-			carddetect-gpio = <&gpio1 1 0>;
-			u-boot,dm-pre-reloc;
-			status = "okay";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_sdio_default>;
 
 		};
 
@@ -324,32 +90,180 @@
 			pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>;
 			status = "okay";
 		};
+*/
+	};
 
-		
-		greth1: greth1@0x3C051000 {
-			compatible = "rc-module,greth";
-            reg = <0x3C051000 0x1000>;			
-			mac-address = [ EC 17 66 77 05 01 ];
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_greth1_1_default>, <&pinctrl_greth1_2_default>, <&pinctrl_greth1_3_default>, <&pinctrl_greth1_4_default>;
-			status = "disabled";
+	lsif1 {
+	    u-boot,dm-pre-reloc;
+	    compatible = "simple-bus";
+		reg = <0x3C060000 0x1000>;
+		reg-names = "ctrlreg";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		mgpio2_1: mgpio2_1@0x3C069000 {
+		    compatible = "rc-module,pl061";
+			u-boot,dm-pre-reloc;
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C069000 0x1000>;
+
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					pinctrl_uart0_default: uart0_default {
+						u-boot,dm-pre-reloc;
+						pinmux = 	<UART0_RXD>,
+									<UART0_TXD>;
+					};					
+			};					
 		};
-	
-        usb: musb@0x3C052000 {
+
+		mgpio3_1: mgpio3_1@0x3C06A3000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C06A000 0x1000>;
+		    u-boot,dm-pre-reloc;
+		
+			pinctrl {
+				    u-boot,dm-pre-reloc;
+					compatible = "rc-module,pl061-pinctrl";
+
+					pinctrl_spi0_default: spi0_default {
+						u-boot,dm-pre-reloc;
+						pinmux = 	<SPI0_SCLK>,
+									<SPI0_MOSI>,
+									<SPI0_MISO>;
+					};					
+
+					pinctrl_uart1_default: uart1_default {
+						pinmux = 	<UART1_RXD>,
+									<UART1_TXD>;
+					};
+
+					pinctrl_uart2_default: uart2_default {
+						pinmux = 	<UART2_RXD>,
+									<UART2_TXD>;
+					};										
+								
+			};
+		};
+		mgpio4_1: mgpio4_1@0x3C06B000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C06B000 0x1000>;
+		
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+
+					pinctrl_spi1_default: spi1_default {
+						u-boot,dm-pre-reloc;
+
+						pinmux = 	<SPI1_SCLK>,
+									<SPI1_MOSI>,
+									<SPI1_MISO>;
+					};		
+
+					pinctrl_sdio_default: sdio_default {
+						u-boot,dm-pre-reloc;
+						pinmux = 	<SDIO_CMD>,
+									<SDIO_D0>,
+									<SDIO_D1>,
+									<SDIO_D2>,
+									<SDIO_D3>;
+					};					
+					
+			};
+		};		
+
+		gpio0: gpio0@0x3C065000 	{
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C065000 0x1000>;
+
+			u-boot,dm-pre-reloc;
+		};
+
+		gpio1: gpio1@0x3C066000 	{
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C066000 0x1000>;
+			#gpio-cells = <2>;
+			gpio-controller;
+
+			u-boot,dm-pre-reloc;
+		};
+
+	    spi0: spi0@0x3C061000 {
+		    compatible = "rc-module,pl022-spi";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_spi0_default>;
+			
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C061000 0x1000>;
+		    cs-gpios = <&gpio1 2 0>, <0>, <0>, <0>;
+		    spi-max-frequency = <12500000>;			
+		    u-boot,dm-pre-reloc;
+
+		    spi_flash@0 {
+			    compatible = "st,m25p32", "spi-flash";
+			    reg = <0>;
+			    u-boot,dm-pre-reloc;
+								
+		    };
+	    };
+
+		uart0: uart0@3C05D000 {  /* console */
+                compatible = "arm,pl011", "arm,primecell";
+                reg = <0x3C05D000 0x1000>;
+                clock = <100000000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_uart0_default>;
+
+ 			    u-boot,dm-pre-reloc;
+		};		
+
+		uart1: uart1@3C05E000 { 
+                compatible = "arm,pl011", "arm,primecell";
+                reg = <0x3C05E000 0x1000>;
+                clock = <100000000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_uart1_default>;
+				status = "disabled";
+		};		
+
+
+		mmc0: mmc0@0x3C064000 {
+			compatible = "rc-module,mmc-0.2";
+			reg = <0x3C064000 0x1000>;
+			carddetect-gpio = <&gpio1 1 0>;
+			u-boot,dm-pre-reloc;
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_sdio_default>;
+
+		};
+
+
+        usb: musb@0x3C06D000 {
                 compatible = "rc-module,musb";
-                reg = <0x3C052000 0x1000>,
+                reg = <0x3C06D000 0x1000>,
                       <0x38000000 0x1000>;
                 reg-names = "mc", "control";
         };
 
-	    spi1: spi1@0x3C05A000 {
+	    spi1: spi1@0x3C062000 {
 		    compatible = "rc-module,pl022-spi";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_spi1_default>;
 			
 		    #address-cells = <1>;
 		    #size-cells = <1>;
-		    reg = <0x3C05A000 0x1000>;
+		    reg = <0x3C062000 0x1000>;
 		    cs-gpios = <&gpio1 4 0>;
 		    spi-max-frequency = <400000>;
 			u-boot,dm-pre-reloc;

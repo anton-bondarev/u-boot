@@ -9,31 +9,21 @@ DECLARE_GLOBAL_DATA_PTR;
 void ddr_init (void);
 int testdramfromto(uint *pstart, uint *pend);
 
-#define CRGCPU__        0x38006000
 
-
-static void slowdown(void)
-{
-	writel(0x1ACCE551, CRGCPU__ + 0xc);
-	writel(0x02010050, CRGCPU__ + 0x9); // 500Mhz
-	writel(0x1, CRGCPU__ + 0x4);
-}
-
-uint32_t *magic = (uint32_t *)(0x00040000 + 0x00020000 - 4);
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
 
 void board_init_f(ulong dummy)
 {
-	// clean up dark magic 
-	*magic = 0;
-	slowdown();
 
 	/* init dram */
 	ddr_init();
 
-	board_init_f_init_reserve((ulong) gd);
 	gd->ram_size = CONFIG_SYS_DDR_SIZE;
+
+	*((int32_t*)0x4E000000) = CONFIG_SYS_DDR_SIZE;
+	if(*((int32_t*)0x4E000000) != CONFIG_SYS_DDR_SIZE)
+		rumboot_putstring("DDR Error\n");
 
 	spl_early_init();
 

@@ -60,9 +60,7 @@ clear_bss:
 
     bl board_init_f_alloc_reserve
     ori r2, r3, r3
-#ifndef CONFIG_SPL_BUILD
     bl board_init_f_init_reserve
-#endif 
 
 	bl	cpu_init_f	/* return boot_flag for calling board_init_f */
 //#ifdef CONFIG_SPL_BUILD

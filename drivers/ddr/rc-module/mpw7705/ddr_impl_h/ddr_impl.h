@@ -1,0 +1,151 @@
+#ifndef __DDR_IMPL_H__
+#define __DDR_IMPL_H__
+
+#include <stdint.h>
+#include "mivem_macro.h"
+#include "mivem_regs_access.h"
+#include "ddr.h"
+
+typedef struct
+{
+    uint32_t T_RDDATA_EN_BC4;
+    uint32_t T_RDDATA_EN_BL8;
+    uint8_t  CL_PHY;
+    uint8_t  CL_MC;
+    uint8_t  CL_CHIP;
+    uint8_t  CWL_PHY;
+    uint8_t  CWL_MC;
+    uint8_t  CWL_CHIP;
+    uint8_t  AL_PHY;
+    uint8_t  AL_MC;
+    uint8_t  AL_CHIP;
+    uint32_t WR;
+    uint32_t T_REFI;
+    uint32_t T_RFC_XPR;
+    uint32_t T_RCD;
+    uint32_t T_RP;
+    uint32_t T_RC;
+    uint32_t T_RAS;
+    uint32_t T_WTR;
+    uint32_t T_RTP;
+    uint32_t T_XSDLL;
+    uint32_t T_MOD;
+} ddr3config;
+
+#define DDR3PHY_PHYREG00 0x000
+REG_READ( ddr3phy, DDR3PHY_PHYREG00, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG00, 32 )
+
+#define DDR3PHY_PHYREG01 0x004
+REG_READ( ddr3phy, DDR3PHY_PHYREG01, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG01, 32 )
+
+#define DDR3PHY_PHYREG0b 0x02C
+REG_READ( ddr3phy, DDR3PHY_PHYREG0b, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG0b, 32 )
+
+#define DDR3PHY_PHYREG0c 0x030
+REG_READ( ddr3phy, DDR3PHY_PHYREG0c, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG0c, 32 )
+
+//#ev-----------------------------------
+#define DDR3PHY_PHYREG26 0x098
+REG_READ( ddr3phy, DDR3PHY_PHYREG26, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG26, 32 )
+
+#define DDR3PHY_PHYREG27 0x09c
+REG_READ( ddr3phy, DDR3PHY_PHYREG27, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG27, 32 )
+
+#define DDR3PHY_PHYREG36 0x0d8
+REG_READ( ddr3phy, DDR3PHY_PHYREG36, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG36, 32 )
+
+#define DDR3PHY_PHYREG37 0x0dc
+REG_READ( ddr3phy, DDR3PHY_PHYREG37, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG37, 32 )
+
+#define DDR3PHY_PHYREG46 0x118
+REG_READ( ddr3phy, DDR3PHY_PHYREG46, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG46, 32 )
+
+#define DDR3PHY_PHYREG47 0x11c
+REG_READ( ddr3phy, DDR3PHY_PHYREG47, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG47, 32 )
+
+#define DDR3PHY_PHYREG56 0x158
+REG_READ( ddr3phy, DDR3PHY_PHYREG56, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG56, 32 )
+
+#define DDR3PHY_PHYREG57 0x15c
+REG_READ( ddr3phy, DDR3PHY_PHYREG57, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG57, 32 )
+//#ev-----------------------
+
+
+
+
+#define DDR3PHY_PHYREGED 0x3b4
+REG_READ( ddr3phy, DDR3PHY_PHYREGED, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGED, 32 )
+
+#define DDR3PHY_PHYREGEF 0x3bc
+REG_READ( ddr3phy, DDR3PHY_PHYREGEF, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGEF, 32 )
+
+#define DDR3PHY_PHYREGEC 0x3b0
+REG_READ( ddr3phy, DDR3PHY_PHYREGEC, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGEC, 32 )
+
+#define DDR3PHY_PHYREGFF 0x3fc
+REG_READ( ddr3phy, DDR3PHY_PHYREGFF, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGFF, 32 )
+
+#define DDR3PHY_PHYREGF0 0x3c0
+REG_READ( ddr3phy, DDR3PHY_PHYREGF0, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGF0, 32 )
+
+#define DDR3PHY_PHYREG02 0x008
+REG_READ( ddr3phy, DDR3PHY_PHYREG02, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREG02, 32 )
+
+#define DDR3PHY_PHYREGEE 0x3b8
+REG_READ( ddr3phy, DDR3PHY_PHYREGEE, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGEE, 32 )
+
+
+
+
+
+
+#define DDR3PHY_PHYREGF1 0x3c4
+REG_READ( ddr3phy, DDR3PHY_PHYREGF1, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGF1, 32 )
+
+#define DDR3PHY_PHYREGF2 0x3c8
+REG_READ( ddr3phy, DDR3PHY_PHYREGF2, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGF2, 32 )
+
+#define DDR3PHY_PHYREGFA 0x3e8
+REG_READ( ddr3phy, DDR3PHY_PHYREGFA, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGFA, 32 )
+
+#define DDR3PHY_PHYREGFB 0x3ec
+REG_READ( ddr3phy, DDR3PHY_PHYREGFB, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGFB, 32 )
+
+#define DDR3PHY_PHYREGFC 0x3f0
+REG_READ( ddr3phy, DDR3PHY_PHYREGFC, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGFC, 32 )
+
+#define DDR3PHY_PHYREGFD 0x3f4
+REG_READ( ddr3phy, DDR3PHY_PHYREGFD, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGFD, 32 )
+
+#define DDR3PHY_PHYREGFE 0x3f8
+REG_READ( ddr3phy, DDR3PHY_PHYREGFE, 32 )
+REG_WRITE( ddr3phy, DDR3PHY_PHYREGFE, 32 )
+
+
+
+#endif // __DDR_IMPL_H__

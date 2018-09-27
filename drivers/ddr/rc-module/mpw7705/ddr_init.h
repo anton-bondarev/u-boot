@@ -302,7 +302,6 @@
 //---------------------------------
 //----------- DDR parameters ------
 #define DDR_ddr3_speed                        1//ddr3_speed: 1 - 1066; 2 - 1333
-#define DDR_lsif_speed                        57142857  // 57 MHz
 #define DDR_BurstLength                       0b00 //0b00: 8   0b10: 4
 #define DDR_initMode                          0 //Spec requires 200us + 500us wait period before starting DDR reads/writes
 #define DDR_eccMode                           0b00 //0b00 - off; 0b10 - GenerateCheckButDoNotCorrect; 0b11 - GenerateCheckAndCorrect
