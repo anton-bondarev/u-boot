@@ -147,16 +147,18 @@
 					};										
 								
 			};
+
 		};
 		mgpio4_1: mgpio4_1@0x3C06B000 {
 		    compatible = "rc-module,pl061";
 		    #address-cells = <1>;
 		    #size-cells = <0>;
 		    reg = <0x3C06B000 0x1000>;
+			u-boot,dm-pre-reloc;
 		
 			pinctrl {
 					compatible = "rc-module,pl061-pinctrl";
-
+					u-boot,dm-pre-reloc;
 					pinctrl_spi1_default: spi1_default {
 						u-boot,dm-pre-reloc;
 
@@ -175,6 +177,7 @@
 					};					
 					
 			};
+
 		};		
 
 		gpio0: gpio0@0x3C065000 	{
@@ -245,7 +248,6 @@
 			status = "okay";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_sdio_default>;
-
 		};
 
 

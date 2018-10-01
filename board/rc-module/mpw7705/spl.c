@@ -9,21 +9,24 @@ DECLARE_GLOBAL_DATA_PTR;
 void ddr_init (void);
 int testdramfromto(uint *pstart, uint *pend);
 
-
+unsigned int* _test_addr;
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
 
 void board_init_f(ulong dummy)
 {
-
 	/* init dram */
+	_test_addr = (unsigned int*)0x9E000000; 
 	ddr_init();
+	*_test_addr = 0x12345678;
+	rumboot_putstring("DDR test...");
 
 	gd->ram_size = CONFIG_SYS_DDR_SIZE;
 
-	*((int32_t*)0x4E000000) = CONFIG_SYS_DDR_SIZE;
-	if(*((int32_t*)0x4E000000) != CONFIG_SYS_DDR_SIZE)
-		rumboot_putstring("DDR Error\n");
+	if(*_test_addr != 0x12345678)
+		rumboot_putstring(" Error\n");
+	else
+		rumboot_putstring(" OK\n");
 
 	spl_early_init();
 

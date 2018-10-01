@@ -24,7 +24,7 @@
 // !!! Checking possible DMA problem with memory 
 //#define DMA_PAD  (4 * 1024)
 
-#define BUS_CLOCK  57142857
+#define BUS_CLOCK  50000000
 #define CLKDIV_MAX 255
 
 #define SDIO_TIMEOUT        2000000 
@@ -53,7 +53,7 @@ static inline struct mpw7705_mmc_platdata * mmc_get_platdata(const struct mmc * 
 
 static uint32_t wait_tick(void) 
 { 
-	static uint32_t tick = 0;
+	static volatile uint32_t tick = 0;
 	return tick ++; 
 }
 
