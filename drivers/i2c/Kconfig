@@ -137,6 +137,13 @@ config SYS_I2C_IMX_LPI2C
 	help
 	  Add support for the NXP i.MX LPI2C driver.
 
+config SYS_I2C_OCORES
+	bool "RC Module OpenCores I2C driver"
+	depends on DM_I2C
+	help
+	  Add support for the I2C controller available in RC Module PowerPC
+	  SoCs.
+
 config SYS_I2C_MESON
 	bool "Amlogic Meson I2C driver"
 	depends on DM_I2C && ARCH_MESON
@@ -147,6 +154,7 @@ config SYS_I2C_MESON
 	  software to define a flexible format of the bit streams. It has an
 	  internal buffer holding up to 8 bytes for transfers and supports
 	  both 7-bit and 10-bit addresses.
+
 
 config SYS_I2C_MXC
 	bool "NXP MXC I2C driver"

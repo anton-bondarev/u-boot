@@ -117,4 +117,6 @@
 
 #define CONFIG_SYS_BOOTM_LEN 0x1000000
 
+#define CONFIG_SPD_EEPROM
+
 #endif /* __MPW7705_H */

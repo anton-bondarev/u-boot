@@ -13,13 +13,17 @@
 
 	chosen {
 		stdout-path = "uart0";
+		spd0-path = "spd0";
+		spd1-path = "spd1";
 	};
 
 	aliases {
 		spi0 = &spi0;
 		mmc0 = &mmc0;
 		uart0 = &uart0;
-	} ; 
+		spd0 = &spd0;
+		spd1 = &spd1;
+	}; 
 
 	lsif0 {
 	    u-boot,dm-pre-reloc;
@@ -178,7 +182,30 @@
 					
 			};
 
-		};		
+		};
+
+		i2c0: i2c@0x3C05A000 {
+			compatible = "rc-module,i2cmst";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+			reg = <0x3C05A000 0x1000>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+			clock-frequency = <100000000>;
+			bus-clock = <100000>;
+			u-boot,dm-pre-reloc;
+
+			spd0: spd@50 {
+				compatible = "i2c-eeprom";
+				reg = <0x50>;
+				u-boot,dm-pre-reloc;
+			};
+			spd1: spd@51 {
+				compatible = "i2c-eeprom";
+				reg = <0x51>;
+				u-boot,dm-pre-reloc;
+			};
+		};
 
 		gpio0: gpio0@0x3C065000 	{
 		    compatible = "rc-module,pl061";
