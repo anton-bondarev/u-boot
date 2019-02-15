@@ -99,16 +99,23 @@ typedef struct {
 /* Read MII register 'addr' from core 'regs' */
 static int read_mii(int phyaddr, int regaddr, volatile greth_regs * regs)
 {
+	debug("read_mii %d - wait until busy\n", regaddr);
+
 	while (GRETH_REGLOAD(&regs->mdio) & GRETH_MII_BUSY) {
 	}
+
+	debug("done - write phy & regaddr\n");
 
 	GRETH_REGSAVE(&regs->mdio, ((phyaddr & 0x1F) << 11) | ((regaddr & 0x1F) << 6) | 2);
 
 	while (GRETH_REGLOAD(&regs->mdio) & GRETH_MII_BUSY) {
 	}
+debug("done\n");
 
 	if (!(GRETH_REGLOAD(&regs->mdio) & GRETH_MII_NVALID)) {
-		return (GRETH_REGLOAD(&regs->mdio) >> 16) & 0xFFFF;
+		uint32_t val = GRETH_REGLOAD(&regs->mdio);
+		debug("MDIO reg %d val %08x\n", regaddr, val); 
+		return (val >> 16) & 0xFFFF;
 	} else {
 		return -1;
 	}
@@ -116,8 +123,10 @@ static int read_mii(int phyaddr, int regaddr, volatile greth_regs * regs)
 
 static void write_mii(int phyaddr, int regaddr, int data, volatile greth_regs * regs)
 {
+	debug("write_mii wait until busy\n");
 	while (GRETH_REGLOAD(&regs->mdio) & GRETH_MII_BUSY) {
 	}
+	debug("done\n");
 
 	GRETH_REGSAVE(&regs->mdio,
 		      ((data & 0xFFFF) << 16) | ((phyaddr & 0x1F) << 11) |
@@ -130,7 +139,7 @@ static void write_mii(int phyaddr, int regaddr, int data, volatile greth_regs * 
 
 int fix_endian (int data_in){
 
-#ifdef CONFIG_MPW7705
+#ifdef CONFIG_MPW7705__
     int data_out = 0;
     
     data_out = data_in << 24 & 0xff000000;
@@ -225,6 +234,7 @@ int greth_init(struct udevice *dev)
 	return 0;
 }
 
+#define SKIP_PHY_INIT
 /* Initiate PHY to a relevant speed
  * return:
  *  - 0 = success
@@ -236,6 +246,15 @@ static int greth_init_phy(greth_priv * dev)
 	int tmp, tmp1, tmp2, i;
 	unsigned int start, timeout;
 	int phyaddr = GRETH_PHY_ADR_DEFAULT;
+
+
+#ifdef SKIP_PHY_INIT
+	dev->phyaddr = 0;
+	dev->gb = 0;
+	dev->fd = 1;
+	dev->sp = 1;
+	dev->auto_neg = 0;
+#else
 
 #ifndef CONFIG_SYS_GRLIB_GRETH_PHYADDR
 	/* If BSP doesn't provide a hardcoded PHY address the driver will
@@ -274,13 +293,23 @@ static int greth_init_phy(greth_priv * dev)
 
 	/* reset PHY and wait for completion */
 	write_mii(phyaddr, 0, 0x8000 | tmp, regs);
-
 	while (((tmp = read_mii(phyaddr, 0, regs))) & 0x8000) {
 		if (get_timer(start) > timeout) {
 			debug("greth_init_phy: PHY read 2 failed\n");
 			return 1;	/* Fail */
 		}
 	}
+
+	debug("MI regs: %04X, %04X, %04X, %04X, %04X, %04X, %04X\n",
+		read_mii(phyaddr, 0, regs),
+		read_mii(phyaddr, 1, regs),
+		read_mii(phyaddr, 2, regs),
+		read_mii(phyaddr, 3, regs),
+		read_mii(phyaddr, 4, regs),
+		read_mii(phyaddr, 5, regs),
+		read_mii(phyaddr, 6, regs));
+		
+
 
 	/* Check if PHY is autoneg capable and then determine operating
 	 * mode, otherwise force it to 10 Mbit halfduplex
@@ -308,6 +337,7 @@ static int greth_init_phy(greth_priv * dev)
 				goto auto_neg_done;
 			}
 		}
+
 		if ((tmp >> 8) & 1) {
 			tmp1 = read_mii(phyaddr, 9, regs);
 			tmp2 = read_mii(phyaddr, 10, regs);
@@ -362,7 +392,7 @@ static int greth_init_phy(greth_priv * dev)
 	} else {
 		printf("PHY info not available\n");
 	}
-
+#endif
 	/* set speed and duplex bits in control register */
 	GRETH_REGORIN(&regs->control,
 		      (dev->gb << 8) | (dev->sp << 7) | (dev->fd << 4));
@@ -434,7 +464,7 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	debug("\n");
 #endif
 
-#ifndef CONFIG_MPW7705
+#ifndef CONFIG_MPW7705_
 	/* send data, wait for data to be sent, then return */
 	if (((unsigned int)eth_data & (GRETH_BUF_ALIGN - 1))
 	    && !greth->gbit_mac) {
@@ -448,7 +478,7 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 
 		txbuf = greth->txbuf;
 
-#ifdef CONFIG_MPW7705
+#ifdef CONFIG_MPW7705_
 		// HW bug? swap everything
 		int j = 0;
 		u32* data = (u32*) eth_data;
@@ -582,7 +612,7 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			// flush cache
 			flush_cache((unsigned long)d, len);
 
-#ifdef CONFIG_MPW7705
+#ifdef CONFIG_MPW7705_
 			// HW bug? swap everything
 			int j = 0;
 			if(((u32)d)%4)
@@ -671,8 +701,23 @@ int greth_set_hwaddr(struct udevice *dev)
 	return 0;
 }
 
+static void iowrite32(uint32_t const value, uint32_t const base_addr)
+{
+    *((volatile uint32_t*)(base_addr)) = value;
+}
+
 static int greth_probe(struct udevice *dev)
 {
+
+	debug("%08x, %08x\n",
+		*((volatile uint32_t*)(0x3C03F030)),
+		*((volatile uint32_t*)(0x3C03F034))
+	);
+	// todo move somewhere initialization of extmem muxer
+	//iowrite32(0x1, 0x3C03F030);
+	//iowrite32(0x0, 0x3C03F034);
+
+
 	//struct eth_pdata *pdata = dev_get_platdata(dev);
 	greth_priv *greth = dev_get_priv(dev);
  
@@ -688,6 +733,8 @@ static int greth_probe(struct udevice *dev)
 
 	/* Check if mac is gigabit capable */
 	greth->gbit_mac = (GRETH_REGLOAD(&greth->regs->control) >> 27) & 1;
+
+	debug("MDIO: %x, CONTROL: %x\n", GRETH_REGLOAD(&greth->regs->mdio), GRETH_REGLOAD(&greth->regs->control));
 
 	/* initiate PHY, select speed/duplex depending on connected PHY */
 	if (greth_init_phy(greth)) {

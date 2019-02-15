@@ -24,7 +24,7 @@
 // !!! Checking possible DMA problem with memory 
 //#define DMA_PAD  (4 * 1024)
 
-#define BUS_CLOCK  50000000
+#define BUS_CLOCK  100000000
 #define CLKDIV_MAX 255
 
 #define SDIO_TIMEOUT        2000000 
@@ -537,7 +537,7 @@ static void set_clock(struct udevice * dev, uint clock)
 {
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
 	
-	uint32_t m = DIV_ROUND_UP(BUS_CLOCK, clock) - 1;		
+	uint32_t m = BUS_CLOCK/(clock*2) - 1;		
 	if ( m > CLKDIV_MAX )
 		m = CLKDIV_MAX;
 	

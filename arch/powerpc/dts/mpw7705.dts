@@ -28,73 +28,98 @@
 	lsif0 {
 	    u-boot,dm-pre-reloc;
 	    compatible = "simple-bus";
+		reg = <0x3C03F000 0x1000>;
+		reg-names = "ctrlreg";
+
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-/*
+
 		mgpio0: mgpio0@0x3C040000 {
 		    compatible = "rc-module,pl061";
 		    #address-cells = <1>;
 		    #size-cells = <0>;
 		    reg = <0x3C040000 0x1000>;
-			u-boot,dm-pre-reloc;
-		
-			pinctrl {
-					compatible = "rc-module,pl061-pinctrl";
-					u-boot,dm-pre-reloc;
-					
-
-			};
-
 			pinctrl {
 					compatible = "rc-module,pl061-pinctrl";
 					
 					pinctrl_greth0_1_default: greth0_1_default {
-						pinmux = 	<GBETH0_TX_EN>,
-									<GBETH0_TX_ER>,
-									<GBETH0_RX_DV>,
+						pinmux = 	<GBETH0_RX_DV>,
 									<GBETH0_RX_ER>,
 									<GBETH0_RX_COL>,
 									<GBETH0_RX_CRS>,
+									<GBETH0_RXD0>,
+									<GBETH0_RXD1>,
+									<GBETH0_RXD2>,
+									<GBETH0_RXD3>;
+					};
+			};
+		};
+
+		mgpio1: mgpio1@0x3C050000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C050000 0x1000>;
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth0_2_default: greth0_2_default {
+						pinmux = 	<GBETH0_RXD4>,
+									<GBETH0_RXD5>,
+									<GBETH0_RXD6>,
+									<GBETH0_RXD7>;
+					};
+			};
+		};
+
+		mgpio4: mgpio4@0x3C080000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C080000 0x1000>;
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth0_3_default: greth0_3_default {
+						pinmux = 	<GBETH0_TX_EN>,
+									<GBETH0_TX_ER>,
 									<GBETH0_TXD0>,
 									<GBETH0_TXD1>;
-					};	
-					pinctrl_greth0_2_default: greth0_2_default {
+					};
+			};
+		};
+
+		mgpio5: mgpio5@0x3C090000 {
+		    compatible = "rc-module,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C090000 0x1000>;
+			pinctrl {
+					compatible = "rc-module,pl061-pinctrl";
+					
+					pinctrl_greth0_4_default: greth0_4_default {
 						pinmux = 	<GBETH0_TXD2>,
 									<GBETH0_TXD3>,
 									<GBETH0_TXD4>,
 									<GBETH0_TXD5>,
 									<GBETH0_TXD6>,
 									<GBETH0_TXD7>,
-									<GBETH0_RXD0>,
-									<GBETH0_RXD1>;
-					};		
-
-					pinctrl_greth0_3_default: greth0_3_default {
-						pinmux = 	<GBETH0_RXD2>,
-									<GBETH0_RXD3>,
-									<GBETH0_RXD4>,
-									<GBETH0_RXD5>,
-									<GBETH0_RXD6>,
-									<GBETH0_RXD7>,
 									<GBETH0_MDC>,
 									<GBETH0_MDIO>;
-					};					
-
-
+					};
 			};
-
 		};
 
-		greth0: greth0@0x3C050000 {
+		greth1: greth0@0x3C034000 {
 			compatible = "rc-module,greth";
-            reg = <0x3C050000 0x1000>;			
+            reg = <0x3C034000 0x1000>;			
 			mac-address = [ EC 17 66 77 05 00 ];
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>;
+			//pinctrl-names = "default";
+			//pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;
 			status = "okay";
 		};
-*/
+
 	};
 
 	lsif1 {

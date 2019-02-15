@@ -12,6 +12,7 @@
 #include "ddr_impl_h/ddr/mcif2arb4.h"
 #include <ddr_spd.h>
 
+DECLARE_GLOBAL_DATA_PTR;
 
 //static uint8_t __attribute__((section(".EM0.data"),aligned(16))) volatile ddr0_init_array[128] = { 0 };
 //static uint8_t __attribute__((section(".EM1.data"),aligned(16))) volatile ddr1_init_array[128] = { 0 };
@@ -22,8 +23,8 @@ unsigned int *ddr1_init_array = 0x80000000;
 #define reg_field(field_right_bit_num_from_ppc_user_manual, value)\
     ((value) << IBM_BIT_INDEX( 32, field_right_bit_num_from_ppc_user_manual ))
 
-#define T_SYS_RDLAT_BC4 0xc                    // get from debug register
-#define T_SYS_RDLAT_BL8 0xe
+#define T_SYS_RDLAT_BC4 0xc                     // get from debug register
+#define T_SYS_RDLAT_BL8 0xc
 
 //CONFIGURATION VALUES FOR DDR3-1600 (DEFAULT)
 static CrgDdrFreq DDR_FREQ;// = DDR3_1600;
@@ -68,8 +69,7 @@ static void ddr_aximcif2_init(const uint32_t baseAddr);
 static void ddr_mcif2arb4_init(const uint32_t baseAddr);
 static void ddr3phy_init(uint32_t baseAddr, const DdrBurstLength burstLen);
 static void ddr3phy_calibrate(const uint32_t baseAddr);
-static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr);
-static void ddr3phy_calibrate_manual_EM1(const unsigned int baseAddr);
+static void ddr3phy_calibrate_manual(const unsigned int baseAddr);
 static void ddr34lmc_dfi_init(const uint32_t baseAddr);
 static void ddr_init_main(DdrHlbId hlbId, DdrInitMode initMode, DdrEccMode eccMode, DdrPmMode powerManagementMode, DdrBurstLength burstLength, DdrPartialWriteMode partialWriteMode);
 static void ddr_set_nopatch_config (CrgDdrFreq FreqMode);
@@ -83,15 +83,11 @@ void crg_ddr_upd_ckdiv ();
 void crg_remove_writelock ();
 void crg_set_writelock ();
 
-static volatile uint32_t ioread32(uint32_t const base_addr)
+volatile uint32_t ioread32(uint32_t const base_addr)
 {
     return *((volatile uint32_t*)(base_addr));
 }
 
-static void iowrite32(uint32_t const value, uint32_t const base_addr)
-{
-    *((volatile uint32_t*)(base_addr)) = value;
-}
 
 void plb6mcif2_simple_init( uint32_t base_addr, const uint32_t puaba )
 {
@@ -152,7 +148,6 @@ void plb6mcif2_simple_init( uint32_t base_addr, const uint32_t puaba )
 
 }
 
-
 void ddr_ddr34lmc_init(const uint32_t baseAddr,
         DdrInitMode initMode,
         DdrEccMode eccMode,
@@ -160,19 +155,6 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
         DdrBurstLength burstLength,
         DdrPartialWriteMode partialWriteMode
 );
-
-void wait_some_time ()
-{
-    volatile uint32_t counter;
-    for (counter = 0; counter < 100000; counter++)
-        ;
-}
-void wait_some_time_1 ()
-{
-    volatile uint32_t counter;
-    for (counter = 0; counter < 1000; counter++)
-        ;
-}
 
 //*************************************************DDR INIT FUNCTIONS*************************************************/
 void ddr_init_impl_freq(
@@ -309,22 +291,6 @@ void write_dcr_reg(uint32_t addr, uint32_t value) {
 	);
 };
 
-void report_DDR_core_regs (uint32_t baseAddr)
-{
-    volatile uint32_t cntr;
-    volatile uint32_t current_address = baseAddr;
-    
-    // rumboot_printf("  report_DDR_core_regs    baseAddr = 0x%08x\n", baseAddr);
-    
-    for (cntr = 0; cntr < 0xFF; cntr++)
-    {
-        // rumboot_printf("  reg %03x = 0x%08x\n", cntr, dcrread32 (current_address));
-        current_address +=1;
-        wait_some_time_1 ();
-    }
-}
-
-#define CRGCPU__        0x38006000
 
 void magic_settings()
 {
@@ -335,8 +301,6 @@ void magic_settings()
     uint32_t i;
 
     init_ppc_for_test();
-    //uart_init_460800();
-    
     dcr_addr=0x80000200;            // BC_CR0
     res_dcr = 0x00070100;
     
@@ -362,10 +326,6 @@ void magic_settings()
     
     write_tlb_entry4();
     write_tlb_entry8();
-
-	//iowrite32(0x1ACCE551, CRGCPU__ + 0x00c); // allow 
-	//iowrite32(0x3, CRGCPU__ + 0x100); //уменьшение тактовой частоты CPU
-    //iowrite32(0x1, CRGCPU__ + 0x4);
 }
 
 
@@ -836,7 +796,10 @@ static unsigned int ddr_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
 	return 0;
 }
 
+
+
 int get_ddr3_spd_bypath(const char * spdpath, ddr3_spd_eeprom_t* spd);
+
 
 void ddr_init()
 {
@@ -855,11 +818,11 @@ void ddr_init()
     {
         dimm1_params_invalid = ddr_compute_dimm_parameters(&spd, &dpar1, 0);
     }
-    //if(!dimm0_params_invalid)
-    //    dump_dimm_params(&dpar0, 0);
+    if(!dimm0_params_invalid)
+        dump_dimm_params(&dpar0, 0);
 
-    //if(!dimm1_params_invalid)
-    //    dump_dimm_params(&dpar1, 1);
+    if(!dimm1_params_invalid)
+        dump_dimm_params(&dpar1, 1);
 
     //printf("LSIF Divider = %d\n", (*(volatile uint32_t *) (CRG_DDR_BASE + CRG_DDR_CKDIVMODE_LSIF)));
 
@@ -872,11 +835,8 @@ void ddr_init()
             DdrBurstLength_Default,
             DdrPartialWriteMode_Default,
             DDR3_DEFAULT);
-
             
-    // rumboot_printf("MCSTAT = 0x%08x\n", ddr34lmc_dcr_read_DDR34LMC_MCSTAT(EM0_DDR3LMC_DCR));
-    // rumboot_printf("DEBUG0 = 0x%08x\n", ddr34lmc_dcr_read_DDR34LMC_DBG0(EM0_DDR3LMC_DCR));
-    
+    usleep(1000);
 }
 
 void ddr_init_em0()
@@ -931,34 +891,18 @@ static void ddr_init_main(
         DdrPartialWriteMode partialWriteMode
         )
 {
-    // rumboot_printf ("Start init DDR3\n");
+    usleep(1000);
 
-    uint8_t T_SYS_RDLAT_configured;
-    uint8_t T_SYS_RDLAT_measured;
-    int i;
-
-// todo: understand what wrong with single init
-// tweak for a while    
-for(i = 0; i < 2; i++)
-{
-  
     if (hlbId & DdrHlbId_Em0)
     {
-        // rumboot_printf("Init EM0 PLB6MCIF2\n");
         ddr_plb6mcif2_init(EM0_PLB6MCIF2_DCR, 0x00000000);
 
-        // rumboot_printf("Init EM0 AXIMCIF2\n");
         ddr_aximcif2_init(EM0_AXIMCIF2_DCR);
 
-        // rumboot_printf("Init EM0 MCIF2ARB4\n");
         ddr_mcif2arb4_init(EM0_MCIF2ARB_DCR);
 
-        
-        //// rumboot_printf("Init EM0 DDR3PHY\n");
-        //ddr3phy_init(EM0_PHY_DCR, burstLength);
         crg_ddr_config_freq (EM0_PHY__, burstLength); //& phy_init
 
-        // rumboot_printf("Init EM0 DDR34LMC\n");
         ddr_ddr34lmc_init(EM0_DDR3LMC_DCR,
                 initMode,
                 eccMode,
@@ -966,17 +910,13 @@ for(i = 0; i < 2; i++)
                 burstLength,
                 partialWriteMode);
 
-
-        // rumboot_printf("Calibrate EM0 DDR3PHY\n");
         ddr3phy_calibrate(EM0_PHY__);
-        
-        // // rumboot_printf("Calibrate (manual) EM0 DDR3PHY\n");
-        // ddr3phy_calibrate_manual_EM0(EM0_PHY__);
     }
 
+    uint8_t T_SYS_RDLAT_configured = burstLength == DdrBurstLength_4 ? T_SYS_RDLAT_BC4 : T_SYS_RDLAT_BL8;
+    uint8_t T_SYS_RDLAT_measured;
     if (hlbId & DdrHlbId_Em0)
     {
-        T_SYS_RDLAT_configured = burstLength == DdrBurstLength_4 ? T_SYS_RDLAT_BC4 : T_SYS_RDLAT_BL8;
         asm volatile (
             "stmw 0, 0(%0)\n\t"
             ::"r"(ddr0_init_array)//woro
@@ -986,64 +926,48 @@ for(i = 0; i < 2; i++)
         dcbi(ddr0_init_array);//woro
         msync();
         (void)(MEM32(ddr0_init_array)); //generate read transaction woro
-        // rumboot_printf("Configured EM0 T_SYS_RDLAT=0x%08x\n",(T_SYS_RDLAT_configured));
+        usleep(1000);
         T_SYS_RDLAT_measured = ddr_get_T_SYS_RDLAT(EM0_DDR3LMC_DCR);
-        // rumboot_printf("Measured EM0 T_SYS_RDLAT=0x%08x\n",T_SYS_RDLAT_measured);
 
         if (T_SYS_RDLAT_measured != T_SYS_RDLAT_configured)
         {
-            // rumboot_printf("EM0 T_SYS_RDLAT reconfiguration. Reason: measured != configured.\n");
-            // rumboot_printf("Enter self-refresh mode\n");
             ddr_enter_self_refresh_mode(EM0_DDR3LMC_DCR);
 
             T_SYS_RDLAT_configured = T_SYS_RDLAT_measured;
-            // rumboot_printf("Set new EM0 T_SYS_RDLAT = 0x%08x\n",T_SYS_RDLAT_configured);
             uint32_t SDTR4_reg = ddr34lmc_dcr_read_DDR34LMC_SDTR4(EM0_DDR3LMC_DCR);
             SDTR4_reg &= ~reg_field(15, 0b111111);
             ddr34lmc_dcr_write_DDR34LMC_SDTR4(EM0_DDR3LMC_DCR,
                     SDTR4_reg | reg_field(15, T_SYS_RDLAT_configured));
 
-            // rumboot_printf("Exit self-refresh mode\n");
             ddr_exit_self_refresh_mode(EM0_DDR3LMC_DCR);
 
             //TODO: need to invalidate read address to avoid cache hit.
             dcbi(ddr0_init_array); //woro
             msync();
-            //(void)(MEM32(EM0_BASE + 0x100)); //generate new read transaction. New address to avoid cache hit.
             (void)(MEM32(ddr0_init_array)); //generate read transaction woro
             T_SYS_RDLAT_measured = ddr_get_T_SYS_RDLAT(EM0_DDR3LMC_DCR);
-            // rumboot_printf("Measured EM0 T_SYS_RDLAT=0x%08x\n",T_SYS_RDLAT_measured);
             TEST_ASSERT(T_SYS_RDLAT_measured == T_SYS_RDLAT_configured, "EM0 DDR34LMC configuration error");
         }
 
     }
-    
 
     //EM1
     if (hlbId & DdrHlbId_Em1)
     {
-        // rumboot_printf("Init EM1 PLB6MCIF2\n");
         ddr_plb6mcif2_init(EM1_PLB6MCIF2_DCR, 0x00000002);
 
-        // rumboot_printf("Init EM1 AXIMCIF2\n");
         ddr_aximcif2_init(EM1_AXIMCIF2_DCR);
 
-        // rumboot_printf("Init EM1 MCIF2ARB4\n");
         ddr_mcif2arb4_init(EM1_MCIF2ARB_DCR);
-
-        //// rumboot_printf("Init EM1 DDR3PHY\n");
-        //ddr3phy_init(EM1_PHY_DCR, burstLength);
 
         if (hlbId & DdrHlbId_Em0) //some magic...
         {
-            // rumboot_printf("Init DDR3PHY\n");
             ddr3phy_init(EM1_PHY__, burstLength);
         }
         else
             crg_ddr_config_freq (EM1_PHY__, burstLength);  //& phy_init
 
 
-        // rumboot_printf("Init EM1 DDR34LMC\n");
         ddr_ddr34lmc_init(EM1_DDR3LMC_DCR,
                 initMode,
                 eccMode,
@@ -1051,15 +975,10 @@ for(i = 0; i < 2; i++)
                 burstLength,
                 partialWriteMode);
 
-        // rumboot_printf("Calibrate EM1 DDR3PHY\n");
         ddr3phy_calibrate(EM1_PHY__);
         
-        // // rumboot_printf("Calibrate (manual) EM1 DDR3PHY\n");
-        // ddr3phy_calibrate_manual_EM1(EM1_PHY__);
-		
         if (hlbId & DdrHlbId_Em1)
         {
-            T_SYS_RDLAT_configured = burstLength == DdrBurstLength_4 ? T_SYS_RDLAT_BC4 : T_SYS_RDLAT_BL8;
             asm volatile (
                 "stmw 0, 0(%0)\n\t"
                 ::"r"(ddr1_init_array)
@@ -1068,42 +987,31 @@ for(i = 0; i < 2; i++)
             dcbi(ddr1_init_array);
             msync();
             (void)(MEM32((uint32_t)ddr1_init_array)); //generate read transaction
-            // rumboot_printf("Configured EM1 T_SYS_RDLAT=0x%08x\n",(T_SYS_RDLAT_configured));
+            usleep(1000);
             T_SYS_RDLAT_measured = ddr_get_T_SYS_RDLAT(EM1_DDR3LMC_DCR);
-            // rumboot_printf("Measured EM1 T_SYS_RDLAT=0x%08x\n",T_SYS_RDLAT_measured);
 
             if (T_SYS_RDLAT_measured != T_SYS_RDLAT_configured)
             {
-                // rumboot_printf("EM1 T_SYS_RDLAT reconfiguration. Reason: measured != configured.\n");
-                // rumboot_printf("Enter self-refresh mode\n");
                 ddr_enter_self_refresh_mode(EM1_DDR3LMC_DCR);
 
                 T_SYS_RDLAT_configured = T_SYS_RDLAT_measured;
-                // rumboot_printf("Set new EM1 T_SYS_RDLAT = 0x%08x\n", T_SYS_RDLAT_configured);
                 uint32_t SDTR4_reg = ddr34lmc_dcr_read_DDR34LMC_SDTR4(EM1_DDR3LMC_DCR);
                 SDTR4_reg &= ~reg_field(15, 0b111111);
                 ddr34lmc_dcr_write_DDR34LMC_SDTR4(EM1_DDR3LMC_DCR,
                         SDTR4_reg | reg_field(15, T_SYS_RDLAT_configured));
 
-                // rumboot_printf("Exit self-refresh mode\n");
                 ddr_exit_self_refresh_mode(EM1_DDR3LMC_DCR);
 
                 //TODO: need to invalidate read address to avoid cache hit.
                 dcbi(ddr1_init_array);
                 msync();
-                //(void)(MEM32(EM1_BASE + 0x100)); //generate new read transaction. New address to avoid cache hit.
                 (void)(MEM32((uint32_t)ddr1_init_array)); //generate read transaction
                 T_SYS_RDLAT_measured = ddr_get_T_SYS_RDLAT(EM1_DDR3LMC_DCR);
-                // rumboot_printf("Measured EM1 T_SYS_RDLAT=0x%08x\n", T_SYS_RDLAT_measured);
                 TEST_ASSERT(T_SYS_RDLAT_measured == T_SYS_RDLAT_configured, "EM1 DDR34LMC configuration error");
             }
 
         }
     }
-}   
-	
-	// rumboot_printf("BESR_em0 = 0x%08x\n", plb6mcif2_dcr_read_PLB6MCIF2_BESR(EM0_PLB6MCIF2_DCR));
-    // rumboot_printf("BESR_em1 = 0x%08x\n", plb6mcif2_dcr_read_PLB6MCIF2_BESR(EM1_PLB6MCIF2_DCR));
     //-------------------
 }
 
@@ -1188,20 +1096,15 @@ static void ddr3phy_init(uint32_t baseAddr, const DdrBurstLength burstLen)
     ddr3phy_write_DDR3PHY_PHYREG00(baseAddr,
             reg & ~(0b11 << 2)); // Soft reset enter
 
-    wait_some_time ();
-    
     reg = ddr3phy_read_DDR3PHY_PHYREG00(baseAddr);
     ddr3phy_write_DDR3PHY_PHYREG00(baseAddr,
             reg | (0b11 << 2)); // Soft reset exit
 
-    wait_some_time ();
-    
     reg = ddr3phy_read_DDR3PHY_PHYREG01(baseAddr);
     reg &= ~0b111;
     ddr3phy_write_DDR3PHY_PHYREG01(baseAddr,
             (burstLen == DdrBurstLength_4) ? (reg | 0b000) : (reg | 0b100) ); // Set DDR3 mode
 
-    // rumboot_printf("phyreg_cl_phy = 0x%08x\n", DDR3PHY_PHYREG0b + baseAddr);
     reg = ddr3phy_read_DDR3PHY_PHYREG0b(baseAddr);
     reg &= ~0xff;
     ddr3phy_write_DDR3PHY_PHYREG0b(baseAddr,
@@ -1212,14 +1115,6 @@ static void ddr3phy_init(uint32_t baseAddr, const DdrBurstLength burstLen)
     ddr3phy_write_DDR3PHY_PHYREG0c(baseAddr,
             reg | (ddr_config.CWL_PHY << 0)); // CWL = 8
 
-    
-    //-------------------------------------------------------------------------
-    //  odt configure bypass mode Off (?)
-    //  Made no sense
-    // iowrite32 (0x0, baseAddr + (0x3 << 2));
-    // iowrite32 (0x0, baseAddr + (0x4 << 2));
-    //-------------------------------------------------------------------------
-    
     //2. Configure DDR PHY PLL output to provide stable clock to SDRAM
     //Setup PHY internal PLL
     //PHY.ddr_refclk = 400MHz
@@ -1245,16 +1140,13 @@ static void ddr3phy_init(uint32_t baseAddr, const DdrBurstLength burstLen)
 
     ddr3phy_write_DDR3PHY_PHYREGED(baseAddr, 0x18); //PLL clock out enable
     
-    // rumboot_printf("    _dbg_0\n");
     while (((ioread32(SCTL_BASE + SCTL_PLL_STATE)>>2)&1) != 1) //#ev Ожидаем установления частоты
     {
     }
-    // usleep(5); //let's wait 5us
-    // rumboot_printf("    _dbg_1\n");
+    usleep(5); //let's wait 5us
     
     //usleep(4);
 
-    //  select DDR PHY internal PLL
     ddr3phy_write_DDR3PHY_PHYREGEF(baseAddr, 0x1);
 
 }
@@ -1262,7 +1154,6 @@ static void ddr34lmc_dfi_init(const uint32_t baseAddr)
 {
     //DFI init must be done before step 7. enabling dfi_cke.
 
-    // rumboot_printf("DFI_INIT_START\n");
     //9. DFI init.
 
     uint32_t reg = 0;
@@ -1280,182 +1171,6 @@ static void ddr34lmc_dfi_init(const uint32_t baseAddr)
     TEST_ASSERT(reg & reg_field(3, 0b1), "DFI_INIT_COMPLETE timeout");
 
     //MCOPT2[DFI_INIT_START] must stay LOW. See PHY spec notes.
-    // rumboot_printf("DFI_INIT_COMPLETE\n");
-}
-
-void sdram_write_leveling_mode_on (const uint32_t baseAddr)
-{
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ0(baseAddr,
-    //Wait = TMRD*tCK/tI_MC_CLOCK = 4*1250/2500 = 2
-    //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
-    //      ENABLE              WAIT                EN_MULTI_RANK_SELECT      RANK
-            reg_field(0, 0b1) | reg_field(15, 512) | reg_field(27, 0) |         reg_field(31, 0b0001));
-
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD0(baseAddr,	//#ev bit30, 29: 00->11
-    //See JEDEC 3.4.3 Mode Register MR1
-    //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11                  A10                A9                   A8                 A7                   A6                   A5                   A4 A3                						 A2                   A1                   A0
-    //Value              0                      0                       0                   0                   0                    1                    0   0   0          Qoff                 TDQS                 0                  Rtt_Nom[2]           0                  Level                Rtt_Nom[1]           DIC[1]               AL                    						Rtt_Nom[0]           DIC[0]               DLL
-    //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4]              ADDR[5]            ADDR[6]              ADDR[7]            ADDR[8]              ADDR[9]              ADDR[10]             ADDR[11:12]           						ADDR[13]             ADDR[14]             ADDR[15]
-                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b1) | reg_field(18, 0) | reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(21, 0) | reg_field(22, 0b0) | reg_field(23, 0) | reg_field(24, 0b1) | reg_field(25, 0b1) | reg_field(26, 0b0) | reg_field(28, ddr_config.AL_CHIP) | reg_field(29, 0b0) | reg_field(30, 0b1) | reg_field(31, 0b0));
-
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ1(baseAddr,
-    //Wait = TMRD*tCK/tI_MC_CLOCK = 4*1250/2500 = 2
-    //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
-    //      ENABLE              WAIT                EN_MULTI_RANK_SELECT      RANK
-            reg_field(0, 0b1) | reg_field(15, 2) | reg_field(27, 0) |         reg_field(31, 0b0010));
-
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD1(baseAddr,	//#ev bit30, 29: 00->11
-    //See JEDEC 3.4.3 Mode Register MR1
-    //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11                  A10                A9                   A8                 A7                   A6                   A5                   A4 A3                						 A2                   A1                   A0
-    //Value              0                      0                       0                   0                   0                    1                    0   0   0          Qoff                 TDQS                 0                  Rtt_Nom[2]           0                  Level                Rtt_Nom[1]           DIC[1]               AL                    						Rtt_Nom[0]           DIC[0]               DLL
-    //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4]              ADDR[5]            ADDR[6]              ADDR[7]            ADDR[8]              ADDR[9]              ADDR[10]             ADDR[11:12]           						ADDR[13]             ADDR[14]             ADDR[15]
-                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b1) | reg_field(18, 0) | reg_field(19, 0b1) | reg_field(20, 0b0) | reg_field(21, 0) | reg_field(22, 0b1) | reg_field(23, 0) | reg_field(24, 0b0) | reg_field(25, 0b0) | reg_field(26, 0b0) | reg_field(28, ddr_config.AL_CHIP) | reg_field(29, 0b1) | reg_field(30, 0b1) | reg_field(31, 0b0));
-
-    // ddr34lmc_dcr_write_DDR34LMC_INITSEQ1(baseAddr, 0);
-    // ddr34lmc_dcr_write_DDR34LMC_INITCMD1(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ2(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD2(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ3(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD3(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ4(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD4(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ5(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD5(baseAddr, 0);
-    
-    
-    
-    uint32_t mcopt2_reg;
-    
-    mcopt2_reg = ddr34lmc_dcr_read_DDR34LMC_MCOPT2(baseAddr);
-    ddr34lmc_dcr_write_DDR34LMC_MCOPT2(baseAddr,
-            (mcopt2_reg & ~(reg_field(0, 0b1))) //MCOPT2[0] = 0b0 SELF_REF_EN
-            | reg_field(2, 0b1)); //MCOPT2[2] = 0b1 INIT_START
-
-    const uint32_t INIT_COMPLETE_TIMEOUT = 1000;
-    uint32_t time = 0;
-    uint32_t mcstat_reg = 0;
-
-    do
-    {
-        mcstat_reg = ddr34lmc_dcr_read_DDR34LMC_MCSTAT(baseAddr);
-        if (mcstat_reg & reg_field(0, 0b1)) // INIT_COMPLETE
-            break;
-    }
-    while (++time != INIT_COMPLETE_TIMEOUT);
-
-    TEST_ASSERT(time != INIT_COMPLETE_TIMEOUT, "sdram_write_leveling_mode_on DDR INIT_COMPLETE_TIMEOUT");
-}
-
-void sdram_write_leveling_mode_off (const uint32_t baseAddr)
-{
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ0(baseAddr,
-    //Wait = TMRD*tCK/tI_MC_CLOCK = 4*1250/2500 = 2
-    //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
-    //      ENABLE              WAIT                EN_MULTI_RANK_SELECT      RANK
-            reg_field(0, 0b1) | reg_field(15, 512) | reg_field(27, 0) |         reg_field(31, 0b1111));
-
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD0(baseAddr,	//#ev bit30, 29: 00->11
-    //See JEDEC 3.4.3 Mode Register MR1
-    //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11                  A10                A9                   A8                 A7                   A6                   A5                   A4 A3                						 A2                   A1                   A0
-    //Value              0                      0                       0                   0                   0                    1                    0   0   0          Qoff                 TDQS                 0                  Rtt_Nom[2]           0                  Level                Rtt_Nom[1]           DIC[1]               AL                    						Rtt_Nom[0]           DIC[0]               DLL
-    //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4]              ADDR[5]            ADDR[6]              ADDR[7]            ADDR[8]              ADDR[9]              ADDR[10]             ADDR[11:12]           						ADDR[13]             ADDR[14]             ADDR[15]
-                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b1) | reg_field(18, 0) | reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(21, 0) | reg_field(22, 0b0) | reg_field(23, 0) | reg_field(24, 0b0) | reg_field(25, 0b1) | reg_field(26, 0b0) | reg_field(28, ddr_config.AL_CHIP) | reg_field(29, 0b1) | reg_field(30, 0b1) | reg_field(31, 0b0));
-
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ1(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD1(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ2(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD2(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ3(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD3(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ4(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD4(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ5(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD5(baseAddr, 0);
-    
-    
-    
-    uint32_t mcopt2_reg;
-    
-    mcopt2_reg = ddr34lmc_dcr_read_DDR34LMC_MCOPT2(baseAddr);
-    ddr34lmc_dcr_write_DDR34LMC_MCOPT2(baseAddr,
-            (mcopt2_reg & ~(reg_field(0, 0b1))) //MCOPT2[0] = 0b0 SELF_REF_EN
-            | reg_field(2, 0b1)); //MCOPT2[2] = 0b1 INIT_START
-
-    const uint32_t INIT_COMPLETE_TIMEOUT = 1000;
-    uint32_t time = 0;
-    uint32_t mcstat_reg = 0;
-
-    do
-    {
-        mcstat_reg = ddr34lmc_dcr_read_DDR34LMC_MCSTAT(baseAddr);
-        if (mcstat_reg & reg_field(0, 0b1)) // INIT_COMPLETE
-            break;
-    }
-    while (++time != INIT_COMPLETE_TIMEOUT);
-
-    TEST_ASSERT(time != INIT_COMPLETE_TIMEOUT, "sdram_write_leveling_mode_off DDR INIT_COMPLETE_TIMEOUT");
-}
-
-void sdram_write_leveling_cs1_off (const uint32_t baseAddr)
-{
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ0(baseAddr,
-    //Wait = TMRD*tCK/tI_MC_CLOCK = 4*1250/2500 = 2
-    //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
-    //      ENABLE              WAIT                EN_MULTI_RANK_SELECT      RANK
-            reg_field(0, 0b1) | reg_field(15, 512) | reg_field(27, 0) |         reg_field(31, 0b0010));
-
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD0(baseAddr,	//#ev bit30, 29: 00->11
-    //See JEDEC 3.4.3 Mode Register MR1
-    //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11                  A10                A9                   A8                 A7                   A6                   A5                   A4 A3                						 A2                   A1                   A0
-    //Value              0                      0                       0                   0                   0                    1                    0   0   0          Qoff                 TDQS                 0                  Rtt_Nom[2]           0                  Level                Rtt_Nom[1]           DIC[1]               AL                    						Rtt_Nom[0]           DIC[0]               DLL
-    //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4]              ADDR[5]            ADDR[6]              ADDR[7]            ADDR[8]              ADDR[9]              ADDR[10]             ADDR[11:12]           						ADDR[13]             ADDR[14]             ADDR[15]
-                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b1) | reg_field(18, 0) | reg_field(19, 0b1) | reg_field(20, 0b0) | reg_field(21, 0) | reg_field(22, 0b0) | reg_field(23, 0) | reg_field(24, 0b0) | reg_field(25, 0b1) | reg_field(26, 0b0) | reg_field(28, ddr_config.AL_CHIP) | reg_field(29, 0b1) | reg_field(30, 0b1) | reg_field(31, 0b0));
-
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ1(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD1(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ2(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD2(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ3(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD3(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ4(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD4(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITSEQ5(baseAddr, 0);
-    ddr34lmc_dcr_write_DDR34LMC_INITCMD5(baseAddr, 0);
-    
-    
-    
-    uint32_t mcopt2_reg;
-    
-    mcopt2_reg = ddr34lmc_dcr_read_DDR34LMC_MCOPT2(baseAddr);
-    ddr34lmc_dcr_write_DDR34LMC_MCOPT2(baseAddr,
-            (mcopt2_reg & ~(reg_field(0, 0b1))) //MCOPT2[0] = 0b0 SELF_REF_EN
-            | reg_field(2, 0b1)); //MCOPT2[2] = 0b1 INIT_START
-
-    const uint32_t INIT_COMPLETE_TIMEOUT = 1000;
-    uint32_t time = 0;
-    uint32_t mcstat_reg = 0;
-
-    do
-    {
-        mcstat_reg = ddr34lmc_dcr_read_DDR34LMC_MCSTAT(baseAddr);
-        if (mcstat_reg & reg_field(0, 0b1)) // INIT_COMPLETE
-            break;
-    }
-    while (++time != INIT_COMPLETE_TIMEOUT);
-
-    TEST_ASSERT(time != INIT_COMPLETE_TIMEOUT, "sdram_write_leveling_mode_off DDR INIT_COMPLETE_TIMEOUT");
-}
-
-void sdram_phy_write_leveling_mode_on (const uint32_t baseAddr)
-{
-    iowrite32 (0x4A, baseAddr + 0x014);
-    iowrite32 (0x40, baseAddr + 0x018);
-}
-
-void sdram_phy_write_leveling_mode_off (const uint32_t baseAddr)
-{
-    iowrite32 (0x4A, baseAddr + 0x014);
-    iowrite32 (0x40, baseAddr + 0x018);
 }
 
 void ddr_ddr34lmc_init(const uint32_t baseAddr,
@@ -1477,12 +1192,10 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     //Must wait for 200us after I_MC_RESET was deactivated
     if (initMode == DdrInitMode_FollowSpecWaitRequirements)
     {
-        // rumboot_printf("Wait 200us according to spec...\n");
         usleep(200); //in microseconds
     }
     else if (initMode == DdrInitMode_ViolateSpecWaitRequirements)
     {
-        // rumboot_printf("Speed up: Ignore 200us requirement\n");
     }
 
     //3. Deactivate SDRAM reset
@@ -1524,32 +1237,30 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
 
     ddr34lmc_dcr_write_DDR34LMC_MCOPT1(baseAddr,	//#ev
 //      PROTOCOL             DM_ENABLE                       [ECC_EN : ECC_COR]      RDIMM                 PMUM               WIDTH[0]              WIDTH[1]           PORT_ID_CHECK_EN      UIOS              QUADCS_RDIMM        ZQCL_EN               WD_DLY               QDEPTH              RWOO                 WOOO                 DCOO                  DEF_REF              DEV_TYPE             CA_PTY_DLY           ECC_MUX               CE_THRESHOLD
-        reg_field(0, 0b0) | reg_field(1, partialWriteMode) | reg_field(3, eccMode) | reg_field(4, 0b0) | reg_field(6, 0b00) | reg_field(7, 0b0) | reg_field(12, 0b0) | reg_field(8, 0b0) | reg_field(9, 0) | reg_field(10, 0b0) | reg_field(11, 0b0) | reg_field(13, 0b1) | reg_field(15, 0b10) | reg_field(16, 0b0) | reg_field(17, 0b0) | reg_field(18, 0b1) | reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(21, 0b0) | reg_field(23, 0b00) | reg_field(31, 0b1));
+        reg_field(0, 0b0) | reg_field(1, partialWriteMode) | reg_field(3, eccMode) | reg_field(4, 0b0) | reg_field(6, 0b00) | reg_field(7, 0b0) | reg_field(12, 0b0) | reg_field(8, 0b0) | reg_field(9, 0) | reg_field(10, 0b0) | reg_field(11, 0b0) | reg_field(13, 0b1) | reg_field(15, 0b10) | reg_field(16, 0b0) | reg_field(17, 0b0) | reg_field(18, 0b1) | reg_field(19, 0b0) | reg_field(20, 0b1) | reg_field(21, 0b0) | reg_field(23, 0b00) | reg_field(31, 0b1));
 
     ddr34lmc_dcr_write_DDR34LMC_IOCNTL(baseAddr, 0);
 
     ddr34lmc_dcr_write_DDR34LMC_PHYCNTL(baseAddr, 0);
 
     //Init ODTR0 - ODTR3
-    //ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x02000000);	//#ev - ODT write rank 0 enable 
-	ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x00000000);
+    ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x02000000);	//#ev - ODT write rank 0 enable
 
-    //ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x08000000);
-	ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x00000000);
+    ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0);
 
     ddr34lmc_dcr_write_DDR34LMC_ODTR2(baseAddr, 0);
 
     ddr34lmc_dcr_write_DDR34LMC_ODTR3(baseAddr, 0);
 
+    // AlSp ToDo: get number of Ranks and its parameters from SPD
     //Init CFGR0 - CFGR3
     ddr34lmc_dcr_write_DDR34LMC_CFGR0(baseAddr, //#ev - ADDR_MODE 11->10
 //           ROW_WIDTH          ADDR_MODE               MIRROR              RANK_ENABLE
         reg_field(19, 0b100) | reg_field(23, 0b0010) | reg_field(27, 0b0) | reg_field(31, 0b1));
 
     ddr34lmc_dcr_write_DDR34LMC_CFGR1(baseAddr,	//#ev - RANK_ENABLE 1->0
-//     RANK_ENABLE               ROW_WIDTH          ADDR_MODE               MIRROR              RANK_ENABLE
-        reg_field(19, 0b100) | reg_field(23, 0b0010) | reg_field(27, 0b0) | reg_field(31, 0b1));
-		// reg_field(31, 0b0));
+//     RANK_ENABLE
+        reg_field(19, 0b100) | reg_field(23, 0b0010) | reg_field(27, 0b0) | reg_field(31, 0b1));    // AlSp: both ranks enabled and initialized?
 
     ddr34lmc_dcr_write_DDR34LMC_CFGR2(baseAddr,
 //     RANK_ENABLE
@@ -1558,7 +1269,6 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     ddr34lmc_dcr_write_DDR34LMC_CFGR3(baseAddr,
     //   RANK_ENABLE
             reg_field(31, 0b0));
-    // rumboot_printf("    DDR34LMC_CFGR0 = 0x%08x\n", dcrread32(baseAddr + DDR34LMC_CFGR0));
 
     //Init SMR0 - SMR3
     ddr34lmc_dcr_write_DDR34LMC_SMR0(baseAddr,
@@ -1569,7 +1279,7 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
 
     ddr34lmc_dcr_write_DDR34LMC_SMR1(baseAddr,	//#ev bit 30, 29: 00->11, 31: 1->0
 //      QOFF (not used)         TDQS (not used)     RTT_Nom[2]         RTT_Nom[1]           RTT_Nom[0]         WR_Level (not used)       DIC[1]             DIC[0]                 AL                   DLL (not used)
-        reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(22, 0b0) | reg_field(25, 0b1) | reg_field(29, 0b1) | reg_field(24, 0b0) | reg_field(26, 0b0) | reg_field(30, 0b1) | reg_field(28, ddr_config.AL_MC) | reg_field(31, 0b0));
+        reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(22, 0b0) | reg_field(25, 0b0) | reg_field(29, 0b1) | reg_field(24, 0b0) | reg_field(26, 0b0) | reg_field(30, 0b1) | reg_field(28, ddr_config.AL_MC) | reg_field(31, 0b0));
 
     ddr34lmc_dcr_write_DDR34LMC_SMR2(baseAddr,
     //For CWL calculation see function min_cwl in SDRAM parameters.
@@ -1580,10 +1290,6 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     ddr34lmc_dcr_write_DDR34LMC_SMR3(baseAddr,
     //      MPR (not used)         MPR_SEL (not used)
             reg_field(29, 0b0) | reg_field(31, 0b00));
-    // rumboot_printf("    DDR34LMC_SMR0 = 0x%08x\n", dcrread32(baseAddr + DDR34LMC_SMR0));
-    // rumboot_printf("    DDR34LMC_SMR1 = 0x%08x\n", dcrread32(baseAddr + DDR34LMC_SMR1));
-    // rumboot_printf("    DDR34LMC_SMR2 = 0x%08x\n", dcrread32(baseAddr + DDR34LMC_SMR2));
-    // rumboot_printf("    DDR34LMC_SMR3 = 0x%08x\n", dcrread32(baseAddr + DDR34LMC_SMR3));
 
     //Init SDTR0 - SDTR5
     ddr34lmc_dcr_write_DDR34LMC_SDTR0(baseAddr,
@@ -1632,7 +1338,6 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     //T_MOD = tMOD/tCK = 15000/1250 = 12
     //      T_RDDATA_EN[0:6]            T_SYS_RDLAT                  T_CCD_L (not used)          T_CCD                 T_CPDED                 T_MOD
             reg_field(7, T_RDDATA_EN) | reg_field(15, T_SYS_RDLAT) | reg_field(19, 0b0100) | reg_field(23, 0b100) | reg_field(26, 0b000) | reg_field(31, ddr_config.T_MOD));
-    // rumboot_printf("T_RDDATA_EN = 0x%08x, T_SYS_RDLAT = 0x%08x\n", T_RDDATA_EN, T_SYS_RDLAT);
 
     ddr34lmc_dcr_write_DDR34LMC_SDTR5(baseAddr,
     //MC uses T_WHY_WRDATA value like this T_PHY_WRLAT = (CWL - 2*T_PHY_WRDATA)/2 (units: I_MC_CLOCK), where T_PHY_WRLAT is a time from WRITE cmd to dfi_wrdata_en signal
@@ -1652,7 +1357,7 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     //Wait = TMRD*tCK/tI_MC_CLOCK = 4*1250/2500 = 2
     //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
     //      ENABLE              WAIT                EN_MULTI_RANK_SELECT      RANK
-            reg_field(0, 0b1) | reg_field(15, 512) | reg_field(27, 0) |         reg_field(31, 0b0011));
+            reg_field(0, 0b1) | reg_field(15, 2) | reg_field(27, 1) |         reg_field(31, 0b1111));
 
     ddr34lmc_dcr_write_DDR34LMC_INITCMD0(baseAddr,
 
@@ -1660,13 +1365,13 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13 A12 A11      A10 A9                A8                   A7                   A6                   A5 A4 A3               A2 A1 A0
     //Value              0                      0                       0                   0                   1                    0                    0   0   0   0   0        Rtt_WR                0                    SRT                  ASR                  CWL                    PASR
     //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:4]                ADDR[5:6]             ADDR[7]              ADDR[8]              ADDR[9]              ADDR[10:12]            ADDR[13:15]
-					reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b1) | reg_field(11, 0b0) | reg_field(20, 0b00000) | reg_field(22, 0b00) | reg_field(23, 0b0) | reg_field(24, 0b0) | reg_field(25, 0b0) | reg_field(28, ddr_config.CWL_CHIP) | reg_field(31, 0b000));
+                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b1) | reg_field(11, 0b0) | reg_field(20, 0b00000) | reg_field(22, 0b00) | reg_field(23, 0b0) | reg_field(24, 0b0) | reg_field(25, 0b0) | reg_field(28, ddr_config.CWL_CHIP) | reg_field(31, 0b000));
 
     ddr34lmc_dcr_write_DDR34LMC_INITSEQ1(baseAddr,
     //Wait = TMRD*tCK/tI_MC_CLOCK = 4*1250/2500 = 2
     //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
     //      ENABLE              WAIT                EN_MULTI_RANK_SELECT      RANK
-            reg_field(0, 0b1) | reg_field(15, 512) | reg_field(27, 0) |         reg_field(31, 0b0011));
+            reg_field(0, 0b1) | reg_field(15, 2) | reg_field(27, 1) |         reg_field(31, 0b1111));
 
     ddr34lmc_dcr_write_DDR34LMC_INITCMD1(baseAddr,
     //See JEDEC 3.4.5 Mode Register MR3
@@ -1679,36 +1384,36 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     //Wait = TMRD*tCK/tI_MC_CLOCK = 4*1250/2500 = 2
     //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
     //      ENABLE              WAIT                EN_MULTI_RANK_SELECT      RANK
-            reg_field(0, 0b1) | reg_field(15, 512) | reg_field(27, 0) |         reg_field(31, 0b0011));
+            reg_field(0, 0b1) | reg_field(15, 2) | reg_field(27, 1) |         reg_field(31, 0b1111));
 
     ddr34lmc_dcr_write_DDR34LMC_INITCMD2(baseAddr,	//#ev bit30, 29: 00->11
     //See JEDEC 3.4.3 Mode Register MR1
-    //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11                  A10                A9                   A8                 A7                   A6                   A5                   A4 A3                						 A2                   A1                   A0
-    //Value              0                      0                       0                   0                   0                    1                    0   0   0          Qoff                 TDQS                 0                  Rtt_Nom[2]           0                  Level                Rtt_Nom[1]           DIC[1]               AL                    						Rtt_Nom[0]           DIC[0]               DLL
-    //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4]              ADDR[5]            ADDR[6]              ADDR[7]            ADDR[8]              ADDR[9]              ADDR[10]             ADDR[11:12]           						ADDR[13]             ADDR[14]             ADDR[15]
-                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b1) | reg_field(18, 0) | reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(21, 0) | reg_field(22, 0b0) | reg_field(23, 0) | reg_field(24, 0b0) | reg_field(25, 0b1) | reg_field(26, 0b0) | reg_field(28, ddr_config.AL_CHIP) | reg_field(29, 0b1) | reg_field(30, 0b1) | reg_field(31, 0b0));
+    //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11                  A10                A9                   A8                 A7                   A6                   A5                   A4 A3                 A2                   A1                   A0
+    //Value              0                      0                       0                   0                   0                    1                    0   0   0          Qoff                 TDQS                 0                  Rtt_Nom[2]           0                  Level                Rtt_Nom[1]           DIC[1]               AL                    Rtt_Nom[0]           DIC[0]               DLL
+    //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4]              ADDR[5]            ADDR[6]              ADDR[7]            ADDR[8]              ADDR[9]              ADDR[10]             ADDR[11:12]           ADDR[13]             ADDR[14]             ADDR[15]
+                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b1) | reg_field(18, 0) | reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(21, 0) | reg_field(22, 0b0) | reg_field(23, 0) | reg_field(24, 0b0) | reg_field(25, 0b0) | reg_field(26, 0b0) | reg_field(28, ddr_config.AL_CHIP) | reg_field(29, 0b1) | reg_field(30, 0b1) | reg_field(31, 0b0));
 
     ddr34lmc_dcr_write_DDR34LMC_INITSEQ3(baseAddr,
     //Wait = tMOD/tI_MC_CLOCK = 15000/2500 = 6
     //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
     //      ENABLE              WAIT              EN_MULTI_RANK_SELECT       RANK
-            reg_field(0, 0b1) | reg_field(15, 512) | reg_field(27, 0) |         reg_field(31, 0b0011));
+            reg_field(0, 0b1) | reg_field(15, 6) | reg_field(27, 1) |         reg_field(31, 0b1111));
 
     ddr34lmc_dcr_write_DDR34LMC_INITCMD3(baseAddr,	//#ev WR 110 -> ddr_config.WR
     //See JEDEC 3.4.2 Mode Register MR0
-    //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11 A10 A9             		A8                   A7                   A6 A5 A4               				A3                   A2                   A1 A0
-    //Value              0                      0                       0                   0                   0                    0                    0   0   0          PPD                  WR                     		DLL                  TM                   CL[3:1]                				RBT                  CL[0]                BL
-    //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4:6]             		 ADDR[7]              ADDR[8]              ADDR[9:11]             				ADDR[12]             ADDR[13]             ADDR[14:15]
+    //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11 A10 A9             A8                   A7                   A6 A5 A4               A3                   A2                   A1 A0
+    //Value              0                      0                       0                   0                   0                    0                    0   0   0          PPD                  WR                     DLL                  TM                   CL[3:1]                RBT                  CL[0]                BL
+    //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4:6]              ADDR[7]              ADDR[8]              ADDR[9:11]             ADDR[12]             ADDR[13]             ADDR[14:15]
                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b0) | reg_field(18, 0) | reg_field(19, 0b1) | reg_field(22, ddr_config.WR) | reg_field(23, 0b1) | reg_field(24, 0b0) | reg_field(27, ddr_config.CL_CHIP) | reg_field(28, 0b0) | reg_field(29, 0b0) | reg_field(31, burstLength));
 
     ddr34lmc_dcr_write_DDR34LMC_INITSEQ4(baseAddr,
     //Wait = tZQINIT/tI_MC_CLOCK = 640000/2500 = 256
     //RANKx is anded with CFGRx[RANK_ENABLE]. Let's set all ranks here
     //          ENABLE              WAIT                EN_MULTI_RANK_SELECT       RANK
-                reg_field(0, 0b1) | reg_field(15, 512) | reg_field(27, 1) |         reg_field(31, 0b0011));
+                reg_field(0, 0b1) | reg_field(15, 256) | reg_field(27, 1) |         reg_field(31, 0b1111));
 
     ddr34lmc_dcr_write_DDR34LMC_INITCMD4(baseAddr,
-    //See JEDEC Table 6 Command Truth Table (ZQCS)
+    //See JEDEC Table 6 Command Truth Table
     //DDR pin            RAS#                   CAS#                    WE#                 A10
     //Value              1                      1                       0                   0
     //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              ADDR[5]
@@ -1729,12 +1434,10 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     //Must wait for 500us after SDRAM reset deactivated
     if (initMode == DdrInitMode_FollowSpecWaitRequirements)
     {
-        // rumboot_printf("Wait 500us according to spec...\n");
         usleep(500); //in microseconds
     }
     else if (initMode == DdrInitMode_ViolateSpecWaitRequirements)
     {
-        // rumboot_printf("Speed up: Ignore 500us requirement\n");
     }
 
     mcopt2_reg = ddr34lmc_dcr_read_DDR34LMC_MCOPT2(baseAddr);
@@ -1761,37 +1464,6 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     mcopt2_reg = ddr34lmc_dcr_read_DDR34LMC_MCOPT2(baseAddr);
     ddr34lmc_dcr_write_DDR34LMC_MCOPT2(baseAddr,
             mcopt2_reg | reg_field(3, 0b1));//MCOPT2[3] = 0b1 MC_ENABLE
-    
-    // report_DDR_core_regs (baseAddr);
-}
-
-char * print_reg(uint32_t val, int len)
-{
-    uint32_t x = val, mask;
-
-
-    while(len)
-    {
-	mask = 1 << (len-1);
-	if (x&mask)
-	{
-	    // rumboot_printf("1");
-	}
-	else
-	{
-	    // rumboot_printf("0");
-	}
-	len--;
-    }
-    // rumboot_printf("\n");
-
-}
-
-static void _ddr3phy_calibrate(const uint32_t baseAddr)
-{
-   dcrwrite32(0x01, baseAddr + DDR3PHY_PHYREG02);
-   usleep(6);  //  in microseconds
-   dcrwrite32(0x00, baseAddr + DDR3PHY_PHYREG02);  //  Stop calibration
 }
 
 static void ddr3phy_calibrate(const uint32_t baseAddr)
@@ -1800,116 +1472,11 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
     int time = 0;
     uint32_t reg;
     
-    
-    // iowrite32 (0x00, baseAddr + (0x28 << 2));  // 
-    // iowrite32 (0x07, baseAddr + (0x38 << 2));  // 
-    // iowrite32 (0x07, baseAddr + (0x48 << 2));  // 
-    // iowrite32 (0x07, baseAddr + (0x58 << 2));  // 
-    
-    // wait_some_time ();
-    
-    /*
-    // rumboot_printf("	Start write-leveling\n");
-    iowrite32 (0xA4, baseAddr + (0x02 << 2));  // 
-    wait_some_time ();
-    iowrite32 (0x00, baseAddr + (0x02 << 2));  // 
-    */
-    
-    // ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0x8);	// CMD AND ADDRESS DLL delay  (8-f)
-    // ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x4);	// CK DLL delay (0-7)
-    // wait_some_time ();
-    
-    //-----------------------------------------------------------------------------------------
-    // rumboot_printf("	Start write-leveling\n");
-    
-    // if (baseAddr == 0x3800E000)
-        // sdram_write_leveling_mode_on (EM0_DDR3LMC_DCR);
-    // else
-    // while (1)
-    // {
-        // // sdram_write_leveling_mode_on (EM1_DDR3LMC_DCR);
-    // sdram_write_leveling_cs1_off (EM1_DDR3LMC_DCR);
-    sdram_phy_write_leveling_mode_on (baseAddr);
-    
-    ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA4); //Start write-leveling
-    
-    time = 0;
-    do
-    {
-        reg = ddr3phy_read_DDR3PHY_PHYREGF0(baseAddr);
-        if ((reg & 0x1f) == 0x1f)
-            break;
-        usleep(1);
-    } while(++time != PHY_CALIBRATION_TIMEOUT);
-    
-    
-    ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA0); //Stop write-leveling
-    
-    TEST_ASSERT(time != PHY_CALIBRATION_TIMEOUT, "write-leveling timeout");
-    // rumboot_printf("	write-leveling.time = %d\n", time);
-
-    reg = ddr3phy_read_DDR3PHY_PHYREGF0(baseAddr);
-    // rumboot_printf("	write-level.status (PHYREGF0) = 0x%08x\n", reg);
-    
-    reg = ddr3phy_read_DDR3PHY_PHYREGF1(baseAddr);
-    // rumboot_printf("	write-level.value ch_A (PHYREGF1) = 0x%08x\n", reg);
-    
-    reg = ddr3phy_read_DDR3PHY_PHYREGF2(baseAddr);
-    // rumboot_printf("	write-level.value ch_B (PHYREGF2) = 0x%08x\n", reg);
-    
-    wait_some_time ();
-    
-    // if (baseAddr == 0x3800E000)
-        // sdram_write_leveling_mode_off (EM0_DDR3LMC_DCR);
-    // else
-        // sdram_write_leveling_mode_off (EM1_DDR3LMC_DCR);
-    // sdram_phy_write_leveling_mode_off (baseAddr);
-    // }
-    //-----------------------------------------------------------------------------------------
-    
-    //-----------------------------------------------------------------------------------------
-    // ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA8); //  Write leveling bypass mode
-    //
-    //  Unstable results
-    
-    // ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xA);	// CMD AND ADDRESS DLL delay  (8-f)
-    // ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0xE);	// CK DLL delay (0-7)
-    
-    // iowrite32 (0x08, baseAddr + (0x26 << 2));  //  write DQ DLL delay
-    // iowrite32 (0x08, baseAddr + (0x36 << 2));  // 
-    // iowrite32 (0x08, baseAddr + (0x46 << 2));  // 
-    // iowrite32 (0x08, baseAddr + (0x56 << 2));  // 
-    
-    // iowrite32 (0x0C, baseAddr + (0x27 << 2));  //  write DQS DLL delay
-    // iowrite32 (0x0C, baseAddr + (0x37 << 2));  // 
-    // iowrite32 (0x0C, baseAddr + (0x47 << 2));  // 
-    // iowrite32 (0x0C, baseAddr + (0x57 << 2));  // 
-    // wait_some_time ();
-    //-----------------------------------------------------------------------------------------
-
-    //-----------------------------------------------------------------------------------------
     //8. Configure PHY calibration regs
-    //-------------------------------------------------------------------------------------
-    //  It pass always (if we look on status reg)
-    //    On CRUCIAL one-rank memories:
-    //      one result register is not stable (PHYREGF8 - ECC byte) - both DDRs
-    //      other register has very starnge value (PHYREGFE - high byte) - DDR1 only
-    //    On HYPERX memroies:
-    //      All registers are stable and had approximately the same values.
-    //
-    //  If we use bypass, then presence of this procedure has no matter.
-    //-------------------------------------------------------------------------------------
+    //rumboot_printf("	Start dqs-gating\n");
     
-    // rumboot_printf("	Start dqs-gating\n");
-    
-    ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA1); //Start calibration
-    
-    volatile uint32_t rdata;
-    volatile uint32_t i;
-    
-    // if (baseAddr == 0x3800F000)
-        // for (i = 0; i < 100; i++)
-            // rdata = ioread32 (0x80000000);   //  Made no sense
+    ddr3phy_write_DDR3PHY_PHYREG02(baseAddr,
+            0xa1); //Start calibration
 
     do
     {
@@ -1918,239 +1485,31 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
             break;
         usleep(1);
     } while(++time != PHY_CALIBRATION_TIMEOUT);
-    
-    // usleep(5);
-    
-    // wait_some_time ();
-
-    ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA0); //Stop calibration
 
     TEST_ASSERT(time != PHY_CALIBRATION_TIMEOUT, "dqs-gating timeout");
-    // rumboot_printf("	dqs-gating.time = %d\n", time);
     
     reg = ddr3phy_read_DDR3PHY_PHYREGFF(baseAddr);
-    // rumboot_printf("	dqs-gating.status = 0x%08x\n", reg);
-    
-    //-----------------------------------------------------------------------------------------
 
-    
-    //-----------------------------------------------------------------------------------------
-    
-    //-----------------------------------------------------------------------------------------
-    // ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA2); //  DQS gating bypass mode
-    // iowrite32 (0x26, baseAddr + (0x2C << 2));  // read DQS DLL delay (0-3)-младший байт (справа)
-    // iowrite32 (0x2C, baseAddr + (0x3C << 2));  // read DQS DLL delay (0-3)
-    // iowrite32 (0x31, baseAddr + (0x4C << 2));  // read DQS DLL delay (0-3)
-    // iowrite32 (0x28, baseAddr + (0x5C << 2));  // read DQS DLL delay (0-3)-старший байт (слева)
-    // iowrite32 (0x2A, baseAddr + (0x6C << 2));  // read DQS DLL delay ECC
-    //-----------------------------------------------------------------------------------------
-    //  Data is unstable after this:
-    //-----------------------------------------------------------------------------------------
-    // iowrite32 (0x3, baseAddr + (0x28 << 2));  // read DQS DLL delay (0-3)-младший байт (справа)
-    // iowrite32 (0x3, baseAddr + (0x38 << 2));  // read DQS DLL delay (0-3)
-    // iowrite32 (0x3, baseAddr + (0x48 << 2));  // read DQS DLL delay (0-3)
-    // iowrite32 (0x3, baseAddr + (0x58 << 2));  // read DQS DLL delay (0-3)-старший байт (слева)
-    // iowrite32 (0x3, baseAddr + (0x29 << 2));  // read DQS DLL delay (0-3)-младший байт (справа)
-    // iowrite32 (0x3, baseAddr + (0x39 << 2));  // read DQS DLL delay (0-3)
-    // iowrite32 (0x3, baseAddr + (0x49 << 2));  // read DQS DLL delay (0-3)
-    // iowrite32 (0x3, baseAddr + (0x59 << 2));  // read DQS DLL delay (0-3)-старший байт (слева)
-    //-----------------------------------------------------------------------------------------
-    
-    
-    // email from INNO, did
-    // please configure the register 0x11b[7:4] to 0x07, this will decrease the skew of the clock
-    // reg = MEM32(baseAddr + 0x11B);
-    // reg &= ~0xf0;
-    // MEM32(baseAddr + 0x11B) = reg | 0x70;
+    ddr3phy_write_DDR3PHY_PHYREG02(baseAddr,
+            0x00); //Stop calibration
 
-    // iowrite32 (0x3F, baseAddr + (0x00 << 2));  // turn channels off
-    
-    
-    //  DQ and DM drive strength - made no sense. Didnt work at all, if high resistance.
-    // iowrite32 (0xAA, baseAddr + (0x20 << 2));  // read DQS DLL delay (0-3)-младший байт (справа)
-    // iowrite32 (0xAA, baseAddr + (0x30 << 2));  // read DQS DLL delay (0-3)
-    // iowrite32 (0xAA, baseAddr + (0x40 << 2));  // read DQS DLL delay (0-3)
-    // iowrite32 (0xAA, baseAddr + (0x50 << 2));  // read DQS DLL delay (0-3)-старший байт (слева)
-    
-    //  DQ and DM ODT resistance - made no sense. Didnt work at all, if high resistance.
-    // iowrite32 (0xAA, baseAddr + (0x21 << 2));  // 
-    // iowrite32 (0xAA, baseAddr + (0x31 << 2));  // 
-    // iowrite32 (0xAA, baseAddr + (0x41 << 2));  // 
-    // iowrite32 (0xAA, baseAddr + (0x51 << 2));  // 
-    
-    //  Per bit deskew - made no sense
-    // iowrite32 (0xF7, baseAddr + (0x70 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x71 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x72 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x73 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x74 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x75 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x76 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x77 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x78 << 2));
-
-    //  Read DLL settings - made no sense
-    // iowrite32 (0xFF, baseAddr + (0x0b0));
-    // iowrite32 (0xF7, baseAddr + (0x0f0));
-    // iowrite32 (0x00, baseAddr + (0x130));
-    // iowrite32 (0xF7, baseAddr + (0x170));
-    
-    //  CMD drive strength - made no sense
-    // iowrite32 (0x11, baseAddr + (0x11 << 2));
-    //  CLK drive strength - made no sense - OSC: first peak increase a bit, if increase
-    // iowrite32 (0xFF, baseAddr + (0x16 << 2));
-    
-    wait_some_time ();
-    
-
-
-    // rumboot_printf("Calibration done.\n");
-    
-    // rumboot_printf("\n\nINFO:\n");
-    reg = ddr3phy_read_DDR3PHY_PHYREGF0(baseAddr);
-    // rumboot_printf("\n	PHYREGF0:\n    0x%08x\n", reg);
-
-    reg = ddr3phy_read_DDR3PHY_PHYREGF1(baseAddr);
-    //// rumboot_printf("REG = 0x%08x\n", reg);
-    // rumboot_printf("\n	PHYREGF1:\n	Channel A High 8bit write leveling dqs value	"); print_reg((reg&0xf0)>>4, 4);
-    // rumboot_printf("	Channel A Low 8bit write leveling dqs value	"); print_reg((reg&0xf)>>0, 4);
-    
-    reg = ddr3phy_read_DDR3PHY_PHYREGF2(baseAddr);
-    //// rumboot_printf("REG = 0x%08x\n", reg);
-    // rumboot_printf("\n	PHYREGF2:\n	Channel B High 8bit write leveling dqs value	"); print_reg((reg&0xf0)>>4, 4);
-    // rumboot_printf("	Channel B Low 8bit write leveling dqs value	"); print_reg((reg&0xf)>>0, 4);
-    
-    reg = ddr3phy_read_DDR3PHY_PHYREGFA(baseAddr);
-    //// rumboot_printf("REG = 0x%08x\n", reg);
-    // rumboot_printf("\n	PHYREGFA:\n	Channel B High 8bit dqs gate sample dqs value(idqs) (3)		%c\n", (reg&0x8)>>3 ? '1' : '0');
-    // rumboot_printf("	Channel B Low 8bit dqs gate sample dqs value(idqs) (3)		%c\n", (reg&0x4)>>2 ? '1' : '0');
-    // rumboot_printf("	Channel A High 8bit dqs gate sample dqs value(idqs) (3)		%c\n", (reg&0x2)>>1 ? '1' : '0');
-    // rumboot_printf("	Channel A Low 8bit dqs gate sample dqs value(idqs) (3)		%c\n", (reg&0x1)>>0 ? '1' : '0');
-    
-    reg = ddr3phy_read_DDR3PHY_PHYREGFB(baseAddr);
-    //// rumboot_printf("REG = 0x%08x\n", reg);
-    // rumboot_printf("\n	PHYREGFB:\n	Calibration get the cyclesel configure channel A low 8bit(3)	"); print_reg((reg&0x70)>>5,3);
-    // rumboot_printf("	Calibration get the ophsel configure channel A low 8bit(3)	"); print_reg((reg&0x18)>>3,2);
-    // rumboot_printf("	Calibration get the dll configure channel A low 8bit(3) 	"); print_reg((reg&0x7)>>0,3);
-    
-    reg = ddr3phy_read_DDR3PHY_PHYREGFC(baseAddr);
-    //// rumboot_printf("REG = 0x%08x\n", reg);
-    // rumboot_printf("\n	PHYREGFC:\n	Calibration get the cyclesel configure channel A high 8bit(3)	"); print_reg((reg&0x70)>>5,3);
-    // rumboot_printf("	Calibration get the ophsel configure channel A high 8bit(3)	"); print_reg((reg&0x18)>>3,2);
-    // rumboot_printf("	Calibration get the dll configure channel A high 8bit(3) 	"); print_reg((reg&0x7)>>0,3);
-    
-    reg = ddr3phy_read_DDR3PHY_PHYREGFD(baseAddr);
-    //// rumboot_printf("REG = 0x%08x\n", reg);
-    // rumboot_printf("\n	PHYREGFD:\n	Calibration get the cyclesel configure channel B low 8bit(3)	"); print_reg((reg&0x70)>>5,3);
-    // rumboot_printf("	Calibration get the ophsel configure channel B low 8bit(3)	"); print_reg((reg&0x18)>>3,2);
-    // rumboot_printf("	Calibration get the dll configure channel B low 8bit(3) 	"); print_reg((reg&0x7)>>0,3);
-    
-    reg = ddr3phy_read_DDR3PHY_PHYREGFE(baseAddr);
-    //// rumboot_printf("REG = 0x%08x\n", reg);
-    // rumboot_printf("\n	PHYREGFE:\n	Calibration get the cyclesel configure channel B high 8bit(3)	"); print_reg((reg&0x70)>>5,3);
-    // rumboot_printf("	Calibration get the ophsel configure channel B high 8bit(3)	"); print_reg((reg&0x18)>>3,2);
-    // rumboot_printf("	Calibration get the dll configure channel B high 8bit(3) 	"); print_reg((reg&0x7)>>0,3);
-    
-    
-        reg = ddr3phy_read_DDR3PHY_PHYREG00(baseAddr);
-        // rumboot_printf("	DDR3PHY_PHYREG00 = 0x%08x\n", reg);
-
-        // rumboot_printf("	DDR3PHY_PHYREG13 = 0x%08x\n", ioread32 (baseAddr + (0x13 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG14 = 0x%08x\n", ioread32 (baseAddr + (0x14 << 2)));
-        
-        // rumboot_printf("  Registers, related to 4 different DDR channels\n");
-        // rumboot_printf("	DDR3PHY_PHYREG03 = 0x%08x\n", ioread32 (baseAddr + 0x00c));
-        // rumboot_printf("	DDR3PHY_PHYREG04 = 0x%08x\n", ioread32 (baseAddr + 0x010));
-        // rumboot_printf("    ----\n");
-        
-        // rumboot_printf("	DDR3PHY_PHYREG20 = 0x%08x\n", ioread32 (baseAddr + (0x20 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG21 = 0x%08x\n", ioread32 (baseAddr + (0x21 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG26 = 0x%08x\n", ioread32 (baseAddr + (0x26 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG27 = 0x%08x\n", ioread32 (baseAddr + (0x27 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG28 = 0x%08x\n", ioread32 (baseAddr + (0x28 << 2)));
-        // rumboot_printf("    --\n");
-
-        // rumboot_printf("	DDR3PHY_PHYREG30 = 0x%08x\n", ioread32 (baseAddr + (0x30 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG31 = 0x%08x\n", ioread32 (baseAddr + (0x31 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG36 = 0x%08x\n", ioread32 (baseAddr + (0x36 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG37 = 0x%08x\n", ioread32 (baseAddr + (0x37 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG38 = 0x%08x\n", ioread32 (baseAddr + (0x38 << 2)));
-        // rumboot_printf("    --\n");
-
-        // rumboot_printf("	DDR3PHY_PHYREG40 = 0x%08x\n", ioread32 (baseAddr + (0x40 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG41 = 0x%08x\n", ioread32 (baseAddr + (0x41 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG46 = 0x%08x\n", ioread32 (baseAddr + (0x46 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG47 = 0x%08x\n", ioread32 (baseAddr + (0x47 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG48 = 0x%08x\n", ioread32 (baseAddr + (0x48 << 2)));
-        // rumboot_printf("    --\n");
-
-        // rumboot_printf("	DDR3PHY_PHYREG50 = 0x%08x\n", ioread32 (baseAddr + (0x50 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG51 = 0x%08x\n", ioread32 (baseAddr + (0x51 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG56 = 0x%08x\n", ioread32 (baseAddr + (0x56 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG57 = 0x%08x\n", ioread32 (baseAddr + (0x57 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG58 = 0x%08x\n", ioread32 (baseAddr + (0x58 << 2)));
-        // rumboot_printf("    ----\n");
-
-        // rumboot_printf("	DDR3PHY_PHYREG2C = 0x%08x\n", ioread32 (baseAddr + (0x0b0)));
-        // rumboot_printf("	DDR3PHY_PHYREG3C = 0x%08x\n", ioread32 (baseAddr + (0x0f0)));
-        // rumboot_printf("	DDR3PHY_PHYREG4C = 0x%08x\n", ioread32 (baseAddr + (0x130)));
-        // rumboot_printf("	DDR3PHY_PHYREG5C = 0x%08x\n", ioread32 (baseAddr + (0x170)));
-        // rumboot_printf("    ----\n");
-
-        // rumboot_printf("	DDR3PHY_PHYREG70 = 0x%08x\n", ioread32 (baseAddr + (0x70 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG71 = 0x%08x\n", ioread32 (baseAddr + (0x71 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG72 = 0x%08x\n", ioread32 (baseAddr + (0x72 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG73 = 0x%08x\n", ioread32 (baseAddr + (0x73 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG74 = 0x%08x\n", ioread32 (baseAddr + (0x74 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG75 = 0x%08x\n", ioread32 (baseAddr + (0x75 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG76 = 0x%08x\n", ioread32 (baseAddr + (0x76 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG77 = 0x%08x\n", ioread32 (baseAddr + (0x77 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG78 = 0x%08x\n", ioread32 (baseAddr + (0x78 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG79 = 0x%08x\n", ioread32 (baseAddr + (0x79 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG7A = 0x%08x\n", ioread32 (baseAddr + (0x7A << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG7B = 0x%08x\n", ioread32 (baseAddr + (0x7B << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG7C = 0x%08x\n", ioread32 (baseAddr + (0x7C << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG7D = 0x%08x\n", ioread32 (baseAddr + (0x7D << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG7E = 0x%08x\n", ioread32 (baseAddr + (0x7E << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG7F = 0x%08x\n", ioread32 (baseAddr + (0x7F << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG80 = 0x%08x\n", ioread32 (baseAddr + (0x80 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG81 = 0x%08x\n", ioread32 (baseAddr + (0x81 << 2)));
-        // rumboot_printf("    ----\n");
-
-        // rumboot_printf("	DDR3PHY_PHYREG11 = 0x%08x\n", ioread32 (baseAddr + (0x11 << 2)));
-        // rumboot_printf("	DDR3PHY_PHYREG16 = 0x%08x\n", ioread32 (baseAddr + (0x16 << 2)));
-        // rumboot_printf("    ----\n");
-
-    // rumboot_printf("\nINFO END:\n");
-    
-    
 }
 
-
-static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr)	//#ev
+static void ddr3phy_calibrate_manual(const unsigned int baseAddr)	//#ev
 {
     
    unsigned int reg;
    
     //#ev ручная подстройка задержек для скорости 1066
    if (DDR_FREQ == DDR3_1066) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xf);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x7);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
    ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
    ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
    
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x1);  // Write DQS DLL delay (0-7)-младший байт (справа)
+   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
    ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x1);  // Write DQS DLL delay (0-7)
+   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
       
    }
@@ -2158,14 +1517,6 @@ static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr)	//#ev
 
    //#ev ручная подстройка задержек для скорости 1333
    if (DDR_FREQ == DDR3_1333) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
    
    ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
@@ -2181,14 +1532,6 @@ static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr)	//#ev
    
    //#ev ручная подстройка задержек для скорости 1600
    if (DDR_FREQ == DDR3_1600) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
    
    ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
@@ -2212,224 +1555,10 @@ static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr)	//#ev
   MEM32(baseAddr + 0x11B) = reg | 0x70;
 }
 
-static void ddr3phy_calibrate_manual_EM1(const unsigned int baseAddr)	//#ev
-{
-    
-   unsigned int reg;
-   
-    //#ev ручная подстройка задержек для скорости 1066
-   if (DDR_FREQ == DDR3_1066) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA8); //  Write leveling bypass mode
-    
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0x8);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x4);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0x8);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0x8);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0x8);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0x8);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x2);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x2);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x2);  // Write DQS DLL delay (0-7)-старший байт (слева)
-   /*
-   ddr3phy_write_DDR3PHY_PHYREG70(baseAddr,0x77);	// CS0 A_DM0 TX de-skew - CS0 A_DM0 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREG7B(baseAddr,0x77);	// CS0 A_DM1 TX de-skew - CS0 A_DM1 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREG86(baseAddr,0x77);	// CS0 B_DM0 TX de-skew - CS0 B_DM0 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREG91(baseAddr,0x77);	// CS0 B_DM1 TX de-skew - CS0 B_DM1 RX de-skew
-													//где C?
-   ddr3phy_write_DDR3PHY_PHYREGC0(baseAddr,0x77);	// CS1 A_DM0 TX de-skew - CS1 A_DM0 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREGCB(baseAddr,0x77);	// CS1 A_DM1 TX de-skew - CS1 A_DM1 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREGD6(baseAddr,0x77);	// CS1 B_DM0 TX de-skew - CS1 B_DM0 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREGE1(baseAddr,0x77);	// CS1 B_DM1 TX de-skew - CS1 B_DM1 RX de-skew
-													//где C?
-												
-     */
-	 
-	reg = ddr3phy_read_DDR3PHY_PHYREG70(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREG70 = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREG7B(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREG7B = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREG86(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREG86 = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREG91(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREG91 = 0x%08x\n", reg);
-	
-	reg = ddr3phy_read_DDR3PHY_PHYREGC0(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREGC0 = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREGCB(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREGCB = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREGD6(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREGD6 = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREGE1(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREGE1 = 0x%08x\n", reg);
-	
-		
-   }
-
-
-   //#ev ручная подстройка задержек для скорости 1333
-   if (DDR_FREQ == DDR3_1333) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
-      
-   }
-   
-   //#ev ручная подстройка задержек для скорости 1600
-   if (DDR_FREQ == DDR3_1600) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
-    
-   }
-   usleep(10);  //  in microseconds #ev 
-   
-  
-   
-   // email from INNO, did
-  // please configure the register 0x11b[7:4] to 0x07, this will decrease the skew of the clock
-  reg = MEM32(baseAddr + 0x11B);
-  reg &= ~0xf0;
-  MEM32(baseAddr + 0x11B) = reg | 0x70;
-  
-}
-/*
-static void ddr_set_nopatch_config (CrgDdrFreq FreqMode)
-{
-    if (FreqMode == DDR3_1600)
-    {
-        ddr_config.T_RDDATA_EN_BC4 = 18;
-        ddr_config.T_RDDATA_EN_BL8 = 18;
-
-        ddr_config.CL_PHY =     11;
-        ddr_config.CL_MC =      0b111;
-        ddr_config.CL_CHIP =    0b111;
-
-        ddr_config.CWL_PHY =    8;
-        ddr_config.CWL_MC =     0b010;
-        ddr_config.CWL_CHIP =   0b011;
-
-        ddr_config.AL_PHY =     10;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-
-        ddr_config.WR =         0b011;
-        ddr_config.T_REFI =     9999;
-        ddr_config.T_RFC_XPR =  108;
-        ddr_config.T_RCD =      0b1110;
-        ddr_config.T_RP =       0b1110;
-        ddr_config.T_RC =       38;
-        ddr_config.T_RAS =      28;
-        ddr_config.T_WTR =      0b0110;
-        ddr_config.T_RTP =      0b0110;
-        ddr_config.T_XSDLL =    16;
-        ddr_config.T_MOD =      12;
-    }
-
-    if (FreqMode == DDR3_1333)
-    {
-        ddr_config.T_RDDATA_EN_BC4 = 10;
-        ddr_config.T_RDDATA_EN_BL8 = 10;
-
-        ddr_config.CL_PHY =     7;
-        ddr_config.CL_MC =      0b011;
-        ddr_config.CL_CHIP =    0b011;
-
-        ddr_config.CWL_PHY =    6;
-        ddr_config.CWL_MC =     0b000;
-        ddr_config.CWL_CHIP =   0b001;
-
-        ddr_config.AL_PHY =     6;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-
-        ddr_config.WR =         0b011;
-        ddr_config.T_REFI =     7999;
-        ddr_config.T_RFC_XPR =  90;
-        ddr_config.T_RCD =      0b1110;
-        ddr_config.T_RP =       0b1110;
-        ddr_config.T_RC =       32;
-        ddr_config.T_RAS =      24;
-        ddr_config.T_WTR =      0b0100;
-        ddr_config.T_RTP =      0b0100;
-        ddr_config.T_XSDLL =    21;
-        ddr_config.T_MOD =      10;
-    }
-
-    if (FreqMode == DDR3_1066)
-    {
-        ddr_config.T_RDDATA_EN_BC4 = 10;
-        ddr_config.T_RDDATA_EN_BL8 = 10;
-
-        ddr_config.CL_PHY =     7;
-        ddr_config.CL_MC =      0b011;
-        ddr_config.CL_CHIP =    0b011;
-
-        ddr_config.CWL_PHY =    6;
-        ddr_config.CWL_MC =     0b000;
-        ddr_config.CWL_CHIP =   0b001;
-
-        ddr_config.AL_PHY =     6;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-
-        ddr_config.WR =         0b011;
-        ddr_config.T_REFI =     5999;
-        ddr_config.T_RFC_XPR =  72; //MC_CLOCK = 3750
-        ddr_config.T_RCD =      0b1110;
-        ddr_config.T_RP =       0b1110;
-        ddr_config.T_RC =       26;
-        ddr_config.T_RAS =      20;
-        ddr_config.T_WTR =      0b0100; //4
-        ddr_config.T_RTP =      0b0100;
-        ddr_config.T_XSDLL =    32; //dfi_clk_1x = 3750
-        ddr_config.T_MOD =      8;
-    }
-}
-*/
 static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
 {   
     if (FreqMode == DDR3_1600)
     {
-        // rumboot_printf("	FreqMode = DDR3_1600\n");
         ddr_config.T_RDDATA_EN_BC4 = 18;
         ddr_config.T_RDDATA_EN_BL8 = 17;
 
@@ -2446,21 +1575,20 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.AL_CHIP =    0b10;
 
         ddr_config.WR =         0b110;
-        ddr_config.T_REFI =     9999;
+        ddr_config.T_REFI =     3120; //            refresh_rate_ps/tckmin_x_ps
         ddr_config.T_RFC_XPR =  108;
-        ddr_config.T_RCD =      0b1111;
-        ddr_config.T_RP =       0b1111;
-        ddr_config.T_RC =       39;
-        ddr_config.T_RAS =      28;
-        ddr_config.T_WTR =      0b0110;
-        ddr_config.T_RTP =      0b0110;
+        ddr_config.T_RCD =      9;    // 0b1111;    trcd_ps/tckmin_x_ps
+        ddr_config.T_RP =       9;    //0b1111;     trp_ps/tckmin_x_ps
+        ddr_config.T_RC =       39;   //            trc_ps/tckmin_x_ps
+        ddr_config.T_RAS =      27;   //28          tras_ps/tckmin_x_ps
+        ddr_config.T_WTR =      6;    // 0b0110;    twtr_ps/tckmin_x_ps
+        ddr_config.T_RTP =      6;    //0b0110;     trtp_ps/tckmin_x_ps
         ddr_config.T_XSDLL =    32;
         ddr_config.T_MOD =      12;
     }
     
     if (FreqMode == DDR3_1333)
     {
-        // rumboot_printf("	FreqMode = DDR3_1333\n");
         ddr_config.T_RDDATA_EN_BC4 = 14;	//?
         ddr_config.T_RDDATA_EN_BL8 = 14;	//?
 
@@ -2491,7 +1619,6 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
 
     if (FreqMode == DDR3_1066)
     {
-        // rumboot_printf("	FreqMode = DDR3_1066\n");
         ddr_config.T_RDDATA_EN_BC4 = 12;
         ddr_config.T_RDDATA_EN_BL8 = 12;
 
@@ -2508,55 +1635,24 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.AL_CHIP =    0b01;
 
         ddr_config.WR =         0b100; //8
-        ddr_config.T_REFI =     519; //  1.95us/1.875ns/2
+        ddr_config.T_REFI =     5999;
         ddr_config.T_RFC_XPR =  72; //MC_CLOCK = 3750
-        ddr_config.T_RCD =      0b1110;
-        ddr_config.T_RP =       0b1110;
-        ddr_config.T_RC =       30;
-        ddr_config.T_RAS =      22;
+        ddr_config.T_RCD =      0b1000;
+        ddr_config.T_RP =       0b1000;
+        ddr_config.T_RC =       28;
+        ddr_config.T_RAS =      20;
         ddr_config.T_WTR =      0b0100; //4
         ddr_config.T_RTP =      0b0100;
         ddr_config.T_XSDLL =    32; //dfi_clk_1x = 3750
         ddr_config.T_MOD =      8;
     }
-    /*
-    if (FreqMode == DDR3_800)
-    {
-        ddr_config.T_RDDATA_EN_BC4 = 8;
-        ddr_config.T_RDDATA_EN_BL8 = 8;
 
-        ddr_config.CL_PHY =     6;
-        ddr_config.CL_MC =      0b010;
-        ddr_config.CL_CHIP =    0b010;
-
-        ddr_config.CWL_PHY =    5;
-        ddr_config.CWL_MC =     0b000;
-        ddr_config.CWL_CHIP =   0b001;
-
-        ddr_config.AL_PHY =     5;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-
-        ddr_config.WR =         0b110;
-        ddr_config.T_REFI =     9999;
-        ddr_config.T_RFC_XPR =  54;
-        ddr_config.T_RCD =      0b1100;
-        ddr_config.T_RP =       0b1100;
-        ddr_config.T_RC =       21;
-        ddr_config.T_RAS =      15;
-        ddr_config.T_WTR =      0b0011;
-        ddr_config.T_RTP =      0b0011;
-        ddr_config.T_XSDLL =    32;
-        ddr_config.T_MOD =      6;
-    }
-    */
 };
 
 //-------------------------------------------------MISCELLANEOUS FUNCTIONS-------------------------------------------------
 
 uint8_t ddr_get_T_SYS_RDLAT(const uint32_t baseAddr)
 {
-    // rumboot_printf("base 0x%08x\n", baseAddr);
     return (uint8_t)(ddr34lmc_dcr_read_DDR34LMC_DBG0(baseAddr) >> 16) & 0b111111;
 }
 
@@ -2647,17 +1743,13 @@ void ddr_exit_self_refresh_mode(const uint32_t baseAddr)
 
 void ddr_enter_low_power_mode ()
 {
-    // rumboot_printf ("Enter LowPower mode....................\n");
 
     uint32_t reg;
     crg_remove_writelock ();
 
-    // rumboot_printf ("Enter self_refresh mode............\n");
     ddr_enter_self_refresh_mode(EM0_DDR3LMC_DCR);
-    // rumboot_printf ("Enter self_refresh mode............done\n");
 
    //isolation cells on
-    // rumboot_printf ("Isolation cells ON.................\n");
     reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
     reg |= (1<<0);
     pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //set ISO_ON_EM0 in PWR_EM0
@@ -2665,17 +1757,14 @@ void ddr_enter_low_power_mode ()
    //
 
    //stop clocks: I_DDR34LMC_CLKX1, I_DCR_CLOCK, I_PLB6_CLOCK
-    // rumboot_printf ("Stop I_DDR34LMC_CLKX1..............\n");
     reg = crg_ddr_read_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE);
     reg &= ~((1<<0) | (1<<2));
     crg_ddr_write_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE, reg); //clear DDR3_EM0_PHY_CLKEN in CKEN_DDR3;
 
-    // rumboot_printf ("Stop I_DCR_CLOCK...................\n");
     reg = crg_cpu_read_CRG_CPU_CKEN_DCR (CRG_CPU_BASE);
     reg &= ~(1<<0);
     crg_cpu_write_CRG_CPU_CKEN_DCR (CRG_CPU_BASE, reg); //clear DDR3_EM0_DCRCLKEN in CKEN_DCR
 
-    // rumboot_printf ("Stop I_PLB6_CLOCK..................\n");
     reg = crg_cpu_read_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE);
     reg &= ~(1<<6);
     crg_cpu_write_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE, reg); //clear DDR3_EM0_DCRCLKEN in CKEN_PLB6
@@ -2684,31 +1773,26 @@ void ddr_enter_low_power_mode ()
     crg_cpu_upd_cken ();
    //
 
-    // rumboot_printf ("Set PWR_OFF_EM0....................\n");
     reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
     reg |= (1<<1);
     pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //set PWR_OFF_EM0 in PWR_EM0
     TEST_ASSERT((pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<1)) , "Error writing to PMU_PWR_EM0");
 
     crg_set_writelock();
-    // rumboot_printf ("Enter LowPower mode....................done\n");
 }
 
 void ddr_exit_low_power_mode ()
 {
-    // rumboot_printf ("Exit LowPower mode....................\n");
 
     uint32_t reg;
     crg_remove_writelock();
 
-    // rumboot_printf ("Clear PWR_OFF_EM0.................\n");
     reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
     reg &= ~(1<<1);
     pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //clear PWR_OFF_EM0 in PWR_EM0
     TEST_ASSERT((!(pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<1))), "Error writing to PMU_PWR_EM0");
 
     //*****I_DDR34LMC_RESET, I_DDR34LMC_SELFREF_RESET, I_DCR_RESET, I_PLB6_RESET
-     // rumboot_printf ("Set RESET.........................\n");
      reg = crg_ddr_read_CRG_DDR_RST_EN (CRG_DDR_BASE);
      reg &= ~((1<<2) | (1<<4) | (1<<15) | (1<<16));
      crg_ddr_write_CRG_DDR_RST_EN (CRG_DDR_BASE, reg);
@@ -2716,17 +1800,14 @@ void ddr_exit_low_power_mode ()
     //******
 
    //start clocks: I_DDR34LMC_CLKX1, I_DCR_CLOCK, I_PLB6_CLOCK
-    // rumboot_printf ("Start I_DDR34LMC_CLKX1............\n");
     reg = crg_ddr_read_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE);
     reg |= (1<<0) | (1<<2);
     crg_ddr_write_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE, reg); //set DDR3_EM0_PHY_CLKEN in CKEN_DDR3
 
-    // rumboot_printf ("Start I_DCR_CLOCK.................\n");
     reg = crg_cpu_read_CRG_CPU_CKEN_DCR (CRG_CPU_BASE);
     reg |= (1<<0);
     crg_cpu_write_CRG_CPU_CKEN_DCR (CRG_CPU_BASE, reg); //set DDR3_EM0_DCRCLKEN in CKEN_DCR
 
-    // rumboot_printf ("Start I_PLB6_CLOCK................\n");
     reg = crg_cpu_read_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE);
     reg |= (1<<6);
     crg_cpu_write_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE, reg); //set DDR3_EM0_DCRCLKEN in CKEN_PLB6
@@ -2736,13 +1817,11 @@ void ddr_exit_low_power_mode ()
     usleep(4); //workaround
 
    //
-    // rumboot_printf ("Clear RESET.......................\n");
     reg = crg_ddr_read_CRG_DDR_RST_EN (CRG_DDR_BASE);
     reg |= (1<<2) | (1<<4) | (1<<15) | (1<<16);
     crg_ddr_write_CRG_DDR_RST_EN (CRG_DDR_BASE, reg);
 
    //isolation cells off
-    // rumboot_printf ("Clear ISO_ON_EM0..................\n");
     reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
     reg &= ~(1<<0);
     pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //clear ISO_ON_EM0 in PWR_EM0
@@ -2750,7 +1829,6 @@ void ddr_exit_low_power_mode ()
    //
 
     crg_set_writelock();
-    // rumboot_printf ("Exit LowPower mode....................done\n");
 }
 
 //-------------------------------------------------DRAM CLK FUNCTIONS-------------------------------------------------
@@ -2799,30 +1877,19 @@ void crg_ddr_config_freq (uint32_t phy_base_addr, DdrBurstLength burstLength)
     switch (DDR_FREQ)
     {
       case DDR3_800:
-          // rumboot_printf ("Set DDR-800 config\n");
           crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_4X (CRG_DDR_BASE, 0x00);
           break;
       case DDR3_1066:
-          // rumboot_printf ("Set DDR-1066 config\n");
-          //crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_REFCLK (CRG_DDR_BASE, 0x0B);   //  DDR3_REFCLK renamed here to DDR3_1X. How to correct this?
           crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_1X (CRG_DDR_BASE, 0x0B);
-          // crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_1X (CRG_DDR_BASE, 0x09);  //  With this settings there are only random errors
           break;
       case DDR3_1333:
-          // rumboot_printf ("Set DDR-1333 config\n");
-          //crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_REFCLK (CRG_DDR_BASE, 0x0B);
           crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_1X (CRG_DDR_BASE, 0x0B);
-          // crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_1X (CRG_DDR_BASE, 0x09);  //  This value better than 0x0B
           break;
       case DDR3_1600:
-          // rumboot_printf ("Set DDR-1600 config\n");
-          //crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_REFCLK (CRG_DDR_BASE, 0x07);
           crg_ddr_write_CRG_DDR_CKDIVMODE_DDR3_1X (CRG_DDR_BASE, 0x07);
           break;
     }
-    wait_some_time ();
     crg_ddr_upd_ckdiv();
-    wait_some_time ();
     //reg = 0x01;
     //crg_ddr_write_CRG_DDR_PLL_CTRL (CRG_DDR_BASE, reg); //restart PLL
 
@@ -2838,7 +1905,7 @@ void crg_ddr_config_freq (uint32_t phy_base_addr, DdrBurstLength burstLength)
 
     //TEST_ASSERT(i < timeout,"RESTART PHY PLL FAILED (TIMEOUT)!\n");
 
-    // rumboot_printf("Init DDR3PHY\n");
+    usleep(1000);
 
     ddr3phy_init(phy_base_addr, burstLength);
 

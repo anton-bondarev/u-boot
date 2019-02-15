@@ -42,8 +42,9 @@ void spl_board_init(void)
 {
 	/* init dram */
 	int i;
-	_test_addr = (unsigned int*)0x80000000; 
+	_test_addr = (unsigned int*)0x40000000; 
 	ddr_init();
+	
 	for(i = 0; i < 16; i++)
 		_test_addr[i] = 0x12345678;
 	printf("DDR test...");
@@ -55,11 +56,8 @@ void spl_board_init(void)
 	else
 		printf(" OK\n");
 
-	for(i = 0; i < 16; i++)
-		printf(" %x\n", _test_addr[i]);
-
-
-
+//	for(i = 0; i < 16; i++)
+//		printf(" %x\n", _test_addr[i]);
 
 	u32 boot_device = spl_boot_device();
 
