@@ -81,11 +81,7 @@ static irqreturn_t module_interrupt(int irq, void *hci)
 #define MODULE_REGANDIN(addr,data) MODULE_REGSAVE(addr,MODULE_REGLOAD(addr)&data)
 
 
-#define MODULE_CONTROL_SCTL_OFFSET 		0
-#define MODULE_CONTROL_SYS_CONF0_OFFSET 8
-#define MODULE_CONTROL_USBPHY_CFG_OFFSET 0xa000
-
-#define MODULE_USB0_RESET_REG_OFFSET 0x2c
+#define MODULE_USB0_RESET_REG_OFFSET 0x10
 
 
 
@@ -188,7 +184,7 @@ static int module_musb_init(struct musb *musb)
 	
 	// select clock to 24mhz
 	// set bit 10 - USBPHY_REFCLK_SEL
-	MODULE_REGORIN(control+MODULE_CONTROL_SCTL_OFFSET+MODULE_CONTROL_SYS_CONF0_OFFSET, 1 << 10);
+	MODULE_REGORIN(control, 1 << 10);
 
 	module_musb_reset(musb);
 

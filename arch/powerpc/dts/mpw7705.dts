@@ -305,9 +305,10 @@
 
         usb: musb@0x3C06D000 {
                 compatible = "rc-module,musb";
-                reg = <0x3C06D000 0x1000>,
-                      <0x38000000 0x1000>;
-                reg-names = "mc", "control";
+                reg = <0x3C06C000 0x1000>,
+					  <0x3C06D000 0x1000>,
+					  <0x38000008 0x4>;
+                reg-names = "phy", "mc", "control";
         };
 
 	    spi1: spi1@0x3C062000 {
