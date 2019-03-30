@@ -1,3 +1,11 @@
+//#define DEBUG
+
+// 1333
+//#define SLOW_DOWN 1500
+
+// 1066
+#define SLOW_DOWN 1876
+
 #include "ddr_impl_h/ddr.h"
 #include "ddr_impl_h/ddr_impl.h"
 #include "ddr_impl_h/ddr_regs.h"
@@ -10,8 +18,9 @@
 #include "ddr_impl_h/ddr/plb6mcif2.h"
 #include "ddr_impl_h/ddr/ddr34lmc.h"
 #include "ddr_impl_h/ddr/mcif2arb4.h"
-#include <ddr_spd.h>
-
+#include "ddr_spd.h"
+#include "rcmodule_dimm_params.h"
+#include "configs/mpw7705.h"
 
 //static uint8_t __attribute__((section(".EM0.data"),aligned(16))) volatile ddr0_init_array[128] = { 0 };
 //static uint8_t __attribute__((section(".EM1.data"),aligned(16))) volatile ddr1_init_array[128] = { 0 };
@@ -26,41 +35,8 @@ unsigned int *ddr1_init_array = 0x80000000;
 #define T_SYS_RDLAT_BL8 0xe
 
 //CONFIGURATION VALUES FOR DDR3-1600 (DEFAULT)
-static CrgDdrFreq DDR_FREQ;// = DDR3_1600;
-
-static ddr3config ddr_config;/* =
-{
- 18,            //T_RDDATA_EN_BC4               // RL-3 = CL + AL - 3
- 18,            //T_RDDATA_EN_BL8
-
- 11,            //CL_PHY
- 0b111,         //CL_MC                         // CL_MC == SMR0 CL[3:1] ; SMR0 CL[0] == 0;
- 0b111,         //CL_CHIP                       // CL = CL_TIME/tCK
-
- 8,             //CWL_PHY
- 0b010,         //CWL_MC                        //== SMR2 [CWL]
- 0b011,         //CWL_CHIP
-
- 10,            //AL_PHY
- 0b01,          //AL_MC                         //== SMR1 [AL]
- 0b01,          //AL_CHIP
-
- 0b110,         //WR                            // SMR0, WR = TWR/tCK
-
- 9999,          //T_REFI                        // SDTR0, T_REFI = 25000000/tI_MC_CLOCK = 25000000/2500 = 10000 (-1 is needed according to MC db)
- 108,           //T_RFC_XPR                     // SDTR0, T_RFC_XPR = (TRFC_MIN + 10ns)/tI_MC_CLOCK
-
- 0b1110,        //T_RCD                         // SDTR2, T_RCD = tRCD/tCK
- 0b1110,        //T_RP                          // SDTR2, T_RP = tRP/tCK
- 42,            //T_RC                          // SDTR2, T_RC = tRC/tCK
- 28,            //T_RAS                         // SDTR2, T_RAS = tRAS/tCK
-
- 0b0110,        //T_WTR                         // SDTR3, T_WTR = tWTR/tCK
- 0b0110,        //T_RTP                         // SDTR3, T_RTP = tRTP/tCK
- 16,            //T_XSDLL                       // SDTR3, TXSDLL = (tXSRD/PHY_to_MC_clock_ratio)/16
-
- 12             //T_MOD                         // SDTR4, T_MOD = tMOD/tCK
-};*/
+static CrgDdrFreq DDR_FREQ;
+static ddr3config ddr_config;
 
 // SUPPORT FUNCTIONS DECLARATIONS
 static void ddr_plb6mcif2_init(const uint32_t baseAddr, const uint32_t puaba);
@@ -175,55 +151,8 @@ void wait_some_time_1 ()
 }
 
 //*************************************************DDR INIT FUNCTIONS*************************************************/
-void ddr_init_impl_freq(
-        DdrHlbId hlbId,
-        DdrInitMode initMode,
-        DdrEccMode eccMode,
-        DdrPmMode powerManagementMode,
-        DdrBurstLength burstLength,
-        DdrPartialWriteMode partialWriteMode,
-        CrgDdrFreq FreqMode
-        )
-{
-    TEST_ASSERT((FreqMode != DDR3_800), "This freq mode not supported");
 
-    DDR_FREQ = FreqMode;
-
-    ddr_set_main_config (DDR_FREQ);
-    ddr_init_main(
-            hlbId,
-            initMode,
-            eccMode,
-            powerManagementMode,
-            burstLength,
-            partialWriteMode);
-}
-
-void ddr_init_impl_nopatch(
-        DdrHlbId hlbId,
-        DdrInitMode initMode,
-        DdrEccMode eccMode,
-        DdrPmMode powerManagementMode,
-        DdrBurstLength burstLength,
-        DdrPartialWriteMode partialWriteMode,
-        CrgDdrFreq FreqMode
-        )
-{
-    TEST_ASSERT((FreqMode != DDR3_800), "This freq mode not supported");
-
-    DDR_FREQ = FreqMode;
-
-    ddr_set_nopatch_config (FreqMode);
-    ddr_init_main(
-            hlbId,
-            initMode,
-            eccMode,
-            powerManagementMode,
-            burstLength,
-            partialWriteMode);
-}
-
-void init_ppc_for_test() {
+void init_mmu() {
     asm volatile (
 	// initialize MMUCR
 	"addis 0, 0, 0x0000   \n\t"  // 0x0000
@@ -324,602 +253,323 @@ void report_DDR_core_regs (uint32_t baseAddr)
     }
 }
 
-#define CRGCPU__        0x38006000
-
-void magic_settings()
+void commutate_plb6()
 {
-    uint32_t * res_dcr = 0x00070100; // result dcr
-
-    uint32_t dcr_addr=0;
     uint32_t dcr_val=0;
-    uint32_t i;
-
-    init_ppc_for_test();
-    //uart_init_460800();
+    init_mmu();
     
-    dcr_addr=0x80000200;            // BC_CR0
-    res_dcr = 0x00070100;
-    
-    for(i=0; i<0x12; i++) {
-	dcr_val = read_dcr_reg(dcr_addr);
-	*res_dcr = dcr_val; res_dcr++;
-	dcr_addr++;
-    };
-    
-    // Set Seg0, Seg1, Seg2 and BC_CR0 
+    // PLB6 commutation
+    // Set Seg0, Seg1, Seg2 and BC_CR0
     write_dcr_reg(0x80000204, 0x00000010);  // BC_SGD1
     write_dcr_reg(0x80000205, 0x00000010);  // BC_SGD2
     dcr_val = read_dcr_reg(0x80000200);     // BC_CR0
     write_dcr_reg(0x80000200, dcr_val | 0x80000000);  
-
-    dcr_addr=0x80000200;
-    res_dcr = 0x00070150;
-    for(i=0; i<0x12; i++) {
-	dcr_val = read_dcr_reg(dcr_addr);
-	*res_dcr = dcr_val; res_dcr++;
-	dcr_addr++;
-    };
-    
-    write_tlb_entry4();
-    write_tlb_entry8();
-
-	//iowrite32(0x1ACCE551, CRGCPU__ + 0x00c); // allow 
-	//iowrite32(0x3, CRGCPU__ + 0x100); //уменьшение тактовой частоты CPU
-    //iowrite32(0x1, CRGCPU__ + 0x4);
 }
 
-
-
-/* Parameters for a DDR dimm computed from the SPD */
-typedef struct dimm_params_s {
-
-	/* DIMM organization parameters */
-	char mpart[19];		/* guaranteed null terminated */
-
-	unsigned int n_ranks;
-	unsigned int die_density;
-	unsigned long long rank_density;
-	unsigned long long capacity;
-	unsigned int data_width;
-	unsigned int primary_sdram_width;
-	unsigned int ec_sdram_width;
-	unsigned int registered_dimm;
-	unsigned int package_3ds;	/* number of dies in 3DS DIMM */
-	unsigned int device_width;	/* x4, x8, x16 components */
-
-	/* SDRAM device parameters */
-	unsigned int n_row_addr;
-	unsigned int n_col_addr;
-	unsigned int edc_config;	/* 0 = none, 1 = parity, 2 = ECC */
-	unsigned int n_banks_per_sdram_device;
-	unsigned int burst_lengths_bitmask;	/* BL=4 bit 2, BL=8 = bit 3 */
-
-	/* used in computing base address of DIMMs */
-	unsigned long long base_address;
-	/* mirrored DIMMs */
-	unsigned int mirrored_dimm;	/* only for ddr3 */
-
-	/* DIMM timing parameters */
-
-	int mtb_ps;	/* medium timebase ps */
-	int ftb_10th_ps; /* fine timebase, in 1/10 ps */
-	int taa_ps;	/* minimum CAS latency time */
-	int tfaw_ps;	/* four active window delay */
-
-	/*
-	 * SDRAM clock periods
-	 * The range for these are 1000-10000 so a short should be sufficient
-	 */
-	int tckmin_x_ps;
-	int tckmin_x_minus_1_ps;
-	int tckmin_x_minus_2_ps;
-	int tckmax_ps;
-
-	/* SPD-defined CAS latencies */
-	unsigned int caslat_x;
-	unsigned int caslat_x_minus_1;
-	unsigned int caslat_x_minus_2;
-
-	unsigned int caslat_lowest_derated;	/* Derated CAS latency */
-
-	/* basic timing parameters */
-	int trcd_ps;
-	int trp_ps;
-	int tras_ps;
-
-	int twr_ps;	/* maximum = 63750 ps */
-	int trfc_ps;	/* max = 255 ns + 256 ns + .75 ns
-				       = 511750 ps */
-	int trrd_ps;	/* maximum = 63750 ps */
-	int twtr_ps;	/* maximum = 63750 ps */
-	int trtp_ps;	/* byte 38, spd->trtp */
-
-	int trc_ps;	/* maximum = 254 ns + .75 ns = 254750 ps */
-
-	int refresh_rate_ps;
-	int extended_op_srt;
-
-	/* DDR3 & DDR4 RDIMM */
-	unsigned char rcw[16];	/* Register Control Word 0-15 */
-} dimm_params_t;
-
-
-static void dump_dimm_params(dimm_params_t *pdimm,
-					 unsigned int dimm_number)
-{
-    int i;
-    printf("Computed DIMM parameters for %d DIMM\n", dimm_number);
-    printf("\tmpart:\t\t\t%s\n", pdimm->mpart);
-    printf("    DIMM organization parameters:\n");
-    printf("\tn_ranks:\t\t%d\n", pdimm->n_ranks);
-    printf("\tdie_density:\t\t%d\n", pdimm->die_density);
-    printf("\trank_density:\t\t%lld\n", pdimm->rank_density);
-    printf("\tcapacity:\t\t%lld\n", pdimm->capacity);
-    printf("\tdata_width:\t\t%d\n", pdimm->data_width);
-    printf("\tprimary_sdram_width:\t%d\n", pdimm->primary_sdram_width);
-    printf("\tec_sdram_width:\t\t%d\n", pdimm->ec_sdram_width);
-    printf("\tregistered_dimm:\t%d\n", pdimm->registered_dimm);
-    printf("\tpackage_3ds:\t\t%d\n", pdimm->package_3ds);
-    printf("\tdevice_width:\t\t%d\n", pdimm->device_width);
-    printf("    SDRAM device parameters:\n");
-    printf("\tn_row_addr:\t\t%d\n", pdimm->n_row_addr);
-    printf("\tn_col_addr:\t\t%d\n", pdimm->n_col_addr);
-    printf("\tedc_config:\t\t%d\n", pdimm->edc_config);
-    printf("\tbanks_per_sdram_device:\t%d\n", pdimm->n_banks_per_sdram_device);
-    printf("\tburst_lengths_bitmask:\t%d\n", pdimm->burst_lengths_bitmask);
-    printf("\tbase_address:\t\t%llx\n", pdimm->base_address);
-    printf("\tmirrored_dimm:\t\t%d\n", pdimm->mirrored_dimm);
-    printf("    DIMM timing parameters:\n");
-    printf("\tmtb_ps:\t\t\t%d\n", pdimm->mtb_ps);
-    printf("\tftb_10th_ps:\t\t%d\n", pdimm->ftb_10th_ps);
-    printf("\ttaa_ps:\t\t\t%d\n", pdimm->taa_ps);
-    printf("\ttfaw_ps:\t\t%d\n", pdimm->tfaw_ps);
-    printf("    SDRAM clock periods:\n");
-    printf("\ttckmin_x_ps:\t\t%d\n", pdimm->tckmin_x_ps);
-    printf("\ttckmin_x_minus_1_ps:\t%d\n", pdimm->tckmin_x_minus_1_ps);
-    printf("\ttckmin_x_minus_2_ps:\t%d\n", pdimm->tckmin_x_minus_2_ps);
-    printf("\ttckmax_ps:\t\t%d\n", pdimm->tckmax_ps);
-    printf("    SPD-defined CAS latencies:\n");
-    printf("\tcaslat_x:\t\t%d\n", pdimm->caslat_x);
-    printf("\tcaslat_x_minus_1:\t%d\n", pdimm->caslat_x_minus_1);
-    printf("\tcaslat_x_minus_2:\t%d\n", pdimm->caslat_x_minus_2);
-    printf("\tcaslat_lowest_derated:\t%d\n", pdimm->caslat_lowest_derated);
-    printf("    basic timing parameters:\n");
-    printf("\ttrcd_ps:\t\t%d\n", pdimm->trcd_ps);
-    printf("\ttrp_ps:\t\t\t%d\n", pdimm->trp_ps);
-    printf("\ttras_ps:\t\t%d\n", pdimm->tras_ps);
-    printf("\ttwr_ps:\t\t\t%d\n", pdimm->twr_ps);
-    printf("\ttrfc_ps:\t\t%d\n", pdimm->trfc_ps);
-    printf("\ttrrd_ps:\t\t%d\n", pdimm->trrd_ps);
-    printf("\ttwtr_ps:\t\t%d\n", pdimm->twtr_ps);
-    printf("\ttrtp_ps:\t\t%d\n", pdimm->trtp_ps);
-    printf("\ttrc_ps:\t\t\t%d\n", pdimm->trc_ps);
-    printf("\trefresh_rate_ps:\t%d\n", pdimm->refresh_rate_ps);
-    printf("\textended_op_srt:\t%d\n", pdimm->extended_op_srt);
-    printf("\trcw:\t\t\t");
-    for(i = 0; i < 16; i++)
-    {
-        printf("%02X ", pdimm->rcw[i]);
-        if(i == 7)
-            printf("\n\t\t\t\t");
-    }
-    printf("\n");
-}
-
-
-/*
- * Calculate the Density of each Physical Rank.
- * Returned size is in bytes.
- *
- * each rank size =
- * sdram capacity(bit) / 8 * primary bus width / sdram width
- *
- * where: sdram capacity  = spd byte4[3:0]
- *        primary bus width = spd byte8[2:0]
- *        sdram width = spd byte7[2:0]
- *
- * SPD byte4 - sdram density and banks
- *	bit[3:0]	size(bit)	size(byte)
- *	0000		256Mb		32MB
- *	0001		512Mb		64MB
- *	0010		1Gb		128MB
- *	0011		2Gb		256MB
- *	0100		4Gb		512MB
- *	0101		8Gb		1GB
- *	0110		16Gb		2GB
- *
- * SPD byte8 - module memory bus width
- * 	bit[2:0]	primary bus width
- *	000		8bits
- * 	001		16bits
- * 	010		32bits
- * 	011		64bits
- *
- * SPD byte7 - module organiztion
- * 	bit[2:0]	sdram device width
- * 	000		4bits
- * 	001		8bits
- * 	010		16bits
- * 	011		32bits
- *
- */
-static unsigned long long
-compute_ranksize(const ddr3_spd_eeprom_t *spd)
-{
-	unsigned long long bsize;
-
-	int nbit_sdram_cap_bsize = 0;
-	int nbit_primary_bus_width = 0;
-	int nbit_sdram_width = 0;
-
-	if ((spd->density_banks & 0xf) < 7)
-		nbit_sdram_cap_bsize = (spd->density_banks & 0xf) + 28;
-	if ((spd->bus_width & 0x7) < 4)
-		nbit_primary_bus_width = (spd->bus_width & 0x7) + 3;
-	if ((spd->organization & 0x7) < 4)
-		nbit_sdram_width = (spd->organization & 0x7) + 2;
-
-	bsize = 1ULL << (nbit_sdram_cap_bsize - 3
-		    + nbit_primary_bus_width - nbit_sdram_width);
-
-#ifdef DEBUG
-	printf("DDR: DDR III rank density = 0x%016llx\n", bsize);
-#endif
-
-	return bsize;
-}
-
-
-
-
-/*
- * ddr_compute_dimm_parameters for DDR3 SPD
- *
- * Compute DIMM parameters based upon the SPD information in spd.
- * Writes the results to the dimm_params_t structure pointed by pdimm.
- *
- */
-static unsigned int ddr_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
-					 dimm_params_t *pdimm,
-					 unsigned int dimm_number)
-{
-	unsigned int retval;
-	unsigned int mtb_ps;
-	int ftb_10th_ps;
-	int i;
-
-    memset(pdimm, 0, sizeof(dimm_params_t));
-
-	if (spd->mem_type) {
-		if (spd->mem_type != SPD_MEMTYPE_DDR3) {
-			printf("DIMM %u: is not a DDR3 SPD.\n", dimm_number);
-			return 1;
-		}
-	} else {
-		memset(pdimm, 0, sizeof(dimm_params_t));
-		return 1;
-	}
-
-	retval = ddr3_spd_check(spd);
-	if (retval) {
-		printf("DIMM %u: failed checksum\n", dimm_number);
-		return 2;
-	}
-
-	/*
-	 * The part name in ASCII in the SPD EEPROM is not null terminated.
-	 * Guarantee null termination here by presetting all bytes to 0
-	 * and copying the part name in ASCII from the SPD onto it
-	 */
-	memset(pdimm->mpart, 0, sizeof(pdimm->mpart));
-	if ((spd->info_size_crc & 0xF) > 1)
-		memcpy(pdimm->mpart, spd->mpart, sizeof(pdimm->mpart) - 1);
-
-	/* DIMM organization parameters */
-	pdimm->n_ranks = ((spd->organization >> 3) & 0x7) + 1;
-	pdimm->rank_density = compute_ranksize(spd);
-	pdimm->capacity = pdimm->n_ranks * pdimm->rank_density;
-	pdimm->primary_sdram_width = 1 << (3 + (spd->bus_width & 0x7));
-	if ((spd->bus_width >> 3) & 0x3)
-		pdimm->ec_sdram_width = 8;
-	else
-		pdimm->ec_sdram_width = 0;
-	pdimm->data_width = pdimm->primary_sdram_width
-			  + pdimm->ec_sdram_width;
-	pdimm->device_width = 1 << ((spd->organization & 0x7) + 2);
-
-	/* These are the types defined by the JEDEC DDR3 SPD spec */
-	pdimm->mirrored_dimm = 0;
-	pdimm->registered_dimm = 0;
-	switch (spd->module_type & DDR3_SPD_MODULETYPE_MASK) {
-	case DDR3_SPD_MODULETYPE_RDIMM:
-	case DDR3_SPD_MODULETYPE_MINI_RDIMM:
-	case DDR3_SPD_MODULETYPE_72B_SO_RDIMM:
-		/* Registered/buffered DIMMs */
-		pdimm->registered_dimm = 1;
-		for (i = 0; i < 16; i += 2) {
-			uint8_t rcw = spd->mod_section.registered.rcw[i/2];
-			pdimm->rcw[i]   = (rcw >> 0) & 0x0F;
-			pdimm->rcw[i+1] = (rcw >> 4) & 0x0F;
-		}
-		break;
-
-	case DDR3_SPD_MODULETYPE_UDIMM:
-	case DDR3_SPD_MODULETYPE_SO_DIMM:
-	case DDR3_SPD_MODULETYPE_MICRO_DIMM:
-	case DDR3_SPD_MODULETYPE_MINI_UDIMM:
-	case DDR3_SPD_MODULETYPE_MINI_CDIMM:
-	case DDR3_SPD_MODULETYPE_72B_SO_UDIMM:
-	case DDR3_SPD_MODULETYPE_72B_SO_CDIMM:
-	case DDR3_SPD_MODULETYPE_LRDIMM:
-	case DDR3_SPD_MODULETYPE_16B_SO_DIMM:
-	case DDR3_SPD_MODULETYPE_32B_SO_DIMM:
-		/* Unbuffered DIMMs */
-		if (spd->mod_section.unbuffered.addr_mapping & 0x1)
-			pdimm->mirrored_dimm = 1;
-		break;
-
-	default:
-		printf("unknown module_type 0x%02X\n", spd->module_type);
-		return 1;
-	}
-
-	/* SDRAM device parameters */
-	pdimm->n_row_addr = ((spd->addressing >> 3) & 0x7) + 12;
-	pdimm->n_col_addr = (spd->addressing & 0x7) + 9;
-	pdimm->n_banks_per_sdram_device = 8 << ((spd->density_banks >> 4) & 0x7);
-
-	/*
-	 * The SPD spec has not the ECC bit,
-	 * We consider the DIMM as ECC capability
-	 * when the extension bus exist
-	 */
-	if (pdimm->ec_sdram_width)
-		pdimm->edc_config = 0x02;
-	else
-		pdimm->edc_config = 0x00;
-
-	/*
-	 * The SPD spec has not the burst length byte
-	 * but DDR3 spec has nature BL8 and BC4,
-	 * BL8 -bit3, BC4 -bit2
-	 */
-	pdimm->burst_lengths_bitmask = 0x0c;
-
-	/* MTB - medium timebase
-	 * The unit in the SPD spec is ns,
-	 * We convert it to ps.
-	 * eg: MTB = 0.125ns (125ps)
-	 */
-	mtb_ps = (spd->mtb_dividend * 1000) /spd->mtb_divisor;
-	pdimm->mtb_ps = mtb_ps;
-
-	/*
-	 * FTB - fine timebase
-	 * use 1/10th of ps as our unit to avoid floating point
-	 * eg, 10 for 1ps, 25 for 2.5ps, 50 for 5ps
-	 */
-	ftb_10th_ps =
-		((spd->ftb_div & 0xf0) >> 4) * 10 / (spd->ftb_div & 0x0f);
-	pdimm->ftb_10th_ps = ftb_10th_ps;
-	/*
-	 * sdram minimum cycle time
-	 * we assume the MTB is 0.125ns
-	 * eg:
-	 * tck_min=15 MTB (1.875ns) ->DDR3-1066
-	 *        =12 MTB (1.5ns) ->DDR3-1333
-	 *        =10 MTB (1.25ns) ->DDR3-1600
-	 */
-	pdimm->tckmin_x_ps = spd->tck_min * mtb_ps +
-		(spd->fine_tck_min * ftb_10th_ps) / 10;
-
-	/*
-	 * CAS latency supported
-	 * bit4 - CL4
-	 * bit5 - CL5
-	 * bit18 - CL18
-	 */
-	pdimm->caslat_x  = ((spd->caslat_msb << 8) | spd->caslat_lsb) << 4;
-
-	/*
-	 * min CAS latency time
-	 * eg: taa_min =
-	 * DDR3-800D	100 MTB (12.5ns)
-	 * DDR3-1066F	105 MTB (13.125ns)
-	 * DDR3-1333H	108 MTB (13.5ns)
-	 * DDR3-1600H	90 MTB (11.25ns)
-	 */
-	pdimm->taa_ps = spd->taa_min * mtb_ps +
-		(spd->fine_taa_min * ftb_10th_ps) / 10;
-
-	/*
-	 * min write recovery time
-	 * eg:
-	 * twr_min = 120 MTB (15ns) -> all speed grades.
-	 */
-	pdimm->twr_ps = spd->twr_min * mtb_ps;
-
-	/*
-	 * min RAS to CAS delay time
-	 * eg: trcd_min =
-	 * DDR3-800	100 MTB (12.5ns)
-	 * DDR3-1066F	105 MTB (13.125ns)
-	 * DDR3-1333H	108 MTB (13.5ns)
-	 * DDR3-1600H	90 MTB (11.25)
-	 */
-	pdimm->trcd_ps = spd->trcd_min * mtb_ps +
-		(spd->fine_trcd_min * ftb_10th_ps) / 10;
-
-	/*
-	 * min row active to row active delay time
-	 * eg: trrd_min =
-	 * DDR3-800(1KB page)	80 MTB (10ns)
-	 * DDR3-1333(1KB page)	48 MTB (6ns)
-	 */
-	pdimm->trrd_ps = spd->trrd_min * mtb_ps;
-
-	/*
-	 * min row precharge delay time
-	 * eg: trp_min =
-	 * DDR3-800D	100 MTB (12.5ns)
-	 * DDR3-1066F	105 MTB (13.125ns)
-	 * DDR3-1333H	108 MTB (13.5ns)
-	 * DDR3-1600H	90 MTB (11.25ns)
-	 */
-	pdimm->trp_ps = spd->trp_min * mtb_ps +
-		(spd->fine_trp_min * ftb_10th_ps) / 10;
-
-	/* min active to precharge delay time
-	 * eg: tRAS_min =
-	 * DDR3-800D	300 MTB (37.5ns)
-	 * DDR3-1066F	300 MTB (37.5ns)
-	 * DDR3-1333H	288 MTB (36ns)
-	 * DDR3-1600H	280 MTB (35ns)
-	 */
-	pdimm->tras_ps = (((spd->tras_trc_ext & 0xf) << 8) | spd->tras_min_lsb)
-			* mtb_ps;
-	/*
-	 * min active to actice/refresh delay time
-	 * eg: tRC_min =
-	 * DDR3-800D	400 MTB (50ns)
-	 * DDR3-1066F	405 MTB (50.625ns)
-	 * DDR3-1333H	396 MTB (49.5ns)
-	 * DDR3-1600H	370 MTB (46.25ns)
-	 */
-	pdimm->trc_ps = (((spd->tras_trc_ext & 0xf0) << 4) | spd->trc_min_lsb)
-			* mtb_ps + (spd->fine_trc_min * ftb_10th_ps) / 10;
-	/*
-	 * min refresh recovery delay time
-	 * eg: tRFC_min =
-	 * 512Mb	720 MTB (90ns)
-	 * 1Gb		880 MTB (110ns)
-	 * 2Gb		1280 MTB (160ns)
-	 */
-	pdimm->trfc_ps = ((spd->trfc_min_msb << 8) | spd->trfc_min_lsb)
-			* mtb_ps;
-	/*
-	 * min internal write to read command delay time
-	 * eg: twtr_min = 40 MTB (7.5ns) - all speed bins.
-	 * tWRT is at least 4 mclk independent of operating freq.
-	 */
-	pdimm->twtr_ps = spd->twtr_min * mtb_ps;
-
-	/*
-	 * min internal read to precharge command delay time
-	 * eg: trtp_min = 40 MTB (7.5ns) - all speed bins.
-	 * tRTP is at least 4 mclk independent of operating freq.
-	 */
-	pdimm->trtp_ps = spd->trtp_min * mtb_ps;
-
-	/*
-	 * Average periodic refresh interval
-	 * tREFI = 7.8 us at normal temperature range
-	 *       = 3.9 us at ext temperature range
-	 */
-	pdimm->refresh_rate_ps = 7800000;
-	if ((spd->therm_ref_opt & 0x1) && !(spd->therm_ref_opt & 0x2)) {
-		pdimm->refresh_rate_ps = 3900000;
-		pdimm->extended_op_srt = 1;
-	}
-
-	/*
-	 * min four active window delay time
-	 * eg: tfaw_min =
-	 * DDR3-800(1KB page)	320 MTB (40ns)
-	 * DDR3-1066(1KB page)	300 MTB (37.5ns)
-	 * DDR3-1333(1KB page)	240 MTB (30ns)
-	 * DDR3-1600(1KB page)	240 MTB (30ns)
-	 */
-	pdimm->tfaw_ps = (((spd->tfaw_msb & 0xf) << 8) | spd->tfaw_min)
-			* mtb_ps;
-
-	return 0;
-}
 
 int get_ddr3_spd_bypath(const char * spdpath, ddr3_spd_eeprom_t* spd);
+unsigned int rcmodule_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
+					 dimm_params_t *pdimm,
+					 unsigned int dimm_number);
+
+static int validate_dimm_parameters(dimm_params_t * params, int no)
+{
+    int result = 0;
+    if(params->n_ranks != 1)
+    {
+        printf("Unsupported DIMM with ranks %d in slot %d\n", params->n_ranks, no);
+        result = 1;
+    }
+
+    if(params->n_banks_per_sdram_device != 8)
+    {
+        printf("Unsupported DIMM with number of banks == %d in slot %d\n", params->n_banks_per_sdram_device, no);
+        result = 1;
+    }
+
+    return result;
+}
+
+
+static unsigned int getWR(int ticks)
+{
+    if(ticks > 14)
+        return 0;
+    if(ticks > 12)
+        return 0b111;
+    if(ticks > 10)
+        return 0b110;
+    if(ticks > 8)
+        return 0b101;
+    
+    if(ticks <= 5)
+        return 0b001;
+    
+    return ticks - 4;
+}
+
+static unsigned int getCL(int ticks)
+{
+    // 001-5 010-6 011-7 100-8 101-9 110-10 111-11
+
+    if(ticks > 10)
+        return 0b111;   
+    if(ticks <= 5)
+        return 0b001;
+    
+    return ticks - 4;
+}
+
+
+static unsigned int getRowWidth(int bits)
+{
+    if(bits <= 17 && bits >= 12)
+        return bits - 12;
+
+    printf("Unsupported DDR3 row width %d for DDR\n", bits);    
+    return 0;
+}
+
+
+static unsigned int getAddrMode(int bits)
+{
+    if(bits == 12)
+        return 0b100;   
+    if(bits == 11)
+        return 0b011;
+    if(bits == 10)
+        return 0b010;
+
+    printf("Unsupported DDR3 addr mode %d for DDR\n", bits);
+
+    return 0;
+}
+
+
+static void ddr_set_config_from_spd(int dimm0_invalid, int dimm1_invalid,
+        dimm_params_t* dpar0, dimm_params_t* dpar1)
+{
+    dimm_params_t* dpar = 0;
+    unsigned long time_base = 1250;     // max for DDR1600
+
+    // first detect maximum allowable frequency and reference parameters
+    if(!dimm0_invalid)
+    {
+        printf("Found DDR module in slot 0: %s, size %dMb\n", dpar0->mpart, (int) (dpar0->capacity/1024/1024));
+        dpar = dpar0;
+        if(dpar0->tckmin_x_ps > time_base)
+            time_base = dpar0->tckmin_x_ps;
+    }
+
+    if(!dimm1_invalid)
+    {
+        printf("Found DDR module in slot 1: %s, size %dMb\n", dpar1->mpart, (int) (dpar1->capacity/1024/1024));
+        if(dpar1->tckmin_x_ps > time_base || !dpar)
+        {
+            time_base = dpar1->tckmin_x_ps;
+            dpar = dpar1;
+        }
+    }
+
+#ifdef SLOW_DOWN        
+    printf("DDR slow down from %d to %d\n", 1000000/time_base*2, 1000000/SLOW_DOWN*2);
+    time_base = SLOW_DOWN;
+#endif
+
+    if(time_base > 1877)
+    {
+        DDR_FREQ = DDR3_800;
+        time_base = 2500;
+    }
+    else if(time_base > 1500)
+    {
+        DDR_FREQ = DDR3_1066;
+        time_base = 1876;        
+    }
+    else if(time_base > 1250)
+    {
+        DDR_FREQ = DDR3_1333;
+        time_base = 1500;
+    }
+    else
+    {
+        DDR_FREQ = DDR3_1600;
+        time_base = 1250;
+    }
+
+    unsigned int cl = (dpar->taa_ps*2)/time_base;
+    cl = (cl&1)?cl/2+1:cl/2;            // round up
+    while(cl < 11)                      // choose supported cl 
+    {
+        if(dpar->caslat_x & (1<<cl))
+            break;
+        cl++;
+    }
+
+    ddr_config.CL_PHY =     cl;   // tocheck +1
+    ddr_config.CL_MC =      getCL(cl);	//001-5 010-6 011-7 100-8 101-9 110-10 111-11 // CL_MC == SMR0 CL[3:1] ; SMR0 CL[0] == 0;
+    ddr_config.CL_CHIP =    getCL(cl);	//001-5 010-6 011-7 100-8 101-9 110-10 111-11 // CL = CL_TIME/tCK
+
+    ddr_config.WR =         getWR(dpar->twr_ps/time_base);  //10    // SMR0, WR = TWR/tCK
+    ddr_config.T_REFI =     dpar->refresh_rate_ps/time_base; // refresh interval (in cycles core clock) // SDTR0, T_REFI = 25000000/tI_MC_CLOCK = 25000000/2500 = 10000 (-1 is needed according to MC db)
+    ddr_config.T_RFC_XPR =  dpar->trfc_ps/time_base; //tRFC - Refresh to ACT or REF  // SDTR0, T_RFC_XPR = (TRFC_MIN + 10ns)/tI_MC_CLOCK
+    ddr_config.T_RCD =      dpar->trcd_ps/time_base; //ACTIVATE to READ/WRITE (in DDR clock cycles) // SDTR2, T_RCD = tRCD/tCK
+    ddr_config.T_RP =       dpar->trp_ps/time_base; //PRECHARGE to ACTIVATE (in DDR clock cycles)  // SDTR2, T_RP = tRP/tCK
+    ddr_config.T_RC =       dpar->trc_ps/time_base; //ACIVATE to ACIVATE (in DDR clock cycles)     // SDTR2, T_RC = tRC/tCK
+    ddr_config.T_RAS =      dpar->tras_ps/time_base; //ACTIVATE to PRECHARGE (in DDR clock cycles)  // SDTR2, T_RAS = tRAS/tCK
+    ddr_config.T_WTR =      dpar->twtr_ps/time_base; //delay from start of internal write transaction to internal read command(in DDR clock cycles) // SDTR3, T_WTR = tWTR/tCK
+    ddr_config.T_RTP =      dpar->trtp_ps/time_base; // internal read command to precharge delay(in DDR clock cycles) // SDTR3, T_RTP = tRTP/tCK
+    ddr_config.T_RRD =      dpar->trrd_ps/time_base;
+    ddr_config.T_XSDLL =    32;	    //exit self refresh and DLL lock delay (in x16 clocks) // SDTR3, TXSDLL = (tXSRD/PHY_to_MC_clock_ratio)/16
+
+    ddr_config.T_ROW_WIDTH = getRowWidth(dpar->n_row_addr);
+    ddr_config.T_ADDR_MODE = getAddrMode(dpar->n_col_addr);
+
+    // to fix after question resolution
+    switch(DDR_FREQ)
+    {
+    case DDR3_1600:
+        ddr_config.CWL_PHY =    8;
+        ddr_config.CWL_MC =     0b010;
+        ddr_config.CWL_CHIP =   0b011;
+
+        ddr_config.AL_PHY =     9;
+        ddr_config.AL_MC =      0b10;
+        ddr_config.AL_CHIP =    0b10;
+    
+        ddr_config.T_MOD =      12;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
+
+        break;
+    case DDR3_1333:
+        ddr_config.CWL_PHY =    7;
+        ddr_config.CWL_MC =     0b001;
+        ddr_config.CWL_CHIP =   0b010;	//000-5 001-6 010-7 011-8
+
+        ddr_config.AL_PHY =     8;
+        ddr_config.AL_MC =      0b01;	//CL-1 
+        ddr_config.AL_CHIP =    0b01;	//CL-1 
+
+        ddr_config.T_MOD =      10;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
+        break;
+    case DDR3_1066:
+        ddr_config.CWL_PHY =    6;
+        ddr_config.CWL_MC =     0b000;
+        ddr_config.CWL_CHIP =   0b001;
+
+        ddr_config.AL_PHY =     7;
+        ddr_config.AL_MC =      0b01;
+        ddr_config.AL_CHIP =    0b01;
+
+        ddr_config.T_MOD =      8;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
+        break;
+    case DDR3_800:
+        ddr_config.CWL_PHY =    5;
+        ddr_config.CWL_MC =     0b000;
+        ddr_config.CWL_CHIP =   0b001;
+
+        ddr_config.AL_PHY =     5;
+        ddr_config.AL_MC =      0b01;
+        ddr_config.AL_CHIP =    0b01;
+        ddr_config.T_MOD =      6;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
+        break;
+    }
+
+    ddr_config.T_RDDATA_EN_BC4 = ddr_config.CL_PHY + ddr_config.AL_PHY - 3 ;	//? // RL-3 = CL + AL - 3
+    ddr_config.T_RDDATA_EN_BL8 = ddr_config.T_RDDATA_EN_BC4;	//? to check
+
+}
+
+static void dump_ddr_config()
+{
+    printf("Current ddr_config:\n");
+    printf("uint32_t T_RDDATA_EN_BC4 =  %d\n", ddr_config.T_RDDATA_EN_BC4);
+    printf("uint32_t T_RDDATA_EN_BL8 =  %d\n", ddr_config.T_RDDATA_EN_BL8);
+    printf("uint8_t  CL_PHY =           %d\n", ddr_config.CL_PHY);
+    printf("uint8_t  CL_MC =            %d\n", ddr_config.CL_MC);
+    printf("uint8_t  CL_CHIP =          %d\n", ddr_config.CL_CHIP);
+    printf("uint8_t  CWL_PHY =          %d\n", ddr_config.CWL_PHY);
+    printf("uint8_t  CWL_MC =           %d\n", ddr_config.CWL_MC);
+    printf("uint8_t  CWL_CHIP =         %d\n", ddr_config.CWL_CHIP);
+    printf("uint8_t  AL_PHY =           %d\n", ddr_config.AL_PHY);
+    printf("uint8_t  AL_MC =            %d\n", ddr_config.AL_MC);
+    printf("uint8_t  AL_CHIP =          %d\n", ddr_config.AL_CHIP);
+    printf("uint32_t WR =               %d\n", ddr_config.WR);
+    printf("uint32_t T_REFI =           %d\n", ddr_config.T_REFI);
+    printf("uint32_t T_RFC_XPR =        %d\n", ddr_config.T_RFC_XPR);
+    printf("uint32_t T_RCD =            %d\n", ddr_config.T_RCD);
+    printf("uint32_t T_RP =             %d\n", ddr_config.T_RP);
+    printf("uint32_t T_RC =             %d\n", ddr_config.T_RC);
+    printf("uint32_t T_RAS =            %d\n", ddr_config.T_RAS);
+    printf("uint32_t T_WTR =            %d\n", ddr_config.T_WTR);
+    printf("uint32_t T_RTP =            %d\n", ddr_config.T_RTP);
+    printf("uint32_t T_XSDLL =          %d\n", ddr_config.T_XSDLL);
+    printf("uint32_t T_MOD =            %d\n", ddr_config.T_MOD);
+    printf("uint32_t T_ROW_WIDTH =      %d\n", ddr_config.T_ROW_WIDTH);
+    printf("uint32_t T_ADDR_MODE =      %d\n", ddr_config.T_ADDR_MODE);
+}
 
 void ddr_init()
 {
-    ddr3_spd_eeprom_t spd;
-    dimm_params_t dpar0, dpar1;
     int dimm0_params_invalid = 1;
     int dimm1_params_invalid = 1;
+    dimm_params_t dpar0, dpar1;
     int res;
+    DdrHlbId hlbId = DdrHlbId_Default;
+    DdrBurstLength bl = DdrBurstLength_Default;
 
+#ifdef CONFIG_SPD_EEPROM
+    ddr3_spd_eeprom_t spd;
 
-    if(!get_ddr3_spd_bypath("spd0-path", &spd))
+    if(!get_ddr3_spd_bypath("spd0-path", &spd) && 
+       !rcmodule_compute_dimm_parameters(&spd, &dpar0, 0))
+            dimm0_params_invalid = validate_dimm_parameters(&dpar0, 0);
+    if(!get_ddr3_spd_bypath("spd1-path", &spd) && 
+       !rcmodule_compute_dimm_parameters(&spd, &dpar1, 1))
+            dimm1_params_invalid = validate_dimm_parameters(&dpar1, 1);
+
+#endif
+
+    commutate_plb6();
+    write_tlb_entry4();
+    write_tlb_entry8();
+
+    if(dimm0_params_invalid && dimm1_params_invalid)
     {
-        dimm0_params_invalid = ddr_compute_dimm_parameters(&spd, &dpar0, 0);
+        DDR_FREQ = DDR3_DEFAULT;
+        ddr_set_main_config (DDR_FREQ);
     }
-    if(!get_ddr3_spd_bypath("spd1-path", &spd))
+    else
     {
-        dimm1_params_invalid = ddr_compute_dimm_parameters(&spd, &dpar1, 0);
+        hlbId = 0;
+        bl = DdrBurstLength_4;
+        if(!dimm0_params_invalid)
+        {
+            hlbId |= DdrHlbId_Em0;
+            if(dpar0.burst_lengths_bitmask > 4)   /* BL=4 bit 2, BL=8 = bit 3 */
+                bl = DdrBurstLength_8;
+        }
+        if(!dimm1_params_invalid)
+        {
+            hlbId |= DdrHlbId_Em1;
+            if(dpar1.burst_lengths_bitmask > 4)   /* BL=4 bit 2, BL=8 = bit 3 */
+                bl = DdrBurstLength_8;
+        }
+        
+        ddr_set_config_from_spd(dimm0_params_invalid, dimm1_params_invalid,
+            &dpar0, &dpar1);
     }
-    //if(!dimm0_params_invalid)
-    //    dump_dimm_params(&dpar0, 0);
 
-    //if(!dimm1_params_invalid)
-    //    dump_dimm_params(&dpar1, 1);
+#ifdef DEBUG
+    dump_ddr_config();
+#endif    
 
-    //printf("LSIF Divider = %d\n", (*(volatile uint32_t *) (CRG_DDR_BASE + CRG_DDR_CKDIVMODE_LSIF)));
-
-    magic_settings();
-    ddr_init_impl_freq(
-            DdrHlbId_Default,
-            DdrInitMode_Default,
-            DdrEccMode_Default,
-            DdrPmMode_Default,
-            DdrBurstLength_Default,
-            DdrPartialWriteMode_Default,
-            DDR3_DEFAULT);
-
-            
-    // rumboot_printf("MCSTAT = 0x%08x\n", ddr34lmc_dcr_read_DDR34LMC_MCSTAT(EM0_DDR3LMC_DCR));
-    // rumboot_printf("DEBUG0 = 0x%08x\n", ddr34lmc_dcr_read_DDR34LMC_DBG0(EM0_DDR3LMC_DCR));
-    
-}
-
-void ddr_init_em0()
-{
-    ddr_init_impl_freq(
-            DdrHlbId_Em0,
-            DdrInitMode_Default,
-            DdrEccMode_Default,
-            DdrPmMode_Default,
-            DdrBurstLength_Default,
-            DdrPartialWriteMode_Default,
-            DDR3_DEFAULT);
-}
-
-void ddr_init_em1()
-{
-    ddr_init_impl_freq(
-            DdrHlbId_Em1,
-            DdrInitMode_Default,
-            DdrEccMode_Default,
-            DdrPmMode_Default,
-            DdrBurstLength_Default,
-            DdrPartialWriteMode_Default,
-            DDR3_DEFAULT);
-}
-
-void ddr_init_impl(
-        DdrHlbId hlbId,
-        DdrInitMode initMode,
-        DdrEccMode eccMode,
-        DdrPmMode powerManagementMode,
-        DdrBurstLength burstLength,
-        DdrPartialWriteMode partialWriteMode
-        )
-{
-    ddr_init_impl_freq(
+    ddr_init_main(
             hlbId,
-            initMode,
-            eccMode,
-            powerManagementMode,
-            burstLength,
-            partialWriteMode,
-            DDR3_DEFAULT);
+            DdrInitMode_Default,
+            DdrEccMode_Default,
+            DdrPmMode_Default,
+            bl,
+            DdrPartialWriteMode_Default);            
 }
 
 static void ddr_init_main(
@@ -1543,12 +1193,12 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
 
     //Init CFGR0 - CFGR3
     ddr34lmc_dcr_write_DDR34LMC_CFGR0(baseAddr, //#ev - ADDR_MODE 11->10
-//           ROW_WIDTH          ADDR_MODE               MIRROR              RANK_ENABLE
-        reg_field(19, 0b100) | reg_field(23, 0b0010) | reg_field(27, 0b0) | reg_field(31, 0b1));
+//                    ROW_WIDTH                 ADDR_MODE                               MIRROR              RANK_ENABLE
+        reg_field(19, ddr_config.T_ROW_WIDTH) | reg_field(23, ddr_config.T_ADDR_MODE) | reg_field(27, 0b0) | reg_field(31, 0b1));
 
     ddr34lmc_dcr_write_DDR34LMC_CFGR1(baseAddr,	//#ev - RANK_ENABLE 1->0
-//     RANK_ENABLE               ROW_WIDTH          ADDR_MODE               MIRROR              RANK_ENABLE
-        reg_field(19, 0b100) | reg_field(23, 0b0010) | reg_field(27, 0b0) | reg_field(31, 0b1));
+//                    ROW_WIDTH                 ADDR_MODE                               MIRROR              RANK_ENABLE
+        reg_field(19, ddr_config.T_ROW_WIDTH) | reg_field(23, ddr_config.T_ADDR_MODE) | reg_field(27, 0b0) | reg_field(31, 0b1));
 		// reg_field(31, 0b0));
 
     ddr34lmc_dcr_write_DDR34LMC_CFGR2(baseAddr,
@@ -1616,7 +1266,7 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     //TXSDLL = (tXSRD/PHY_to_MC_clock_ratio)/16 = (512/2)/16 = 16
     //T_FAWADJ = 2. See Table 3-19 MC db
     //      T_WTR_S (not used)      T_WTR                                T_FAWADJ                   T_RTP                   T_RRD_L (not used)      T_RRD                        T_XSDLL
-            reg_field(3, 0b0011) | reg_field(7, ddr_config.T_WTR) | reg_field(11, 0b10) | reg_field(15, ddr_config.T_RTP) | reg_field(19, 0b0010) | reg_field(23, 0b0100) | reg_field(31, ddr_config.T_XSDLL));
+            reg_field(3, 0b0011) | reg_field(7, ddr_config.T_WTR) | reg_field(11, 0b10) | reg_field(15, ddr_config.T_RTP) | reg_field(19, 0b0010) | reg_field(23, ddr_config.T_RRD) | reg_field(31, ddr_config.T_XSDLL));
 
     const uint8_t T_SYS_RDLAT = (burstLength == DdrBurstLength_4) ? T_SYS_RDLAT_BC4 : T_SYS_RDLAT_BL8; //Experimental values. TODO: update comments below after MMPPC-548
     const uint32_t T_RDDATA_EN = (burstLength == DdrBurstLength_4) ? ddr_config.T_RDDATA_EN_BC4 : ddr_config.T_RDDATA_EN_BL8; //Experimental values. TODO: update comments below after MMPPC-548
@@ -2331,102 +1981,13 @@ static void ddr3phy_calibrate_manual_EM1(const unsigned int baseAddr)	//#ev
   MEM32(baseAddr + 0x11B) = reg | 0x70;
   
 }
-/*
-static void ddr_set_nopatch_config (CrgDdrFreq FreqMode)
-{
-    if (FreqMode == DDR3_1600)
-    {
-        ddr_config.T_RDDATA_EN_BC4 = 18;
-        ddr_config.T_RDDATA_EN_BL8 = 18;
 
-        ddr_config.CL_PHY =     11;
-        ddr_config.CL_MC =      0b111;
-        ddr_config.CL_CHIP =    0b111;
-
-        ddr_config.CWL_PHY =    8;
-        ddr_config.CWL_MC =     0b010;
-        ddr_config.CWL_CHIP =   0b011;
-
-        ddr_config.AL_PHY =     10;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-
-        ddr_config.WR =         0b011;
-        ddr_config.T_REFI =     9999;
-        ddr_config.T_RFC_XPR =  108;
-        ddr_config.T_RCD =      0b1110;
-        ddr_config.T_RP =       0b1110;
-        ddr_config.T_RC =       38;
-        ddr_config.T_RAS =      28;
-        ddr_config.T_WTR =      0b0110;
-        ddr_config.T_RTP =      0b0110;
-        ddr_config.T_XSDLL =    16;
-        ddr_config.T_MOD =      12;
-    }
-
-    if (FreqMode == DDR3_1333)
-    {
-        ddr_config.T_RDDATA_EN_BC4 = 10;
-        ddr_config.T_RDDATA_EN_BL8 = 10;
-
-        ddr_config.CL_PHY =     7;
-        ddr_config.CL_MC =      0b011;
-        ddr_config.CL_CHIP =    0b011;
-
-        ddr_config.CWL_PHY =    6;
-        ddr_config.CWL_MC =     0b000;
-        ddr_config.CWL_CHIP =   0b001;
-
-        ddr_config.AL_PHY =     6;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-
-        ddr_config.WR =         0b011;
-        ddr_config.T_REFI =     7999;
-        ddr_config.T_RFC_XPR =  90;
-        ddr_config.T_RCD =      0b1110;
-        ddr_config.T_RP =       0b1110;
-        ddr_config.T_RC =       32;
-        ddr_config.T_RAS =      24;
-        ddr_config.T_WTR =      0b0100;
-        ddr_config.T_RTP =      0b0100;
-        ddr_config.T_XSDLL =    21;
-        ddr_config.T_MOD =      10;
-    }
-
-    if (FreqMode == DDR3_1066)
-    {
-        ddr_config.T_RDDATA_EN_BC4 = 10;
-        ddr_config.T_RDDATA_EN_BL8 = 10;
-
-        ddr_config.CL_PHY =     7;
-        ddr_config.CL_MC =      0b011;
-        ddr_config.CL_CHIP =    0b011;
-
-        ddr_config.CWL_PHY =    6;
-        ddr_config.CWL_MC =     0b000;
-        ddr_config.CWL_CHIP =   0b001;
-
-        ddr_config.AL_PHY =     6;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-
-        ddr_config.WR =         0b011;
-        ddr_config.T_REFI =     5999;
-        ddr_config.T_RFC_XPR =  72; //MC_CLOCK = 3750
-        ddr_config.T_RCD =      0b1110;
-        ddr_config.T_RP =       0b1110;
-        ddr_config.T_RC =       26;
-        ddr_config.T_RAS =      20;
-        ddr_config.T_WTR =      0b0100; //4
-        ddr_config.T_RTP =      0b0100;
-        ddr_config.T_XSDLL =    32; //dfi_clk_1x = 3750
-        ddr_config.T_MOD =      8;
-    }
-}
-*/
 static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
 {   
+    ddr_config.T_ROW_WIDTH = 0b100;
+    ddr_config.T_ADDR_MODE = 0b10;
+    ddr_config.T_RRD = 0b100;
+
     if (FreqMode == DDR3_1600)
     {
         // rumboot_printf("	FreqMode = DDR3_1600\n");

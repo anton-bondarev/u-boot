@@ -534,14 +534,9 @@ static void tftp_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 		 */
 		for (i = 0; i+8 < len; i++) {
 			if (strcmp((char *)pkt + i, "blksize") == 0) {
-#ifdef CONFIG_MPW7705
-			// HW bug? workaround 
-			tftp_block_size = CONFIG_TFTP_BLOCKSIZE;
-#else				
 				tftp_block_size = (unsigned short)
 					simple_strtoul((char *)pkt + i + 8,
 						       NULL, 10);
-#endif							   
 				debug("Blocksize ack: %s, %d\n",
 				      (char *)pkt + i + 8, tftp_block_size);
 			}

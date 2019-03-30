@@ -30,6 +30,9 @@ typedef struct
     uint32_t T_RTP;
     uint32_t T_XSDLL;
     uint32_t T_MOD;
+    uint32_t T_ROW_WIDTH;
+    uint32_t T_ADDR_MODE;
+    uint32_t T_RRD;
 } ddr3config;
 
 #define DDR3PHY_PHYREG00 0x000

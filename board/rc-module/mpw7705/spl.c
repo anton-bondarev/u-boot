@@ -44,20 +44,24 @@ void spl_board_init(void)
 	int i;
 	_test_addr = (unsigned int*)0x40000000; 
 	ddr_init();
-	
+
 	for(i = 0; i < 16; i++)
-		_test_addr[i] = 0x12345678;
+		_test_addr[i] = &_test_addr[i];
 	printf("DDR test...");
 
 	gd->ram_size = CONFIG_SYS_DDR_SIZE;
 
-	if(*_test_addr != 0x12345678)
-		printf(" Error\n");
-	else
+	for(i = 0; i < 16; i++)
+	{
+		if(_test_addr[i] != &_test_addr[i])
+		{
+			printf(" Error at %d [%08X != %08X]\n", i, _test_addr[i], &_test_addr[i]);
+			break;
+		}
+	}
+	if(i == 16)
 		printf(" OK\n");
 
-//	for(i = 0; i < 16; i++)
-//		printf(" %x\n", _test_addr[i]);
 
 	u32 boot_device = spl_boot_device();
 
