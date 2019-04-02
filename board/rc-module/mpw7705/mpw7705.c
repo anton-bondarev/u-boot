@@ -5,6 +5,7 @@
 #include "ddr_spd.h"
 #include "rcmodule_dimm_params.h"
 #include <fdt_support.h>
+#include <environment.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -112,18 +113,27 @@ int dram_init(void)
 }
 
 #define SPR_TBL_R 0x10C
+#define SPR_TBU_R 0x10D
 
-static uint32_t tcurrent(void)
+static uint64_t tcurrent(void)
 {
-	uint32_t value = 0;
+	uint32_t valuel = 0;
+	uint32_t valueh = 0;
 
 	__asm volatile(
 		"mfspr %0, %1 \n\t"
-		: "=r"(value)
+		: "=r"(valuel)
 		: "i"(SPR_TBL_R)
 		:);
 
-	return value;
+	__asm volatile(
+		"mfspr %0, %1 \n\t"
+		: "=r"(valueh)
+		: "i"(SPR_TBU_R)
+		:);
+
+
+	return (((uint64_t)valueh) << 32) + valuel;
 }
 
 static uint32_t mcurrent(void)

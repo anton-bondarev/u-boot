@@ -22,7 +22,7 @@
 #include "mpw7705_sysreg.h"
 
 // !!! Checking possible DMA problem with memory 
-//#define DMA_PAD  (4 * 1024)
+#define DMA_PAD  (4 * 1024)
 
 #define BUS_CLOCK  100000000
 #define CLKDIV_MAX 255
@@ -668,10 +668,10 @@ static int mpw7705_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, str
 	if ( res && is_int_data_cmd ) {
 		res = wait_tran_done_handle(mmc);
 		if ( res ) {				
-			u8 buf[512];
+			u32 buf[256];
 			BUG_ON(data_len > sizeof(buf));
 			PREP_BUF(buf);
-			res = buf2axi(mmc, 0, buf, data_len);
+			res = buf2axi(mmc, 0, (u8*)&buf[0], data_len);
 			Debug(">>>BUF: res=%d\n", res);
 			print_buf(buf, data_len);
 			memcpy(data->dest, buf, data_len);

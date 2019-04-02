@@ -113,12 +113,20 @@ typedef struct {
 /* Read MII register 'addr' from core 'regs' */
 static int read_mii(int phyaddr, int regaddr, volatile greth_regs * regs)
 {
+	unsigned long start;
+	start = get_timer(0);
+
 	while (GRETH_REGLOAD(&regs->mdio) & GRETH_MII_BUSY) {
+		if(get_timer(start) > GRETH_PHY_TIMEOUT_MS)
+			return -1;
 	}
 
 	GRETH_REGSAVE(&regs->mdio, ((phyaddr & 0x1F) << 11) | ((regaddr & 0x1F) << 6) | 2);
 
+	start = get_timer(0);
 	while (GRETH_REGLOAD(&regs->mdio) & GRETH_MII_BUSY) {
+		if(get_timer(start) > GRETH_PHY_TIMEOUT_MS)
+			return -1;
 	}
 
 	if (!(GRETH_REGLOAD(&regs->mdio) & GRETH_MII_NVALID)) {
@@ -130,14 +138,22 @@ static int read_mii(int phyaddr, int regaddr, volatile greth_regs * regs)
 
 static void write_mii(int phyaddr, int regaddr, int data, volatile greth_regs * regs)
 {
+	unsigned long start;
+	start = get_timer(0);
+
 	while (GRETH_REGLOAD(&regs->mdio) & GRETH_MII_BUSY) {
+		if(get_timer(start) > GRETH_PHY_TIMEOUT_MS)
+			return;
 	}
 
 	GRETH_REGSAVE(&regs->mdio,
 		      ((data & 0xFFFF) << 16) | ((phyaddr & 0x1F) << 11) |
 		      ((regaddr & 0x1F) << 6) | 1);
 
+	start = get_timer(0);
 	while (GRETH_REGLOAD(&regs->mdio) & GRETH_MII_BUSY) {
+		if(get_timer(start) > GRETH_PHY_TIMEOUT_MS)
+			return;
 	}
 
 }
@@ -615,11 +631,6 @@ int greth_set_hwaddr(struct udevice *dev)
 	return 0;
 }
 
-static void iowrite32(uint32_t const value, uint32_t const base_addr)
-{
-    *((volatile uint32_t*)(base_addr)) = value;
-}
-
 static int greth_probe(struct udevice *dev)
 {
 
@@ -627,10 +638,6 @@ static int greth_probe(struct udevice *dev)
 		*((volatile uint32_t*)(0x3C03F030)),
 		*((volatile uint32_t*)(0x3C03F034))
 	);
-	// todo move somewhere initialization of extmem muxer
-	//iowrite32(0x1, 0x3C03F030);
-	//iowrite32(0x0, 0x3C03F034);
-
 
 	//struct eth_pdata *pdata = dev_get_platdata(dev);
 	greth_priv *greth = dev_get_priv(dev);
@@ -670,10 +677,13 @@ static int greth_probe(struct udevice *dev)
 	debug("MDIO: %x, CONTROL: %x\n", GRETH_REGLOAD(&greth->regs->mdio), GRETH_REGLOAD(&greth->regs->control));
 
 	/* initiate PHY, select speed/duplex depending on connected PHY */
-	if (greth_init_phy(greth)) {
-		/* Failed to init PHY (timedout) */
-		debug("GRETH[%p]: Failed to init PHY\n", greth->regs);
-		return -1;
+	if(!env_get("greth_skip_phy"))	// workaround for mpw7705 issue with core
+	{
+		if (greth_init_phy(greth)) {
+			/* Failed to init PHY (timedout) */
+			debug("GRETH[%p]: Failed to init PHY\n", greth->regs);
+			return -1;
+		}
 	}
 
 	debug("GRETH[%p]: Initialized successfully\n", greth->regs);

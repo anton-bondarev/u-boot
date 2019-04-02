@@ -154,8 +154,6 @@ static int do_usb_mass_storage(cmd_tbl_t *cmdtp, int flag,
 		devnum  = argv[2];
 	}
 
-	asm("ori r0, r0, r0");
-	
 	rc = ums_init(devtype, devnum);
 	if (rc < 0)
 		return CMD_RET_FAILURE;
