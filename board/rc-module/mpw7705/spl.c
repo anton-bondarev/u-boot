@@ -46,21 +46,23 @@ void spl_board_init(void)
 	ddr_init();
 
 	for(i = 0; i < 16; i++)
-		_test_addr[i] = &_test_addr[i];
+		_test_addr[i] = (unsigned int) &_test_addr[i];
 	printf("DDR test...");
 
 	gd->ram_size = CONFIG_SYS_DDR_SIZE;
 
 	for(i = 0; i < 16; i++)
 	{
-		if(_test_addr[i] != &_test_addr[i])
+		if(_test_addr[i] != (unsigned int) &_test_addr[i])
 		{
-			printf(" Error at %d [%08X != %08X]\n", i, _test_addr[i], &_test_addr[i]);
+			printf(" Error at %d [%08X != %08X]\n", i, _test_addr[i], (unsigned int)&_test_addr[i]);
 			break;
 		}
 	}
 	if(i == 16)
 		printf(" OK\n");
+	else
+		do_reset(0,0,0,0);
 
 
 	u32 boot_device = spl_boot_device();
@@ -99,9 +101,20 @@ void board_boot_order(u32 *spl_boot_list)
 	}
 }
 
-// ASTRO TODO
+#define SPRN_DBCR0_44X 0x134
+#define DBCR0_RST_SYSTEM 0x30000000
+
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
+	unsigned long tmp;
+
+	asm volatile(
+		"mfspr	%0,%1\n"
+		"oris	%0,%0,%2@h\n"
+		"mtspr	%1,%0"
+		: "=&r"(tmp)
+		: "i"(SPRN_DBCR0_44X), "i"(DBCR0_RST_SYSTEM));
+
 	return 0;
-}
+	}
 

@@ -4,7 +4,7 @@
 //#define SLOW_DOWN 1500
 
 // 1066
-#define SLOW_DOWN 1876
+//#define SLOW_DOWN 1876
 
 #include "ddr_impl_h/ddr.h"
 #include "ddr_impl_h/ddr_impl.h"
@@ -320,6 +320,26 @@ static unsigned int getCL(int ticks)
     return ticks - 4;
 }
 
+static unsigned int getCWLMicron(int CL)
+{
+    switch(CL)
+    {
+        case 11:
+            return 8;
+        case 10:
+        case 9:
+            return 7;
+        case 8:
+        case 7:
+            return 6;
+        case 6:
+        case 5:
+            return 5;            
+    };
+    return 8;
+}
+
+
 
 static unsigned int getRowWidth(int bits)
 {
@@ -425,55 +445,14 @@ static void ddr_set_config_from_spd(int dimm0_invalid, int dimm1_invalid,
     ddr_config.T_ROW_WIDTH = getRowWidth(dpar->n_row_addr);
     ddr_config.T_ADDR_MODE = getAddrMode(dpar->n_col_addr);
 
-    // to fix after question resolution
-    switch(DDR_FREQ)
-    {
-    case DDR3_1600:
-        ddr_config.CWL_PHY =    8;
-        ddr_config.CWL_MC =     0b010;
-        ddr_config.CWL_CHIP =   0b011;
+    ddr_config.T_MOD =      12;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
+    ddr_config.AL_PHY =     1;
+    ddr_config.AL_MC =      0b01;
+    ddr_config.AL_CHIP =    0b01;
 
-        ddr_config.AL_PHY =     9;
-        ddr_config.AL_MC =      0b10;
-        ddr_config.AL_CHIP =    0b10;
-    
-        ddr_config.T_MOD =      12;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
-
-        break;
-    case DDR3_1333:
-        ddr_config.CWL_PHY =    7;
-        ddr_config.CWL_MC =     0b001;
-        ddr_config.CWL_CHIP =   0b010;	//000-5 001-6 010-7 011-8
-
-        ddr_config.AL_PHY =     8;
-        ddr_config.AL_MC =      0b01;	//CL-1 
-        ddr_config.AL_CHIP =    0b01;	//CL-1 
-
-        ddr_config.T_MOD =      10;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
-        break;
-    case DDR3_1066:
-        ddr_config.CWL_PHY =    6;
-        ddr_config.CWL_MC =     0b000;
-        ddr_config.CWL_CHIP =   0b001;
-
-        ddr_config.AL_PHY =     7;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-
-        ddr_config.T_MOD =      8;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
-        break;
-    case DDR3_800:
-        ddr_config.CWL_PHY =    5;
-        ddr_config.CWL_MC =     0b000;
-        ddr_config.CWL_CHIP =   0b001;
-
-        ddr_config.AL_PHY =     5;
-        ddr_config.AL_MC =      0b01;
-        ddr_config.AL_CHIP =    0b01;
-        ddr_config.T_MOD =      6;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
-        break;
-    }
-
+    ddr_config.CWL_PHY = getCWLMicron(ddr_config.CL_PHY);       //? to check
+    ddr_config.CWL_CHIP = getCL(ddr_config.CWL_PHY) - 1;
+    ddr_config.CWL_MC = ddr_config.CWL_CHIP - 1;
     ddr_config.T_RDDATA_EN_BC4 = ddr_config.CL_PHY + ddr_config.AL_PHY - 3 ;	//? // RL-3 = CL + AL - 3
     ddr_config.T_RDDATA_EN_BL8 = ddr_config.T_RDDATA_EN_BC4;	//? to check
 
@@ -559,9 +538,9 @@ void ddr_init()
             &dpar0, &dpar1);
     }
 
-#ifdef DEBUG
+//#ifdef DEBUG
     dump_ddr_config();
-#endif    
+//#endif    
 
     ddr_init_main(
             hlbId,
