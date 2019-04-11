@@ -30,4 +30,5 @@
 /ubsha1
 /xway-swap-bytes
 /rumboot-packimage
+*.pyc
 

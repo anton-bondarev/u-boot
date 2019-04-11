@@ -202,7 +202,7 @@ ALL-$(CONFIG_SPL_X86_16BIT_INIT) += $(obj)/u-boot-x86-16bit-spl.bin
 ALL-$(CONFIG_ARCH_ZYNQ)		+= $(obj)/boot.bin
 ALL-$(CONFIG_ARCH_ZYNQMP)	+= $(obj)/boot.bin
 
-ALL-$(CONFIG_MPW7705)		+= $(obj)/$(SPL_BIN).rbi $(obj)/$(SPL_BIN).edcl
+ALL-$(CONFIG_MPW7705)		+= $(obj)/$(SPL_BIN).rbi
 
 all:	$(ALL-y)
 
@@ -236,17 +236,12 @@ $(obj)/$(SPL_BIN).bin: $(obj)/$(SPL_BIN)-nodtb.bin FORCE
 	$(call if_changed,copy)
 endif
 
-PACKIMAGEFLAGS_$(SPL_BIN).rbi = -t bootimage
-PACKIMAGEFLAGS_$(SPL_BIN).edcl = -t hostimage
-
 # cmd to create romboot image
 quiet_cmd_packimage = PACK    $@
-cmd_packimage = $(objtree)/tools/rumboot-packimage \
-		-E 0x$(shell $(OBJDUMP) -t $(word 2,$^) | grep _start_secondary | cut -d " " -f1)\
-		$(PACKIMAGEFLAGS_$(@F)) -i $< -o $@ >/dev/null
+cmd_packimage = cp $< $@; $(objtree)/tools/rumboot-packimage -c -f $@ > /dev/null
 
 # create rumboot image
-$(obj)/$(SPL_BIN).rbi $(obj)/$(SPL_BIN).edcl: $(obj)/$(SPL_BIN).bin $(obj)/$(SPL_BIN)
+$(obj)/$(SPL_BIN).rbi: $(obj)/$(SPL_BIN).bin $(obj)/$(SPL_BIN)
 	$(call if_changed,packimage)
 
 # Create a file that pads from the end of u-boot-spl-nodtb.bin to bss_end
