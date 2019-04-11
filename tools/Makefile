@@ -54,7 +54,6 @@ hostprogs-y += mkenvimage
 mkenvimage-objs := mkenvimage.o os_support.o lib/crc32.o
 
 hostprogs-y += dumpimage mkimage
-hostprogs-$(CONFIG_MPW7705) += rumboot-packimage
 
 hostprogs-$(CONFIG_FIT_SIGNATURE) += fit_info fit_check_sign
 
@@ -123,8 +122,6 @@ mkimage-objs   := $(dumpimage-mkimage-objs) mkimage.o
 fit_info-objs   := $(dumpimage-mkimage-objs) fit_info.o
 fit_check_sign-objs   := $(dumpimage-mkimage-objs) fit_check_sign.o
 file2include-objs := file2include.o
-
-rumboot-packimage-objs := rumboot-packimage.o crc32.o
 
 ifneq ($(CONFIG_MX23)$(CONFIG_MX28),)
 # Add CONFIG_MXS into host CFLAGS, so we can check whether or not register
