@@ -15,7 +15,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-void ddr_init (void);
+void ddr_init (int slowdown);
 int testdramfromto(uint *pstart, uint *pend);
 
 volatile unsigned int* _test_addr;
@@ -38,18 +38,15 @@ u32 spl_boot_device(void)
 	return BOOT_DEVICE_MMC1;
 }
 
-void spl_board_init(void)
+
+bool is_ddr_ok(void)
 {
-	/* init dram */
 	int i;
 	_test_addr = (unsigned int*)0x40000000; 
-	ddr_init();
 
 	for(i = 0; i < 16; i++)
 		_test_addr[i] = (unsigned int) &_test_addr[i];
 	printf("DDR test...");
-
-	gd->ram_size = CONFIG_SYS_DDR_SIZE;
 
 	for(i = 0; i < 16; i++)
 	{
@@ -60,9 +57,38 @@ void spl_board_init(void)
 		}
 	}
 	if(i == 16)
-		printf(" OK\n");
+	{
+		printf(" OK.\n");
+		return 1;
+	}
 	else
-		do_reset(0,0,0,0);
+		return 0;
+}
+
+void usleep(uint32_t usec);
+
+void spl_board_init(void)
+{
+	/* init dram */
+	ddr_init(0);
+
+	if(!is_ddr_ok())
+	{
+		printf("Try to slow down DDR\n");
+
+		ddr_init(1);
+		if(!is_ddr_ok())
+		{
+			printf("Try to use fixed params for DDR\n");
+			ddr_init(2);
+			if(!is_ddr_ok())
+			{
+				usleep(1000);
+				do_reset(0,0,0,0);
+			}
+		}
+	}
+	gd->ram_size = CONFIG_SYS_DDR_SIZE;
 
 
 	u32 boot_device = spl_boot_device();

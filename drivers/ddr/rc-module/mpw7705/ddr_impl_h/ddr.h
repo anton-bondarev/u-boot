@@ -54,7 +54,7 @@ void ddr_init_imlp_freq(
         );
 
 //DDR default initialization routine.
-void ddr_init(void);
+void ddr_init(int slow_down);
 
 //Init EM0 only
 void ddr_init_em0(void);

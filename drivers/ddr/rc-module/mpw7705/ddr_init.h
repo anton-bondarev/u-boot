@@ -433,6 +433,6 @@
 #define DMA0_DMA_CONTROL                    0x00000078
 #define MSI_INT_BASE                        0x80000000
 
-void ddr_init (void);  //  DDR initialisation subroutine
+void ddr_init (int slow_down);  //  DDR initialisation subroutine
 
 #endif /* end of include guard: DDR_INIT_H */

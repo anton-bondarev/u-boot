@@ -4,7 +4,7 @@
 //#define SLOW_DOWN 1500
 
 // 1066
-//#define SLOW_DOWN 1876
+#define SLOW_DOWN 1876
 
 #include "ddr_impl_h/ddr.h"
 #include "ddr_impl_h/ddr_impl.h"
@@ -287,7 +287,7 @@ static int validate_dimm_parameters(dimm_params_t * params, int no)
         result = 1;
     }
 
-    return result;
+    return 0; /*result*/;
 }
 
 
@@ -366,7 +366,7 @@ static unsigned int getAddrMode(int bits)
 }
 
 
-static void ddr_set_config_from_spd(int dimm0_invalid, int dimm1_invalid,
+static void ddr_set_config_from_spd(int slowdown, int dimm0_invalid, int dimm1_invalid,
         dimm_params_t* dpar0, dimm_params_t* dpar1)
 {
     dimm_params_t* dpar = 0;
@@ -391,10 +391,11 @@ static void ddr_set_config_from_spd(int dimm0_invalid, int dimm1_invalid,
         }
     }
 
-#ifdef SLOW_DOWN        
-    printf("DDR slow down from %d to %d\n", 1000000/time_base*2, 1000000/SLOW_DOWN*2);
-    time_base = SLOW_DOWN;
-#endif
+    if(slowdown != 0)
+    {
+        printf("DDR slow down from %d to %d\n", 1000000/time_base*2, 1000000/SLOW_DOWN*2);
+        time_base = SLOW_DOWN;
+    }
 
     if(time_base > 1877)
     {
@@ -446,7 +447,7 @@ static void ddr_set_config_from_spd(int dimm0_invalid, int dimm1_invalid,
     ddr_config.T_ADDR_MODE = getAddrMode(dpar->n_col_addr);
 
     ddr_config.T_MOD =      12;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
-    ddr_config.AL_PHY =     1;
+    ddr_config.AL_PHY =     ddr_config.CL_PHY-1;
     ddr_config.AL_MC =      0b01;
     ddr_config.AL_CHIP =    0b01;
 
@@ -487,7 +488,7 @@ static void dump_ddr_config()
     printf("uint32_t T_ADDR_MODE =      %d\n", ddr_config.T_ADDR_MODE);
 }
 
-void ddr_init()
+void ddr_init (int slowdown)
 {
     int dimm0_params_invalid = 1;
     int dimm1_params_invalid = 1;
@@ -512,7 +513,7 @@ void ddr_init()
     write_tlb_entry4();
     write_tlb_entry8();
 
-    if(dimm0_params_invalid && dimm1_params_invalid)
+    if((slowdown==2) || (dimm0_params_invalid && dimm1_params_invalid))
     {
         DDR_FREQ = DDR3_DEFAULT;
         ddr_set_main_config (DDR_FREQ);
@@ -534,13 +535,13 @@ void ddr_init()
                 bl = DdrBurstLength_8;
         }
         
-        ddr_set_config_from_spd(dimm0_params_invalid, dimm1_params_invalid,
+        ddr_set_config_from_spd(slowdown, dimm0_params_invalid, dimm1_params_invalid,
             &dpar0, &dpar1);
     }
 
-//#ifdef DEBUG
+#ifdef DEBUG
     dump_ddr_config();
-//#endif    
+#endif    
 
     ddr_init_main(
             hlbId,
@@ -568,7 +569,7 @@ static void ddr_init_main(
 
 // todo: understand what wrong with single init
 // tweak for a while    
-for(i = 0; i < 2; i++)
+for(i = 0; i < 16; i++)
 {
   
     if (hlbId & DdrHlbId_Em0)
