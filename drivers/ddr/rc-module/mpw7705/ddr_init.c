@@ -569,7 +569,7 @@ static void ddr_init_main(
 
 // todo: understand what wrong with single init
 // tweak for a while    
-for(i = 0; i < 16; i++)
+for(i = 0; i < 2; i++)
 {
   
     if (hlbId & DdrHlbId_Em0)
@@ -1161,11 +1161,11 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     ddr34lmc_dcr_write_DDR34LMC_PHYCNTL(baseAddr, 0);
 
     //Init ODTR0 - ODTR3
-    //ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x02000000);	//#ev - ODT write rank 0 enable 
-	ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x00000000);
+    ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x02000000);	//#ev - ODT write rank 0 enable 
+	//ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x00000000);
 
-    //ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x08000000);
-	ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x00000000);
+    ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x08000000);
+	//ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x00000000);
 
     ddr34lmc_dcr_write_DDR34LMC_ODTR2(baseAddr, 0);
 
@@ -1178,8 +1178,8 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
 
     ddr34lmc_dcr_write_DDR34LMC_CFGR1(baseAddr,	//#ev - RANK_ENABLE 1->0
 //                    ROW_WIDTH                 ADDR_MODE                               MIRROR              RANK_ENABLE
-        reg_field(19, ddr_config.T_ROW_WIDTH) | reg_field(23, ddr_config.T_ADDR_MODE) | reg_field(27, 0b0) | reg_field(31, 0b1));
-		// reg_field(31, 0b0));
+        //reg_field(19, ddr_config.T_ROW_WIDTH) | reg_field(23, ddr_config.T_ADDR_MODE) | reg_field(27, 0b0) | reg_field(31, 0b1));
+		 reg_field(31, 0b0));
 
     ddr34lmc_dcr_write_DDR34LMC_CFGR2(baseAddr,
 //     RANK_ENABLE
@@ -1316,7 +1316,7 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     //DDR pin            RAS#                   CAS#                    WE#                 BA2                 BA1                  BA0                  A15 A14 A13        A12                  A11                  A10                A9                   A8                 A7                   A6                   A5                   A4 A3                						 A2                   A1                   A0
     //Value              0                      0                       0                   0                   0                    1                    0   0   0          Qoff                 TDQS                 0                  Rtt_Nom[2]           0                  Level                Rtt_Nom[1]           DIC[1]               AL                    						Rtt_Nom[0]           DIC[0]               DLL
     //INITCMD            CMD[0]                 CMD[1]                  CMD[2]              BANK[0]             BANK[1]              BANK[2]              ADDR[0:2]          ADDR[3]              ADDR[4]              ADDR[5]            ADDR[6]              ADDR[7]            ADDR[8]              ADDR[9]              ADDR[10]             ADDR[11:12]           						ADDR[13]             ADDR[14]             ADDR[15]
-                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b1) | reg_field(18, 0) | reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(21, 0) | reg_field(22, 0b0) | reg_field(23, 0) | reg_field(24, 0b0) | reg_field(25, 0b1) | reg_field(26, 0b0) | reg_field(28, ddr_config.AL_CHIP) | reg_field(29, 0b1) | reg_field(30, 0b1) | reg_field(31, 0b0));
+                         reg_field(0, 0b0) |    reg_field(1, 0b0) |     reg_field(2, 0b0) | reg_field(9, 0b0) | reg_field(10, 0b0) | reg_field(11, 0b1) | reg_field(18, 0) | reg_field(19, 0b0) | reg_field(20, 0b0) | reg_field(21, 0) | reg_field(22, 0b0) | reg_field(23, 0) | reg_field(24, 0b0) | reg_field(25, 0b0) | reg_field(26, 0b0) | reg_field(28, ddr_config.AL_CHIP) | reg_field(29, 0b1) | reg_field(30, 0b1) | reg_field(31, 0b0));
 
     ddr34lmc_dcr_write_DDR34LMC_INITSEQ3(baseAddr,
     //Wait = tMOD/tI_MC_CLOCK = 15000/2500 = 6
@@ -1444,6 +1444,34 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
     wait_some_time ();
     iowrite32 (0x00, baseAddr + (0x02 << 2));  // 
     */
+
+    //  CMD drive strength - made no sense
+    iowrite32 (0xCC, baseAddr + (0x11 << 2));
+    //  CMD weak pull up enable, CMD weak pull down enable
+    //  Looks like there is smth else undocumented on its address
+    // iowrite32 (0x00, baseAddr + (0x12 << 2));
+    //  CLK drive strength - made no sense - OSC: first peak increase a bit, if increase
+    iowrite32 (0xCC, baseAddr + (0x16 << 2));
+    
+    //  DQ and DM drive strength - made no sense. Didnt work at all, if high resistance.
+    iowrite32 (0xCC, baseAddr + (0x20 << 2));  //  (0-3)-РјР»Р°РґС€РёР№ Р±Р°Р№С‚ (СЃРїСЂР°РІР°)
+    iowrite32 (0xCC, baseAddr + (0x30 << 2));  //  (0-3)
+    iowrite32 (0xCC, baseAddr + (0x40 << 2));  //  (0-3)
+    iowrite32 (0xCC, baseAddr + (0x50 << 2));  //  (0-3)-СЃС‚Р°СЂС€РёР№ Р±Р°Р№С‚ (СЃР»РµРІР°)
+    
+    //  DQ and DM ODT resistance - made no sense. Didnt work at all, if high resistance.
+    iowrite32 (0x99, baseAddr + (0x21 << 2));  // 
+    iowrite32 (0x99, baseAddr + (0x31 << 2));  // 
+    iowrite32 (0x99, baseAddr + (0x41 << 2));  // 
+    iowrite32 (0x99, baseAddr + (0x51 << 2));  // 
+    
+    wait_some_time ();
+    
+    if (DDR_FREQ == DDR3_1333)
+    {
+        iowrite32 (0xC + 0x2, baseAddr + (0x13 << 2));  // CMD AND ADDRESS DLL delay  (8-f)
+        iowrite32 (0x2      , baseAddr + (0x14 << 2));  // CK DLL delay (0-7)
+    }   
     
     // ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0x8);	// CMD AND ADDRESS DLL delay  (8-f)
     // ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x4);	// CK DLL delay (0-7)
@@ -1537,9 +1565,6 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
     volatile uint32_t rdata;
     volatile uint32_t i;
     
-    // if (baseAddr == 0x3800F000)
-        // for (i = 0; i < 100; i++)
-            // rdata = ioread32 (0x80000000);   //  Made no sense
 
     do
     {
@@ -1549,10 +1574,6 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
         usleep(1);
     } while(++time != PHY_CALIBRATION_TIMEOUT);
     
-    // usleep(5);
-    
-    // wait_some_time ();
-
     ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA0); //Stop calibration
 
     TEST_ASSERT(time != PHY_CALIBRATION_TIMEOUT, "dqs-gating timeout");
@@ -1608,17 +1629,6 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
     // iowrite32 (0xAA, baseAddr + (0x41 << 2));  // 
     // iowrite32 (0xAA, baseAddr + (0x51 << 2));  // 
     
-    //  Per bit deskew - made no sense
-    // iowrite32 (0xF7, baseAddr + (0x70 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x71 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x72 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x73 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x74 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x75 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x76 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x77 << 2));
-    // iowrite32 (0xF7, baseAddr + (0x78 << 2));
-
     //  Read DLL settings - made no sense
     // iowrite32 (0xFF, baseAddr + (0x0b0));
     // iowrite32 (0xF7, baseAddr + (0x0f0));
@@ -1972,14 +1982,14 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
     {
         // rumboot_printf("	FreqMode = DDR3_1600\n");
         ddr_config.T_RDDATA_EN_BC4 = 18;
-        ddr_config.T_RDDATA_EN_BL8 = 17;
+        ddr_config.T_RDDATA_EN_BL8 = 16;
 
         ddr_config.CL_PHY =     11;
         ddr_config.CL_MC =      0b111;
         ddr_config.CL_CHIP =    0b111;
 
         ddr_config.CWL_PHY =    8;
-        ddr_config.CWL_MC =     0b010;
+        ddr_config.CWL_MC =     0b011;
         ddr_config.CWL_CHIP =   0b011;
 
         ddr_config.AL_PHY =     9;
@@ -1987,14 +1997,14 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.AL_CHIP =    0b10;
 
         ddr_config.WR =         0b110;
-        ddr_config.T_REFI =     9999;
+        ddr_config.T_REFI =     779;
         ddr_config.T_RFC_XPR =  108;
         ddr_config.T_RCD =      0b1111;
         ddr_config.T_RP =       0b1111;
-        ddr_config.T_RC =       39;
-        ddr_config.T_RAS =      28;
-        ddr_config.T_WTR =      0b0110;
-        ddr_config.T_RTP =      0b0110;
+        ddr_config.T_RC =       46;
+        ddr_config.T_RAS =      36;
+        ddr_config.T_WTR =      0b0111;
+        ddr_config.T_RTP =      0b0111;
         ddr_config.T_XSDLL =    32;
         ddr_config.T_MOD =      12;
     }
@@ -2010,7 +2020,7 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.CL_CHIP =    0b101;	//001-5 010-6 011-7 100-8 101-9 110-10 111-11
 
         ddr_config.CWL_PHY =    7;
-        ddr_config.CWL_MC =     0b001;
+        ddr_config.CWL_MC =     0b010;
         ddr_config.CWL_CHIP =   0b010;	//000-5 001-6 010-7 011-8
 
         ddr_config.AL_PHY =     8;
@@ -2018,14 +2028,14 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.AL_CHIP =    0b01;	//CL-1 
 
         ddr_config.WR =         0b101; //10
-        ddr_config.T_REFI =     7999;	//refresh interval (in cycles core clock)
+        ddr_config.T_REFI =     649;	//refresh interval (in cycles core clock)
         ddr_config.T_RFC_XPR =  90;	//tRFC - Refresh to ACT or REF
-        ddr_config.T_RCD =      0b1110;	//ACTIVATE to READ/WRITE (in DDR clock cycles)
-        ddr_config.T_RP =       0b1110;	//PRECHARGE to ACTIVATE (in DDR clock cycles)
-        ddr_config.T_RC =       33;	//ACIVATE to ACIVATE (in DDR clock cycles)
-        ddr_config.T_RAS =      24;	 //ACTIVATE to PRECHARGE (in DDR clock cycles)
-        ddr_config.T_WTR =      0b0101;	//delay from start of internal write transaction to internal read command(in DDR clock cycles)
-        ddr_config.T_RTP =      0b0101;	//internal read command to precharge delay(in DDR clock cycles)
+        ddr_config.T_RCD =      0b1111;	//ACTIVATE to READ/WRITE (in DDR clock cycles)
+        ddr_config.T_RP =       0b1111;	//PRECHARGE to ACTIVATE (in DDR clock cycles)
+        ddr_config.T_RC =       40;	//ACIVATE to ACIVATE (in DDR clock cycles)
+        ddr_config.T_RAS =      30;	 //ACTIVATE to PRECHARGE (in DDR clock cycles)
+        ddr_config.T_WTR =      0b0111;	//delay from start of internal write transaction to internal read command(in DDR clock cycles)
+        ddr_config.T_RTP =      0b0111;	//internal read command to precharge delay(in DDR clock cycles)
         ddr_config.T_XSDLL =    32;	//exit self refresh and DLL lock delay (in x16 clocks)
         ddr_config.T_MOD =      10;	//MRS command update delay (in DDR clock cycles)
     }

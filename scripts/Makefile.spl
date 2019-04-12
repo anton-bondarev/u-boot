@@ -202,7 +202,7 @@ ALL-$(CONFIG_SPL_X86_16BIT_INIT) += $(obj)/u-boot-x86-16bit-spl.bin
 ALL-$(CONFIG_ARCH_ZYNQ)		+= $(obj)/boot.bin
 ALL-$(CONFIG_ARCH_ZYNQMP)	+= $(obj)/boot.bin
 
-ALL-$(CONFIG_MPW7705)		+= $(obj)/$(SPL_BIN).rbi
+ALL-$(CONFIG_MPW7705)		+= $(obj)/$(SPL_BIN)-dtb.rbi
 
 all:	$(ALL-y)
 
@@ -241,7 +241,7 @@ quiet_cmd_packimage = PACK    $@
 cmd_packimage = cp $< $@; $(objtree)/tools/rumboot-packimage -c -f $@ > /dev/null
 
 # create rumboot image
-$(obj)/$(SPL_BIN).rbi: $(obj)/$(SPL_BIN).bin $(obj)/$(SPL_BIN)
+$(obj)/$(SPL_BIN)-dtb.rbi: $(obj)/$(SPL_BIN)-dtb.bin $(obj)/$(SPL_BIN)
 	$(call if_changed,packimage)
 
 # Create a file that pads from the end of u-boot-spl-nodtb.bin to bss_end
