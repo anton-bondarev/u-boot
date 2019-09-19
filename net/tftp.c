@@ -639,6 +639,7 @@ static void tftp_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 		}
 #endif
 		tftp_send();
+		tftp_send(); // double send for packet loss correction
 
 #ifdef CONFIG_MCAST_TFTP
 		if (tftp_mcast_active) {
