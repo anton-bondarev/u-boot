@@ -123,7 +123,7 @@
         "loadkernel=tftp ${loadaddr} ${bootfile}\0" \
         "loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage-tx011.bin\0" \
         "loadsd=run loadfdtsd; run loadkernelsd\0" \
-        "setmem=mmap drop 0 1m; mmap set 0 256m 00000000; mmap set ${loadaddr} 16m 10000000\0" \
+        "setmem=mmap drop all; mmap drop 0 1m; mmap set 0 256m 00000000; mmap set ${loadaddr} 16m 10000000\0" \
         "tftptimeout=1000\0" \
         "tftptimeoutcountmax=100\0"
 
