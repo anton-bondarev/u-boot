@@ -19,9 +19,8 @@
 #include <memalign.h>
 #include <miiphy.h>
 #include <net.h>
-#include <netdev.h>
-#include "greth.h"
 #include <asm/io.h>
+#include "greth.h"
 
 /* Default to 3s timeout on autonegotiation */
 #ifndef GRETH_PHY_TIMEOUT_MS
@@ -31,11 +30,6 @@
 #ifndef GRETH_SEND_TIMEOUT_MS
 #define GRETH_SEND_TIMEOUT_MS 3000
 #endif
-
-#ifndef GRETH_RECV_TIMEOUT_MS
-#define GRETH_RECV_TIMEOUT_MS 1000
-#endif
-
 
 /* Default to PHY adrress 0 not not specified */
 #ifdef CONFIG_SYS_GRLIB_GRETH_PHYADDR
@@ -68,7 +62,6 @@ inline u32 GRETH_REGLOAD(volatile void* addr)	{
 
 typedef struct {
 	greth_regs *regs;
-	int irq;
 	struct eth_device *dev;
 
 	/* Hardware info */
@@ -361,8 +354,8 @@ static int greth_init_phy(greth_priv * dev)
 
 	}
       auto_neg_done:
-	debug("%s GRETH Ethermac at [0x%x] irq %d. Running \
-		%d Mbps %s duplex\n", dev->gbit_mac ? "10/100/1000" : "10/100", (unsigned int)(regs), (unsigned int)(dev->irq), dev->gb ? 1000 : (dev->sp ? 100 : 10), dev->fd ? "full" : "half");
+	debug("%s GRETH Ethermac at [0x%x]. Running \
+		%d Mbps %s duplex\n", dev->gbit_mac ? "10/100/1000" : "10/100", (unsigned int)(regs), dev->gb ? 1000 : (dev->sp ? 100 : 10), dev->fd ? "full" : "half");
 	/* Read out PHY info if extended registers are available */
 	if (tmp & 1) {
 		tmp1 = read_mii(phyaddr, 2, regs);
@@ -428,7 +421,6 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	void *txbuf;
 	unsigned int status;
 	unsigned int start, timeout;
-
 
 	debug("greth_send\n");
 
@@ -507,112 +499,78 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 {
 	greth_priv *greth = dev_get_priv(dev);
+	greth_bd *rxbd;
+	unsigned status, bad;
+	uchar *d;
+	int len;
+
+	rxbd = greth->rxbd_curr;
+	status = GRETH_REGLOAD(&rxbd->stat);
+	if (status & GRETH_BD_EN)
+		return -1; // no more packets
+
+	// increment current descriptor
+	if (rxbd == greth->rxbd_max)
+		greth->rxbd_curr = greth->rxbd_base;
+	else
+		greth->rxbd_curr = rxbd + 1;
+
+	*packetp = (uchar*)rxbd->addr;
+	len = status & GRETH_BD_LEN;
+
+	debug("greth_recv: packet 0x%x, 0x%x, len: %i\n",
+		(unsigned int)rxbd, status, len);
+
+	// Check status for errors.
+	bad = 0;
+	if (status & GRETH_RXBD_ERR_FT) {
+		greth->stats.rx_length_errors++;
+		bad = 1;
+	}
+	if (status & (GRETH_RXBD_ERR_AE | GRETH_RXBD_ERR_OE)) {
+		greth->stats.rx_frame_errors++;
+		bad = 1;
+	}
+	if (status & GRETH_RXBD_ERR_CRC) {
+		greth->stats.rx_crc_errors++;
+		bad = 1;
+	}
+	if (bad) {
+		greth->stats.rx_errors++;
+		printf("greth_recv: Bad packet (%d, %d, %d, 0x%08x, %d)\n",
+			greth->stats.rx_length_errors,
+			greth->stats.rx_frame_errors,
+			greth->stats.rx_crc_errors, status,
+			greth->stats.rx_packets);
+		len = 0; // skip the packet (but free_pkt will be called)
+	} else {
+		d = (uchar*)rxbd->addr;
+		debug("greth_recv: new packet, length: %d. data: %x %x %x %x %x %x %x %x\n",
+			len, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
+		greth->stats.rx_packets++;
+	}
+
+	return len;
+}
+
+int greth_free_pkt(struct udevice *dev, uchar *packet, int length)
+{
+	greth_priv *greth = dev_get_priv(dev);
 	greth_regs *regs = greth->regs;
 	greth_bd *rxbd;
-	unsigned int status, len = 0, bad;
-	char *d;
-	int enable = 0;
-	int i;
-	unsigned int start, timeout;
 
+	// find the descriptor
+	rxbd = greth->rxbd_base;
+	while (rxbd->addr != (unsigned)packet)
+		++rxbd;
 
-	/* Receive One packet only, but clear as many error packets as there are
-	 * available.
-	 */
-	{
-		/* current receive descriptor */
-		rxbd = greth->rxbd_curr;
+	// reenable descriptor to receive more packet with this descriptor, wrap around if needed
+	rxbd->stat = GRETH_BD_EN | (rxbd == greth->rxbd_max ? GRETH_BD_WR : 0);
 
-		start = get_timer(0);
-		timeout = GRETH_RECV_TIMEOUT_MS;
+	// notify the adpater about the new descriptor
+	GRETH_REGORIN(&regs->control, GRETH_RXEN);
 
-		/* get status of next received packet */
-		while ((status = GRETH_REGLOAD(&rxbd->stat)) & GRETH_BD_EN) {
-			if (get_timer(start) > timeout) 
-				break;
-		}
-
-		bad = 0;
-
-		/* stop if no more packets received */
-		if (status & GRETH_BD_EN) {
-			goto done;
-		}
-
-		debug("greth_recv: packet 0x%x, 0x%x, len: %d\n",
-		       (unsigned int)rxbd, status, status & GRETH_BD_LEN);
-
-		/* Check status for errors.
-		 */
-		if (status & GRETH_RXBD_ERR_FT) {
-			greth->stats.rx_length_errors++;
-			bad = 1;
-		}
-		if (status & (GRETH_RXBD_ERR_AE | GRETH_RXBD_ERR_OE)) {
-			greth->stats.rx_frame_errors++;
-			bad = 1;
-		}
-		if (status & GRETH_RXBD_ERR_CRC) {
-			greth->stats.rx_crc_errors++;
-			bad = 1;
-		}
-		if (bad) {
-			greth->stats.rx_errors++;
-			printf
-			    ("greth_recv: Bad packet (%d, %d, %d, 0x%08x, %d)\n",
-			     greth->stats.rx_length_errors,
-			     greth->stats.rx_frame_errors,
-			     greth->stats.rx_crc_errors, status,
-			     greth->stats.rx_packets);
-			/* print all rx descriptors */
-			for (i = 0; i < GRETH_RXBD_CNT; i++) {
-				printf("[%d]: Stat=0x%lx, Addr=0x%lx\n", i,
-				       (long)GRETH_REGLOAD(&greth->rxbd_base[i].stat),
-				       (long)GRETH_REGLOAD(&greth->rxbd_base[i].addr));
-			}
-		} else {
-			/* Process the incoming packet. */
-			len = status & GRETH_BD_LEN;
-			d = (char *)rxbd->addr;
-
-			debug
-			    ("greth_recv: new packet, length: %d. data: %x %x %x %x %x %x %x %x\n",
-			     len, d[0], d[1], d[2], d[3], d[4], d[5], d[6],
-			     d[7]);
-
-			/* flush all data cache to make sure we're not reading old packet data */
-			//sparc_dcache_flush_all();
-
-			/* pass packet on to network subsystem */
-			net_process_received_packet((void *)d, len);
-
-			/* bump stats counters */
-			greth->stats.rx_packets++;
-
-			/* bad is now 0 ==> will stop loop */
-		}
-
-		/* reenable descriptor to receive more packet with this descriptor, wrap around if needed */
-		rxbd->stat =
-		    GRETH_BD_EN |
-		    (((unsigned int)greth->rxbd_curr >=
-		      (unsigned int)greth->rxbd_max) ? GRETH_BD_WR : 0);
-		enable = 1;
-
-		/* increase index */
-		greth->rxbd_curr =
-		    ((unsigned int)greth->rxbd_curr >=
-		     (unsigned int)greth->rxbd_max) ? greth->
-		    rxbd_base : (greth->rxbd_curr + 1);
-
-	}
-
-	if (enable) {
-		GRETH_REGORIN(&regs->control, GRETH_RXEN);
-	}
-      done:
-	/* return positive length of packet or 0 if non received */
-	return len;
+	return 0;
 }
 
 int greth_set_hwaddr(struct udevice *dev)
@@ -713,22 +671,22 @@ static int greth_remove(struct udevice *dev)
 static int greth_ofdata_to_platdata(struct udevice *dev)
 {
         greth_priv *priv = dev_get_priv(dev);
-		struct eth_pdata *pdata = dev_get_platdata(dev);
-		const char *mac;
-		int len;
+	struct eth_pdata *pdata = dev_get_platdata(dev);
+	const char *mac;
+	int len;
 
-        priv->regs = (greth_regs*) devfdt_get_addr(dev);
+        priv->regs = (greth_regs*)(uintptr_t)devfdt_get_addr(dev);
 
-		mac = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "mac-address", &len);
-		if (mac && is_valid_ethaddr((u8 *)mac))
-		{
-			pdata->enetaddr[0] = mac[0];
-			pdata->enetaddr[1] = mac[1];
-			pdata->enetaddr[2] = mac[2];
-			pdata->enetaddr[3] = mac[3];
-			pdata->enetaddr[4] = mac[4];
-			pdata->enetaddr[5] = mac[5];
-		}
+	mac = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "mac-address", &len);
+	if (mac && is_valid_ethaddr((u8 *)mac))
+	{
+		pdata->enetaddr[0] = mac[0];
+		pdata->enetaddr[1] = mac[1];
+		pdata->enetaddr[2] = mac[2];
+		pdata->enetaddr[3] = mac[3];
+		pdata->enetaddr[4] = mac[4];
+		pdata->enetaddr[5] = mac[5];
+	}
 
 //        pdata->phy_interface = -1;
 //        phy_mode = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "phy-mode",
@@ -743,15 +701,14 @@ static int greth_ofdata_to_platdata(struct udevice *dev)
         return 0;
 }
 
-
 static const struct eth_ops greth_ops = {
-        .start                  = greth_init,
-        .send                   = greth_send,
-        .recv                   = greth_recv,
-        .stop                   = greth_halt,
-        .write_hwaddr           = greth_set_hwaddr,
+        .start        = greth_init,
+        .send         = greth_send,
+        .recv         = greth_recv,
+	.free_pkt     = greth_free_pkt,
+        .stop         = greth_halt,
+        .write_hwaddr = greth_set_hwaddr,
 };
-
 
 static const struct udevice_id greth_ids[] = {
         { .compatible = "rc-module,greth" },
@@ -769,8 +726,3 @@ U_BOOT_DRIVER(greth) = {
         .priv_auto_alloc_size = sizeof(greth_priv),
         .platdata_auto_alloc_size = sizeof(struct eth_pdata),
 };
-
-
-
-
-

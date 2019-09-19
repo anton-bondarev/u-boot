@@ -114,7 +114,7 @@
 		greth1: greth0@0x3C034000 {
 			compatible = "rc-module,greth";
             reg = <0x3C034000 0x1000>;			
-			mac-address = [ EC 17 66 77 05 00 ];
+			mac-address = [ EC 17 66 77 05 80 ]; // [ EC 17 66 77 05 00 ];
 			//pinctrl-names = "default";
 			//pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;
 			status = "okay";
