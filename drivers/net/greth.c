@@ -67,6 +67,7 @@ typedef struct {
 	/* Hardware info */
 	unsigned char phyaddr;
 	int gbit_mac;
+	int edcl;
 
 	/* Current operating Mode */
 	int gb;			/* GigaBit */
@@ -632,16 +633,20 @@ static int greth_probe(struct udevice *dev)
 	/* Check if mac is gigabit capable */
 	greth->gbit_mac = (GRETH_REGLOAD(&greth->regs->control) >> 27) & 1;
 
+	/* Check if mac has EDCL */
+	greth->edcl = (GRETH_REGLOAD(&greth->regs->control) >> 31) & 1;
+
+	/* If we have EDCL we disable the EDCL speed-duplex FSM so
+	 * it doesn't interfere with the software */
+	if (greth->edcl != 0)
+		GRETH_REGORIN(&greth->regs->control, (1 << 12));
+
 	debug("MDIO: %x, CONTROL: %x\n", GRETH_REGLOAD(&greth->regs->mdio), GRETH_REGLOAD(&greth->regs->control));
 
-	/* initiate PHY, select speed/duplex depending on connected PHY */
-	if(!env_get("greth_skip_phy"))	// workaround for mpw7705 issue with core
-	{
-		if (greth_init_phy(greth)) {
-			/* Failed to init PHY (timedout) */
-			debug("GRETH[%p]: Failed to init PHY\n", greth->regs);
-			return -1;
-		}
+	if (greth_init_phy(greth)) {
+		/* Failed to init PHY (timedout) */
+		debug("GRETH[%p]: Failed to init PHY\n", greth->regs);
+		return -1;
 	}
 
 	debug("GRETH[%p]: Initialized successfully\n", greth->regs);
