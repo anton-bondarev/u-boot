@@ -133,7 +133,7 @@ static int pl061_pinctrl_probe(struct udevice *dev)
 }
 
 static const struct udevice_id pl061_pinctrl_match[] = {
-	{ .compatible = "rc-module,pl061-pinctrl" },
+	{ .compatible = "rcm,pl061-pinctrl" },
 	{}
 };
 

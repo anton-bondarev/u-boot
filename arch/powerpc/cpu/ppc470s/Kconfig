@@ -8,12 +8,12 @@ choice
 	prompt "Target select"
 	optional
 
-config TARGET_MPW7705
-	bool "Support MPW7705"
+config TARGET_1888TX018
+	bool "Support 1888TX018"
 	select SUPPORT_SPL
 
 endchoice
 
-source "board/rc-module/mpw7705/Kconfig"
+source "board/rcm/1888tx018/Kconfig"
 
 endmenu

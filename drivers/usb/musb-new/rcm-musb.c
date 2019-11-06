@@ -1,5 +1,5 @@
 /*
- * MPW7705 MUSB "glue layer"
+ * RCM 1888TX018 MUSB "glue layer"
  * 
  * Copyright (C) 2018, AstroSoft.
  * Alexey Spirkov <alexeis@astrosoft.ru>
@@ -22,26 +22,26 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 
-/* RC-Module controller data */
-struct module_musb_data {
+/* RCM controller data */
+struct rcm_musb_data {
 	struct musb_host_data mdata;
 	struct device dev;
 	void __iomem *musb_ctrl;
 	void __iomem *musb_parent_ctrl;
 };
 
-#define to_module_musb_data(d)	\
-	container_of(d, struct module_musb_data, dev)
+#define to_rcm_musb_data(d)	\
+	container_of(d, struct rcm_musb_data, dev)
 
-static void module_musb_disable(struct musb *musb)
+static void rcm_musb_disable(struct musb *musb)
 {
 	/* no way to shut the controller */
 }
 
-static int module_musb_reset(struct musb *musb);
-static int module_musb_enable(struct musb *musb);
+static int rcm_musb_reset(struct musb *musb);
+static int rcm_musb_enable(struct musb *musb);
 
-static irqreturn_t module_interrupt(int irq, void *hci)
+static irqreturn_t rcm_interrupt(int irq, void *hci)
 {
 	struct musb		*musb = hci;
 	irqreturn_t		retval = IRQ_NONE;
@@ -75,28 +75,28 @@ static irqreturn_t module_interrupt(int irq, void *hci)
 #define  MUSB_SOFTRST_NRSTX	BIT(1)
 
 
-#define MODULE_REGLOAD(addr )readl(addr)
-#define MODULE_REGSAVE(addr,data) writel(data,addr)
-#define MODULE_REGORIN(addr,data) MODULE_REGSAVE(addr,MODULE_REGLOAD(addr)|data)
-#define MODULE_REGANDIN(addr,data) MODULE_REGSAVE(addr,MODULE_REGLOAD(addr)&data)
+#define RCM_REGLOAD(addr )readl(addr)
+#define RCM_REGSAVE(addr,data) writel(data,addr)
+#define RCM_REGORIN(addr,data) RCM_REGSAVE(addr,RCM_REGLOAD(addr)|data)
+#define RCM_REGANDIN(addr,data) RCM_REGSAVE(addr,RCM_REGLOAD(addr)&data)
 
 
-#define MODULE_USB0_RESET_REG_OFFSET 0x10
+#define RCM_USB0_RESET_REG_OFFSET 0x10
 
 
 
-static int module_musb_set_mode(struct musb *musb, u8 mode)
+static int rcm_musb_set_mode(struct musb *musb, u8 mode)
 {
 	struct device *dev = musb->controller;
-	struct module_musb_data *pdata = to_module_musb_data(dev);
+	struct rcm_musb_data *pdata = to_rcm_musb_data(dev);
 
-	debug("module_musb_set_mode: %d\n", (int) mode);
+	debug("rcm_musb_set_mode: %d\n", (int) mode);
 
 	return 0;
 
 	switch (mode) {
 	case MUSB_HOST:
-//		clrsetbits_le32(pdata->musb_ctrl + MODULE_CONTROL_USBPHY_CFG_OFFSET,
+//		clrsetbits_le32(pdata->musb_ctrl + RCM_CONTROL_USBPHY_CFG_OFFSET,
 //				USBCRCON_USBIDVAL, USBCRCON_USBIDOVEN);
 		break;
 	case MUSB_PERIPHERAL:
@@ -125,40 +125,40 @@ typedef enum
 
 void usleep(uint32_t usec);
 
-static int module_musb_reset(struct musb *musb)
+static int rcm_musb_reset(struct musb *musb)
 {
-	struct module_musb_data *pdata = to_module_musb_data(musb->controller);
+	struct rcm_musb_data *pdata = to_rcm_musb_data(musb->controller);
 
 	void __iomem *control = pdata->musb_parent_ctrl;
 
     debug("USB reset sequence begin\n");
 	writeb((unsigned char) (1 << POR_reset_bit_num) | (1 << utmi_reset_phy_bit_num) | (0 << utmi_suspendm_en_bit_num) | (0 << utmi_reset_musb_bit_num), 
-				control+MODULE_USB0_RESET_REG_OFFSET);
+				control+RCM_USB0_RESET_REG_OFFSET);
 
     //T1 - POR LOW
     writeb((unsigned char) (0 << POR_reset_bit_num) | (1 << utmi_reset_phy_bit_num) | (0 << utmi_suspendm_en_bit_num) | (0 << utmi_reset_musb_bit_num),
-				control+MODULE_USB0_RESET_REG_OFFSET);
+				control+RCM_USB0_RESET_REG_OFFSET);
     usleep(10);
 
     //T2 - SUSPENDM HIGH
     writeb((unsigned char) (0 << POR_reset_bit_num) | (1 << utmi_reset_phy_bit_num) | (1 << utmi_suspendm_en_bit_num) | (0 << utmi_reset_musb_bit_num),
-				control+MODULE_USB0_RESET_REG_OFFSET);
+				control+RCM_USB0_RESET_REG_OFFSET);
     usleep(47);
 
     //T3 T4 UTMI_RESET LOW
     writeb((unsigned char) (0 << POR_reset_bit_num) | (0 << utmi_reset_phy_bit_num) | (1 << utmi_suspendm_en_bit_num) | (0 << utmi_reset_musb_bit_num),
-				control+MODULE_USB0_RESET_REG_OFFSET);
+				control+RCM_USB0_RESET_REG_OFFSET);
 
     //T5 - Release reset USB controller
     writeb((unsigned char) (0 << POR_reset_bit_num) | (0 << utmi_reset_phy_bit_num) | (1 << utmi_suspendm_en_bit_num) | (1 << utmi_reset_musb_bit_num),
-				control+MODULE_USB0_RESET_REG_OFFSET);
+				control+RCM_USB0_RESET_REG_OFFSET);
     debug("USB reset sequence done\n");
 
 	return 0;
 }
 
 
-static int module_musb_enable(struct musb *musb)
+static int rcm_musb_enable(struct musb *musb)
 {
 	/* soft reset by NRSTx */
 	musb_writeb(musb->mregs, MUSB_SOFTRST, MUSB_SOFTRST_NRSTX);
@@ -172,9 +172,9 @@ static int module_musb_enable(struct musb *musb)
 	return 0;
 }
 
-static int module_musb_init(struct musb *musb)
+static int rcm_musb_init(struct musb *musb)
 {
-	struct module_musb_data *pdata = to_module_musb_data(musb->controller);
+	struct rcm_musb_data *pdata = to_rcm_musb_data(musb->controller);
 	u32 ctrl, hwvers;
 	u8 power;
 
@@ -184,16 +184,16 @@ static int module_musb_init(struct musb *musb)
 	
 	// select clock to 24mhz
 	// set bit 10 - USBPHY_REFCLK_SEL
-	MODULE_REGORIN(control, 1 << 10);
+	RCM_REGORIN(control, 1 << 10);
 
-	module_musb_reset(musb);
+	rcm_musb_reset(musb);
 
 	/* Returns zero if not clocked */
 	hwvers = musb_read_hwvers(musb->mregs);
 	if (!hwvers)
 		return -ENODEV;
 
-	debug("module_musb_init: hwvers: %x\n", hwvers);
+	debug("rcm_musb_init: hwvers: %x\n", hwvers);
 
 			
 	/* Reset the musb */
@@ -207,14 +207,14 @@ static int module_musb_init(struct musb *musb)
 	power = power & ~MUSB_POWER_RESET;
 	musb_writeb(musb->mregs, MUSB_POWER, power);
 
-	musb->isr = module_interrupt;
+	musb->isr = rcm_interrupt;
 
 	return 0;
 }
 /*
 static int fix_endian (int data_in){
 
-#ifdef CONFIG_MPW7705
+#ifdef CONFIG_1888TX018
     int data_out = 0;
     
     data_out = data_in << 24 & 0xff000000;
@@ -311,23 +311,23 @@ void musb_read_fifo(struct musb_hw_ep *hw_ep, u16 len, u8 *dst)
 }
 
 
-const struct musb_platform_ops module_musb_ops = {
-	.init		= module_musb_init,
-//	.set_mode	= module_musb_set_mode,
-//	.disable	= module_musb_disable,
-//	.enable		= module_musb_enable,
+const struct musb_platform_ops rcm_musb_ops = {
+	.init		= rcm_musb_init,
+//	.set_mode	= rcm_musb_set_mode,
+//	.disable	= rcm_musb_disable,
+//	.enable		= rcm_musb_enable,
 };
 
 
-static struct musb_hdrc_config module_musb_config = {
+static struct musb_hdrc_config rcm_musb_config = {
 	.multipoint     = 1,
 	.dyn_fifo       = 1,
 	.num_eps        = 16,
 	.ram_bits       = 12,
 };
 
-/* MPW7705 has one MUSB controller which can be host or gadget */
-static struct musb_hdrc_platform_data module_musb_plat = {
+/* 1888TX018 has one MUSB controller which can be host or gadget */
+static struct musb_hdrc_platform_data rcm_musb_plat = {
 #if defined(CONFIG_USB_MUSB_HOST)
 	.mode          = MUSB_HOST,
 #elif defined(CONFIG_USB_MUSB_GADGET)
@@ -335,15 +335,15 @@ static struct musb_hdrc_platform_data module_musb_plat = {
 #else
 #error "Please define either CONFIG_USB_MUSB_HOST or CONFIG_USB_MUSB_GADGET"
 #endif
-	.config         = &module_musb_config,
+	.config         = &rcm_musb_config,
 	.power          = 250,		/* 500mA */
-	.platform_ops	= &module_musb_ops,
+	.platform_ops	= &rcm_musb_ops,
 };
 
 static int musb_usb_probe(struct udevice *dev)
 {
 	struct usb_bus_priv *priv = dev_get_uclass_priv(dev);
-	struct module_musb_data *pdata = dev_get_priv(dev);
+	struct rcm_musb_data *pdata = dev_get_priv(dev);
 	struct musb_host_data *mdata = &pdata->mdata;
 	struct fdt_resource mc, ctrl, parentctrl;
 	void *fdt = (void *)gd->fdt_blob;
@@ -356,14 +356,14 @@ static int musb_usb_probe(struct udevice *dev)
 	ret = fdt_get_named_resource(fdt, node, "reg", "reg-names",
 				     "mc", &mc);
 	if (ret < 0) {
-		printf("module-musb: resource \"mc\" not found\n");
+		printf("rcm-musb: resource \"mc\" not found\n");
 		return ret;
 	}
 
 	ret = fdt_get_named_resource(fdt, node, "reg", "reg-names",
 				     "control", &ctrl);
 	if (ret < 0) {
-		printf("module-musb: resource \"control\" not found\n");
+		printf("rcm-musb: resource \"control\" not found\n");
 		return ret;
 	}
 
@@ -377,7 +377,7 @@ static int musb_usb_probe(struct udevice *dev)
 	ret = fdt_get_named_resource(fdt, node, "reg", "reg-names",
 				     "ctrlreg", &parentctrl);
 	if (ret < 0) {
-		printf("module-musb: unable to find parent resource \"ctrlreg\" %d\n", ret);
+		printf("rcm-musb: unable to find parent resource \"ctrlreg\" %d\n", ret);
 		return ret;
 	}
 	pdata->musb_parent_ctrl = devm_ioremap(dev, parentctrl.start, fdt_resource_size(&parentctrl));
@@ -385,15 +385,15 @@ static int musb_usb_probe(struct udevice *dev)
 
 	/* init controller */
 #ifdef CONFIG_USB_MUSB_HOST
-	mdata->host = musb_init_controller(&module_musb_plat,
+	mdata->host = musb_init_controller(&rcm_musb_plat,
 					   &pdata->dev, mregs);
 	if (!mdata->host)
 		return -EIO;
 
 	ret = musb_lowlevel_init(mdata);
 #else
-//	module_musb_plat.mode = MUSB_PERIPHERAL;
-	ret = musb_register(&module_musb_plat, &pdata->dev, mregs);
+//	rcm_musb_plat.mode = MUSB_PERIPHERAL;
+	ret = musb_register(&rcm_musb_plat, &pdata->dev, mregs);
 #endif
 
 	return ret;
@@ -401,7 +401,7 @@ static int musb_usb_probe(struct udevice *dev)
 
 static int musb_usb_remove(struct udevice *dev)
 {
-	struct module_musb_data *pdata = dev_get_priv(dev);
+	struct rcm_musb_data *pdata = dev_get_priv(dev);
 
 	debug("musb_usb_remove\n");
 
@@ -410,8 +410,8 @@ static int musb_usb_remove(struct udevice *dev)
 	return 0;
 }
 
-static const struct udevice_id module_musb_ids[] = {
-	{ .compatible = "rc-module,musb" },
+static const struct udevice_id rcm_musb_ids[] = {
+	{ .compatible = "rc-rcm,musb" },
 	{ }
 };
 
@@ -420,9 +420,9 @@ struct dm_usb_ops musb_empty_ops = {
 };
 
 U_BOOT_DRIVER(usb_musb) = {
-	.name		= "module-musb",
+	.name		= "rcm-musb",
 	.id		= UCLASS_USB,
-	.of_match	= module_musb_ids,
+	.of_match	= rcm_musb_ids,
 	.probe		= musb_usb_probe,
 	.remove		= musb_usb_remove,
 #ifdef CONFIG_USB_MUSB_HOST
@@ -431,5 +431,5 @@ U_BOOT_DRIVER(usb_musb) = {
 	.ops 		= &musb_empty_ops,
 #endif
 	.platdata_auto_alloc_size = sizeof(struct usb_platdata),
-	.priv_auto_alloc_size = sizeof(struct module_musb_data),
+	.priv_auto_alloc_size = sizeof(struct rcm_musb_data),
 };

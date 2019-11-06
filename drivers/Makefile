@@ -102,4 +102,4 @@ obj-y += thermal/
 obj-$(CONFIG_MACH_PIC32) += ddr/microchip/
 endif
 
-obj-$(CONFIG_MPW7705_DDR) += ddr/rc-module/mpw7705/
+obj-$(CONFIG_1888TX018_DDR) += ddr/rcm/1888tx018/

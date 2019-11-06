@@ -20,7 +20,7 @@
 #include <asm/mmu.h>
 #include <spd_sdram.h>
 #include "ddr_spd.h"
-#include "rcmodule_dimm_params.h"
+#include "rcm_dimm_params.h"
 
 
 DECLARE_GLOBAL_DATA_PTR;

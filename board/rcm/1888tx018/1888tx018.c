@@ -3,7 +3,7 @@
 #include <usb.h>
 #include <dm.h>
 #include "ddr_spd.h"
-#include "rcmodule_dimm_params.h"
+#include "rcm_dimm_params.h"
 #include <fdt_support.h>
 #include <environment.h>
 

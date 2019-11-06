@@ -15,7 +15,7 @@
 #include <asm/unaligned.h>
 #include "gadget_chips.h"
 
-#ifdef CONFIG_MPW7705
+#ifdef CONFIG_1888TX018
 #include <asm/io.h>
 #endif
 

@@ -1,13 +1,13 @@
-if TARGET_MPW7705
+if TARGET_1888TX018
 
 config SYS_BOARD
-	default "mpw7705"
+	default "1888tx018"
 
 config SYS_VENDOR
-	default "rc-module"
+	default "rcm"
 
 config SYS_CONFIG_NAME
-	default "mpw7705"
+	default "1888tx018"
 
 config SYS_TEXT_BASE
 	default 0x4D000040

@@ -250,7 +250,7 @@ config CMD_BOOTEFI_HELLO
 
 config CMD_BOOTEDCL
 	bool "Support boot via EDCL"
-	depends on TARGET_MPW7705
+	depends on TARGET_1888TX018
 	default y
 	help
 	  Boot with EDCL tool.

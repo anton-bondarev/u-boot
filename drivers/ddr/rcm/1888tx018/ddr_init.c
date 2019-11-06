@@ -19,8 +19,8 @@
 #include "ddr_impl_h/ddr/ddr34lmc.h"
 #include "ddr_impl_h/ddr/mcif2arb4.h"
 #include "ddr_spd.h"
-#include "rcmodule_dimm_params.h"
-#include "configs/mpw7705.h"
+#include "rcm_dimm_params.h"
+#include "configs/1888tx018.h"
 
 //static uint8_t __attribute__((section(".EM0.data"),aligned(16))) volatile ddr0_init_array[128] = { 0 };
 //static uint8_t __attribute__((section(".EM1.data"),aligned(16))) volatile ddr1_init_array[128] = { 0 };

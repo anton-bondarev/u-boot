@@ -1,0 +1,5 @@
+config MPW7705_DDR
+	bool "1888tx018 DDR SDRAM driver"
+	depends on TARGET_1888TX018
+	help
+	  Enable DDR SDRAM controller for the 1888tx018 device.

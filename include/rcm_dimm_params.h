@@ -1,5 +1,5 @@
 /*
- * TX018 SPD parameters
+ * RCM 1888TX018 DDR SPD parameters
  * 
  * Copyright (C) 2019, AstroSoft.
  * Alexey Spirkov <alexeis@astrosoft.ru>
@@ -9,8 +9,8 @@
  * Based on original u-boot code.
  */
 
-#ifndef _TX018_SPD_H_
-#define _TX018_SPD_H_
+#ifndef _1888TX018_SPD_H_
+#define _1888TX018_SPD_H_
 
 /* Parameters for a DDR dimm computed from the SPD */
 typedef struct dimm_params_s {
@@ -86,4 +86,4 @@ typedef struct dimm_params_s {
 } dimm_params_t;
 
 
-#endif /* _TX018_SPD_H_ */
+#endif /* _1888TX018_SPD_H_ */

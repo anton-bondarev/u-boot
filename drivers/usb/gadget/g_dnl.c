@@ -23,7 +23,7 @@
 #include "gadget_chips.h"
 #include "composite.c"
 
-#ifdef CONFIG_MPW7705
+#ifdef CONFIG_1888TX018
 #include <asm/io.h>
 #endif
 
@@ -121,7 +121,7 @@ static int g_dnl_do_config(struct usb_configuration *c)
 	const char *s = c->cdev->driver->name;
 	struct g_dnl_bind_callback *callback = g_dnl_bind_callback_first();
 
-#ifndef CONFIG_MPW7705
+#ifndef CONFIG_1888TX018
 	// memory fail?
 	debug("%s: configuration: 0x%p composite dev: 0x%p\n",
 	      __func__, c, c->cdev);
