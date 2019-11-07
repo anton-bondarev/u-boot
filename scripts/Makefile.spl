@@ -202,7 +202,7 @@ ALL-$(CONFIG_SPL_X86_16BIT_INIT) += $(obj)/u-boot-x86-16bit-spl.bin
 ALL-$(CONFIG_ARCH_ZYNQ)		+= $(obj)/boot.bin
 ALL-$(CONFIG_ARCH_ZYNQMP)	+= $(obj)/boot.bin
 
-ALL-$(CONFIG_MPW7705)		+= $(obj)/$(SPL_BIN)-dtb.rbi
+ALL-$(CONFIG_1888TX018)		+= $(obj)/$(SPL_BIN)-dtb.rbi
 
 all:	$(ALL-y)
 

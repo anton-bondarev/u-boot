@@ -268,7 +268,7 @@ void commutate_plb6()
 
 
 int get_ddr3_spd_bypath(const char * spdpath, ddr3_spd_eeprom_t* spd);
-unsigned int rcmodule_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
+unsigned int rcm_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
 					 dimm_params_t *pdimm,
 					 unsigned int dimm_number);
 
@@ -501,10 +501,10 @@ void ddr_init (int slowdown)
     ddr3_spd_eeprom_t spd;
 
     if(!get_ddr3_spd_bypath("spd0-path", &spd) && 
-       !rcmodule_compute_dimm_parameters(&spd, &dpar0, 0))
+       !rcm_compute_dimm_parameters(&spd, &dpar0, 0))
             dimm0_params_invalid = validate_dimm_parameters(&dpar0, 0);
     if(!get_ddr3_spd_bypath("spd1-path", &spd) && 
-       !rcmodule_compute_dimm_parameters(&spd, &dpar1, 1))
+       !rcm_compute_dimm_parameters(&spd, &dpar1, 1))
             dimm1_params_invalid = validate_dimm_parameters(&dpar1, 1);
 
 #endif

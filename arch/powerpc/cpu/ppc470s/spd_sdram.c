@@ -1,5 +1,5 @@
 /*
- * TX018 SPD related code
+ * RCM 1888TX018 SPD related code
  *
  * Copyright (C) 2018 AstroSoft
  *               Alexey Spirkov <alexeis@astrosoft.ru>
@@ -388,13 +388,13 @@ compute_ranksize(const ddr3_spd_eeprom_t *spd)
 
 
 /*
- * ddr_compute_dimm_parameters for DDR3 SPD
+ * rcm_compute_dimm_parameters for DDR3 SPD
  *
  * Compute DIMM parameters based upon the SPD information in spd.
  * Writes the results to the dimm_params_t structure pointed by pdimm.
  *
  */
-unsigned int rcmodule_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
+unsigned int rcm_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
 					 dimm_params_t *pdimm,
 					 unsigned int dimm_number)
 {

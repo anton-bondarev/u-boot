@@ -1,4 +1,4 @@
-config MPW7705_DDR
+config 1888TX018_DDR
 	bool "1888tx018 DDR SDRAM driver"
 	depends on TARGET_1888TX018
 	help

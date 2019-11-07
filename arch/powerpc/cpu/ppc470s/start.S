@@ -152,7 +152,7 @@ rte_nf:
 .section ".text.start_secondary","ax",@progbits
 .global _start_secondary
 _start_secondary:
-    load_const_link sp, MPW_SPL_STACK_SECONDARY
+    load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
 	bl	process_spintable    
 
 #endif

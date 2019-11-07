@@ -43,7 +43,7 @@ typedef void (*kernel_start)(uint32_t p0);
 
 static noinline int process_spintable_next(void)
 {
-    spintable_entry* spintable = (spintable_entry*) (MPW_SPL_SPINTABLE | 0x40000000);
+    spintable_entry* spintable = (spintable_entry*) (RCM_1888TX018_SPL_SPINTABLE | 0x40000000);
 
     // invalidate IM0 at 0x0
     tlb47x_inval(0x00000000, TLBSID_1M);
