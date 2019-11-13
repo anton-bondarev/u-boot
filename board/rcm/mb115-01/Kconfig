@@ -1,7 +1,7 @@
 if TARGET_1888TX018
 
 config SYS_BOARD
-	default "1888tx018"
+	default "mb115-01"
 
 config SYS_VENDOR
 	default "rcm"

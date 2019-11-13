@@ -14,6 +14,6 @@ config TARGET_1888TX018
 
 endchoice
 
-source "board/rcm/1888tx018/Kconfig"
+source "board/rcm/mb115-01/Kconfig"
 
 endmenu
