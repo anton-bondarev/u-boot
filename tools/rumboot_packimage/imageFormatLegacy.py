@@ -2,7 +2,7 @@ from rumboot_packimage import imageFormatBase
 
 class ImageFormatLegacy(imageFormatBase.ImageFormatBase):
     """
-    This class works with TX1888 images
+    This class works with 1888TX018 (TX1888) images
     struct bootheader
     {
         uint32_t magic;

@@ -8,6 +8,6 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-ifdef CONFIG_MPW7705_DDR
-obj-$(CONFIG_TARGET_MPW7705) += ddr_init.o timer.o
+ifdef CONFIG_1888TX018_DDR
+obj-$(CONFIG_TARGET_1888TX018) += ddr_init.o timer.o
 endif

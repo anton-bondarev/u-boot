@@ -199,17 +199,17 @@ config MMC_MESON_GX
 	help
 	 Support for EMMC host controller on Meson GX ARM SoCs platform (S905)
 
-config MMC_MPW7705
-	bool "MPW7705 MMC controller support (SDIO mode)"
+config MMC_1888TX018
+	bool "1888TX018 MMC controller support (SDIO mode)"
 	depends on DM_MMC && BLK
 	help
-	  Support for MMC on MPW7705 platform
+	  Support for MMC on RCM 1888TX018 platform
 
-config MMC_MPW7705_SPI
-	bool "MPW7705 MMC controller support (SPI mode)"
+config MMC_1888TX018_SPI
+	bool "1888TX018 MMC controller support (SPI mode)"
 	depends on DM_MMC && BLK
 	help
-	  Support for MMC over SPI on MPW7705 platform
+	  Support for MMC over SPI on RCM 1888TX018 platform
 
 	 
 config MMC_MXC

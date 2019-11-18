@@ -68,7 +68,7 @@ static inline u8 i2c_8bit_addr_from_msg(const struct i2c_msg *msg)
 
 #define TYPE_OCORES		0
 #define TYPE_GRLIB		1
-#define TYPE_RCMODULE	2
+#define TYPE_RCM	2
 
 static inline void oc_setreg(struct ocores_i2c *i2c, int reg, u8 value)
 {
@@ -213,7 +213,7 @@ static int ocores_i2c_xfer(struct udevice *bus, struct i2c_msg *msg,
  * 32-bit little endian and the PRELOW and PREHIGH registers are merged into one
  * register. The subsequent registers has their offset decreased accordingly. */
 
-static u8 oc_getreg_rcmodule(struct ocores_i2c *i2c, int reg)
+static u8 oc_getreg_rcm(struct ocores_i2c *i2c, int reg)
 {
 	u32 rd;
 	int rreg = reg;
@@ -226,7 +226,7 @@ static u8 oc_getreg_rcmodule(struct ocores_i2c *i2c, int reg)
 		return (u8)rd;
 }
 
-static void oc_setreg_rcmodule(struct ocores_i2c *i2c, int reg, u8 value)
+static void oc_setreg_rcm(struct ocores_i2c *i2c, int reg, u8 value)
 {
 	u32 curr, wr;
 	int rreg = reg;
@@ -302,8 +302,8 @@ static int ocores_i2c_probe(struct udevice *bus)
 	struct ocores_i2c *i2c = dev_get_priv(bus);
 	int ret;
 
-	i2c->setreg = oc_setreg_rcmodule;
-	i2c->getreg = oc_getreg_rcmodule;
+	i2c->setreg = oc_setreg_rcm;
+	i2c->getreg = oc_getreg_rcm;
 
 	ret = ocores_init(bus, i2c);
 
@@ -319,7 +319,7 @@ static const struct dm_i2c_ops ocores_i2c_ops = {
 };
 
 static const struct udevice_id ocores_i2c_ids[] = {
-	{ .compatible = "rc-module,i2cmst" },
+	{ .compatible = "rcm,i2cmst" },
 	{ }
 };
 

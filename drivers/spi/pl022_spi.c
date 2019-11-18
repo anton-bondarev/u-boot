@@ -399,7 +399,7 @@ static const struct dm_spi_ops pl022_spi_ops = {
 
 static const struct udevice_id pl022_spi_ids[] = {
 	{ .compatible = "arm,pl022-spi" },
-	{ .compatible = "rc-module,pl022-spi" },
+	{ .compatible = "rcm,pl022-spi" },
 	{}
 };
 

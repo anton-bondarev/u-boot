@@ -1,2 +1,2 @@
 source "drivers/ddr/altera/Kconfig"
-source "drivers/ddr/rc-module/mpw7705/Kconfig"
+source "drivers/ddr/rcm/1888tx018/Kconfig"

@@ -138,7 +138,7 @@ config SYS_I2C_IMX_LPI2C
 	  Add support for the NXP i.MX LPI2C driver.
 
 config SYS_I2C_OCORES
-	bool "RC Module OpenCores I2C driver"
+	bool "RCM OpenCores I2C driver"
 	depends on DM_I2C
 	help
 	  Add support for the I2C controller available in RC Module PowerPC

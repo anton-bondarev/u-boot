@@ -2620,7 +2620,7 @@ int mmc_init(struct mmc *mmc)
 
 	if (!mmc->init_in_progress)
 	{
-#ifdef CONFIG_MPW7705		
+#ifdef CONFIG_1888TX018		
 		int i = 0;
 		for(i = 0; i < 2; i++)
 		{

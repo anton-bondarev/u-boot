@@ -26,7 +26,7 @@ void hang(void)
 	puts("### ERROR ### Please RESET the board ###\n");
 #endif
 	bootstage_error(BOOTSTAGE_ID_NEED_RESET);
-#ifdef DEBUG_MPW7705
+#ifdef DEBUG_1888TX018
 	/* go to host mode */
 	void (*bootrom_enter_host_mode)(void) = (void (*)(void)) 0xfffc0178;
 	bootrom_enter_host_mode();

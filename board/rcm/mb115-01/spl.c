@@ -1,5 +1,5 @@
 /*
- * TX018 SPL startup code
+ * RCM 1888TX018 SPL startup code
  *
  * Copyright (C) 2018 AstroSoft
  *               Alexey Spirkov <alexeis@astrosoft.ru>

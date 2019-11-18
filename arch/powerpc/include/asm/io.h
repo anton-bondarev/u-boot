@@ -22,7 +22,7 @@
 
 #define readb(addr) in_8((volatile u8 *)(addr))
 #define writeb(b,addr) out_8((volatile u8 *)(addr), (b))
-#if !defined(__BIG_ENDIAN) || defined(CONFIG_MPW7705)
+#if !defined(__BIG_ENDIAN) || defined(CONFIG_1888TX018)
 #define readw(addr) (*(volatile u16 *) (addr))
 #define readl(addr) (*(volatile u32 *) (addr))
 #define writew(b,addr) ((*(volatile u16 *) (addr)) = (b))
@@ -68,7 +68,7 @@
 #define inl_p(port)     in_le32((u32 *)((port)+_IO_BASE))
 #define outl_p(val, port)   out_le32((u32 *)((port)+_IO_BASE), (val))
 
-#ifndef CONFIG_MPW7705
+#ifndef CONFIG_1888TX018
 extern void _insb(volatile u8 *port, void *buf, int ns);
 extern void _outsb(volatile u8 *port, const void *buf, int ns);
 extern void _insw_ns(volatile u16 *port, void *buf, int ns);

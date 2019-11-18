@@ -177,7 +177,7 @@ config GRETH_ETH
 	bool "Gaisler Ethernet controller"
 	help
 	  This driver supports the 10/100/1000 Fast Ethernet controller for
-	  MPW RC-Module processors.
+	  1888TX018 RCM processors.
 
 
 config FTMAC100

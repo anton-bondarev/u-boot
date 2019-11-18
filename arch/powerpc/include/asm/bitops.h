@@ -21,7 +21,7 @@
 #define SMP_MB
 #endif /* CONFIG_SMP */
 
-#ifndef CONFIG_MPW7705
+#ifndef CONFIG_1888TX018
 #define __INLINE_BITOPS	1
 #endif
 

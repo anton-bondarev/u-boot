@@ -3,7 +3,7 @@
 #include <usb.h>
 #include <dm.h>
 #include "ddr_spd.h"
-#include "rcmodule_dimm_params.h"
+#include "rcm_dimm_params.h"
 #include <fdt_support.h>
 #include <environment.h>
 
@@ -30,7 +30,7 @@ int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 }
 
 int get_ddr3_spd_bypath(const char *spdpath, ddr3_spd_eeprom_t *spd);
-unsigned int rcmodule_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
+unsigned int rcm_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
 											  dimm_params_t *pdimm,
 											  unsigned int dimm_number);
 
@@ -79,10 +79,10 @@ phys_size_t get_physical_mem_size(void)
 	ddr3_spd_eeprom_t spd;
 
 	if (!get_ddr3_spd_bypath("spd0-path", &spd))
-		dimm0_params_invalid = rcmodule_compute_dimm_parameters(&spd, &dpar0, 0);
+		dimm0_params_invalid = rcm_compute_dimm_parameters(&spd, &dpar0, 0);
 
 	if (!get_ddr3_spd_bypath("spd1-path", &spd))
-		dimm1_params_invalid = rcmodule_compute_dimm_parameters(&spd, &dpar1, 1);
+		dimm1_params_invalid = rcm_compute_dimm_parameters(&spd, &dpar1, 1);
 
 	if (!dimm0_params_invalid)
 	{

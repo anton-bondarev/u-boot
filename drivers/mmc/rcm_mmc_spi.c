@@ -1,5 +1,5 @@
 /*
- * generic mmc spi driver adapted to mpw7705
+ * generic mmc spi driver adapted to RCM 1888TX018
  *
  * Copyright (C) 2010 Thomas Chou <thomas@wytron.com.tw>
  * Licensed under the GPL-2 or later.
@@ -25,7 +25,7 @@
 #include <asm/io.h>
 #include <asm/gpio.h>
 
-struct mpw7705_mmc_platdata {
+struct rcm_mmc_platdata {
 	struct mmc_config cfg;
 	struct mmc mmc;
 	uint32_t regbase;
@@ -269,16 +269,16 @@ static int mmc_spi_set_ios(struct mmc *mmc)
 	return 0;
 }
 
-static int mpw7705_dm_mmc_set_ios(struct udevice *dev)
+static int rcm_dm_mmc_set_ios(struct udevice *dev)
 {
-//	debug(">mpw7705_dm_mmc_set_ios\n");
-	struct mpw7705_mmc_platdata * pdata = dev_get_platdata(dev);
+//	debug(">rcm_dm_mmc_set_ios\n");
+	struct rcm_mmc_platdata * pdata = dev_get_platdata(dev);
 	return mmc_spi_set_ios(&pdata->mmc);
 }
 
 static bool check_sd_card_present(struct udevice *dev)
 {
-	struct mpw7705_mmc_platdata * pdata = dev_get_platdata(dev);
+	struct rcm_mmc_platdata * pdata = dev_get_platdata(dev);
 
 	bool carddetected = dm_gpio_get_value(&pdata->card_detect) == 0;
 	debug("check_sd_card_present: %d\n", carddetected);
@@ -286,11 +286,11 @@ static bool check_sd_card_present(struct udevice *dev)
 	return carddetected;
 }
 
-static int mpw7705_mmc_probe(struct udevice *dev)
+static int rcm_mmc_probe(struct udevice *dev)
 {
-	debug(">mpw7705_mmc_probe\n");
+	debug(">rcm_mmc_probe\n");
 	
-	struct mpw7705_mmc_platdata * pdata = dev_get_platdata(dev);
+	struct rcm_mmc_platdata * pdata = dev_get_platdata(dev);
 	struct mmc_uclass_priv * upriv = dev_get_uclass_priv(dev);
 	struct mmc * mmc = & pdata->mmc;
 	struct mmc_config * cfg = & pdata->cfg;
@@ -336,19 +336,19 @@ static int mpw7705_mmc_probe(struct udevice *dev)
 	return 0;
 }
 
-static int mpw7705_mmc_bind(struct udevice *dev)
+static int rcm_mmc_bind(struct udevice *dev)
 {
-	debug(">mpw7705_mmc_bind\n");
+	debug(">rcm_mmc_bind\n");
 	
-	struct mpw7705_mmc_platdata * pdata = dev_get_platdata(dev);
+	struct rcm_mmc_platdata * pdata = dev_get_platdata(dev);
 	return mmc_bind(dev, & pdata->mmc, & pdata->cfg);
 }
 
 
-static int mpw7705_mmc_ofdata_to_platdata(struct udevice *dev)
+static int rcm_mmc_ofdata_to_platdata(struct udevice *dev)
 {
-	debug(">mpw7705_mmc_ofdata_to_platdata\n");
-	struct mpw7705_mmc_platdata * pdata = dev_get_platdata(dev);
+	debug(">rcm_mmc_ofdata_to_platdata\n");
+	struct rcm_mmc_platdata * pdata = dev_get_platdata(dev);
 
 	fdt_addr_t sdio_addr = devfdt_get_addr(dev);
 
@@ -359,25 +359,25 @@ static int mpw7705_mmc_ofdata_to_platdata(struct udevice *dev)
 	return 0;
 }
 
-static const struct udevice_id mpw7705_mmc_match[] = {
-	{ .compatible = "rc-module,mmc-spi-0.2" },
+static const struct udevice_id rcm_mmc_match[] = {
+	{ .compatible = "rcm,mmc-spi-0.2" },
 	{ }
 };
 
-static const struct dm_mmc_ops mpw7705_dm_mmc_ops = {
+static const struct dm_mmc_ops rcm_dm_mmc_ops = {
 	.send_cmd = mmc_spi_request,
-	.set_ios = mpw7705_dm_mmc_set_ios,
+	.set_ios = rcm_dm_mmc_set_ios,
 };
 
-U_BOOT_DRIVER(mpw7705_mmc_drv_spi) = {
-	.name = "mpw7705_mmc_spi_drv",
+U_BOOT_DRIVER(rcm_mmc_drv_spi) = {
+	.name = "rcm_mmc_spi_drv",
 	.id = UCLASS_MMC,
-	.of_match = mpw7705_mmc_match,
-	.ops = & mpw7705_dm_mmc_ops,
-	.probe = mpw7705_mmc_probe,
-	.bind = mpw7705_mmc_bind,
-	.ofdata_to_platdata = mpw7705_mmc_ofdata_to_platdata,
-	.platdata_auto_alloc_size = sizeof(struct mpw7705_mmc_platdata),
+	.of_match = rcm_mmc_match,
+	.ops = & rcm_dm_mmc_ops,
+	.probe = rcm_mmc_probe,
+	.bind = rcm_mmc_bind,
+	.ofdata_to_platdata = rcm_mmc_ofdata_to_platdata,
+	.platdata_auto_alloc_size = sizeof(struct rcm_mmc_platdata),
 	.priv_auto_alloc_size = 1000
 };
 
