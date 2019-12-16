@@ -9,6 +9,9 @@
 #define CRG_DDR_RST_EN              0x018
 #define CRG_DDR_UPD_CK              0x01C
 #define CRG_DDR_CKALIGN             0x020
+#define CRG_DDR_PLL_PRDIV           0x030
+#define CRG_DDR_PLL_FBDIV           0x034
+#define CRG_DDR_PLL_PSDIV           0x038
 
 #define CRG_DDR_CKDIVMODE_LSIF      0x100
 #define CRG_DDR_CKEN_LSIF           0x104
@@ -28,6 +31,22 @@
 #define SCTL_PLL_STATE                        0x004
 
 REG_READ(crg_ddr, CRG_DDR_PLL_STATE, 32)
+
+
+REG_READ(crg_ddr, CRG_DDR_PLL_FBDIV, 32)
+REG_WRITE(crg_ddr, CRG_DDR_PLL_FBDIV, 32)
+REG_SET(crg_ddr, CRG_DDR_PLL_FBDIV, 32)
+REG_CLEAR(crg_ddr, CRG_DDR_PLL_FBDIV, 32)
+
+REG_READ(crg_ddr, CRG_DDR_PLL_PRDIV, 32)
+REG_WRITE(crg_ddr, CRG_DDR_PLL_PRDIV, 32)
+REG_SET(crg_ddr, CRG_DDR_PLL_PRDIV, 32)
+REG_CLEAR(crg_ddr, CRG_DDR_PLL_PRDIV, 32)
+
+REG_READ(crg_ddr, CRG_DDR_PLL_PSDIV, 32)
+REG_WRITE(crg_ddr, CRG_DDR_PLL_PSDIV, 32)
+REG_SET(crg_ddr, CRG_DDR_PLL_PSDIV, 32)
+REG_CLEAR(crg_ddr, CRG_DDR_PLL_PSDIV, 32)
 
 REG_READ(crg_ddr, CRG_DDR_PLL_CTRL, 32)
 REG_WRITE(crg_ddr, CRG_DDR_PLL_CTRL, 32)

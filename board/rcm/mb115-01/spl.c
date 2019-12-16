@@ -42,13 +42,13 @@ u32 spl_boot_device(void)
 bool is_ddr_ok(void)
 {
 	int i;
-	_test_addr = (unsigned int*)0x40000000; 
+	_test_addr = (unsigned int*)0x4D000000; 
 
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < 256; i++)
 		_test_addr[i] = (unsigned int) &_test_addr[i];
 	printf("DDR test...");
 
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < 256; i++)
 	{
 		if(_test_addr[i] != (unsigned int) &_test_addr[i])
 		{
@@ -56,7 +56,7 @@ bool is_ddr_ok(void)
 			break;
 		}
 	}
-	if(i == 16)
+	if(i == 256)
 	{
 		printf(" OK.\n");
 		return 1;
@@ -74,19 +74,9 @@ void spl_board_init(void)
 
 	if(!is_ddr_ok())
 	{
-		printf("Try to slow down DDR\n");
-
-		ddr_init(1);
-		if(!is_ddr_ok())
-		{
-			printf("Try to use fixed params for DDR\n");
-			ddr_init(2);
-			if(!is_ddr_ok())
-			{
-				usleep(1000);
-				do_reset(0,0,0,0);
-			}
-		}
+		printf("Error in DDR resetting...\n");
+		usleep(1000);
+		do_reset(0,0,0,0);
 	}
 	gd->ram_size = CONFIG_SYS_DDR_SIZE;
 

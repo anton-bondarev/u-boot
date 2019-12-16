@@ -447,15 +447,26 @@ static void ddr_set_config_from_spd(int slowdown, int dimm0_invalid, int dimm1_i
     ddr_config.T_ADDR_MODE = getAddrMode(dpar->n_col_addr);
 
     ddr_config.T_MOD =      12;	    //MRS command update delay (in DDR clock cycles) // SDTR4, T_MOD = tMOD/tCKtCK   
-    ddr_config.AL_PHY =     ddr_config.CL_PHY-1;
-    ddr_config.AL_MC =      0b01;
-    ddr_config.AL_CHIP =    0b01;
+    ddr_config.AL_PHY =     ddr_config.CL_PHY-2;
+    ddr_config.AL_MC =      getCL(ddr_config.AL_PHY)-3;
+    ddr_config.AL_CHIP =    ddr_config.AL_MC;
 
     ddr_config.CWL_PHY = getCWLMicron(ddr_config.CL_PHY);       //? to check
-    ddr_config.CWL_CHIP = getCL(ddr_config.CWL_PHY) - 1;
-    ddr_config.CWL_MC = ddr_config.CWL_CHIP - 1;
-    ddr_config.T_RDDATA_EN_BC4 = ddr_config.CL_PHY + ddr_config.AL_PHY - 3 ;	//? // RL-3 = CL + AL - 3
-    ddr_config.T_RDDATA_EN_BL8 = ddr_config.T_RDDATA_EN_BC4;	//? to check
+
+    // temporary workaround for memory CWLs
+    if(!strncmp("CT",dpar->mpart, 2 ))
+    {
+        ddr_config.CWL_CHIP = getCL(ddr_config.CWL_PHY) -1;   // crucial
+        ddr_config.CWL_MC = ddr_config.CWL_CHIP -1;           // crucial
+    }
+    else
+    {
+        ddr_config.CWL_CHIP = getCL(ddr_config.CWL_PHY);        // kingston transcend
+        ddr_config.CWL_MC = ddr_config.CWL_CHIP;                // kingston transcend
+    }
+
+    ddr_config.T_RDDATA_EN_BC4 = ddr_config.CL_PHY + ddr_config.AL_PHY - 2 ;	//? // RL-3 = CL + AL - 3
+    ddr_config.T_RDDATA_EN_BL8 = ddr_config.T_RDDATA_EN_BC4 - 2;	//? to check
 
 }
 
@@ -477,6 +488,7 @@ static void dump_ddr_config()
     printf("uint32_t T_REFI =           %d\n", ddr_config.T_REFI);
     printf("uint32_t T_RFC_XPR =        %d\n", ddr_config.T_RFC_XPR);
     printf("uint32_t T_RCD =            %d\n", ddr_config.T_RCD);
+    printf("uint32_t T_RRD =            %d\n", ddr_config.T_RRD);
     printf("uint32_t T_RP =             %d\n", ddr_config.T_RP);
     printf("uint32_t T_RC =             %d\n", ddr_config.T_RC);
     printf("uint32_t T_RAS =            %d\n", ddr_config.T_RAS);
@@ -1078,7 +1090,7 @@ void sdram_write_leveling_cs1_off (const uint32_t baseAddr)
 
 void sdram_phy_write_leveling_mode_on (const uint32_t baseAddr)
 {
-    iowrite32 (0x4A, baseAddr + 0x014);
+    iowrite32 (0x0E, baseAddr + 0x014); // !!!Changed
     iowrite32 (0x40, baseAddr + 0x018);
 }
 
@@ -1161,11 +1173,11 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     ddr34lmc_dcr_write_DDR34LMC_PHYCNTL(baseAddr, 0);
 
     //Init ODTR0 - ODTR3
-    ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x02000000);	//#ev - ODT write rank 0 enable 
-	//ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x00000000);
+    //ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x02000000);	//#ev - ODT write rank 0 enable 
+	ddr34lmc_dcr_write_DDR34LMC_ODTR0(baseAddr, 0x00000000);
 
-    ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x08000000);
-	//ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x00000000);
+    //ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x08000000);
+	ddr34lmc_dcr_write_DDR34LMC_ODTR1(baseAddr, 0x00000000);
 
     ddr34lmc_dcr_write_DDR34LMC_ODTR2(baseAddr, 0);
 
@@ -1179,7 +1191,7 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     ddr34lmc_dcr_write_DDR34LMC_CFGR1(baseAddr,	//#ev - RANK_ENABLE 1->0
 //                    ROW_WIDTH                 ADDR_MODE                               MIRROR              RANK_ENABLE
         //reg_field(19, ddr_config.T_ROW_WIDTH) | reg_field(23, ddr_config.T_ADDR_MODE) | reg_field(27, 0b0) | reg_field(31, 0b1));
-		 reg_field(31, 0b0));
+		reg_field(31, 0b0));
 
     ddr34lmc_dcr_write_DDR34LMC_CFGR2(baseAddr,
 //     RANK_ENABLE
@@ -1989,20 +2001,21 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.CL_CHIP =    0b111;
 
         ddr_config.CWL_PHY =    8;
-        ddr_config.CWL_MC =     0b011;
-        ddr_config.CWL_CHIP =   0b011;
+        ddr_config.CWL_MC =     0b100;
+        ddr_config.CWL_CHIP =   0b100;
 
         ddr_config.AL_PHY =     9;
         ddr_config.AL_MC =      0b10;
         ddr_config.AL_CHIP =    0b10;
 
         ddr_config.WR =         0b110;
-        ddr_config.T_REFI =     779;
-        ddr_config.T_RFC_XPR =  108;
+        ddr_config.T_REFI =     3120;
+        ddr_config.T_RFC_XPR =  128;
         ddr_config.T_RCD =      0b1111;
-        ddr_config.T_RP =       0b1111;
-        ddr_config.T_RC =       46;
-        ddr_config.T_RAS =      36;
+        ddr_config.T_RP =       0b1010;
+        ddr_config.T_RC =       38;
+        ddr_config.T_RAS =      28;
+        ddr_config.T_RRD =      6;
         ddr_config.T_WTR =      0b0111;
         ddr_config.T_RTP =      0b0111;
         ddr_config.T_XSDLL =    32;
@@ -2020,7 +2033,7 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.CL_CHIP =    0b101;	//001-5 010-6 011-7 100-8 101-9 110-10 111-11
 
         ddr_config.CWL_PHY =    7;
-        ddr_config.CWL_MC =     0b010;
+        ddr_config.CWL_MC =     0b001;
         ddr_config.CWL_CHIP =   0b010;	//000-5 001-6 010-7 011-8
 
         ddr_config.AL_PHY =     8;
@@ -2028,16 +2041,17 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.AL_CHIP =    0b01;	//CL-1 
 
         ddr_config.WR =         0b101; //10
-        ddr_config.T_REFI =     649;	//refresh interval (in cycles core clock)
+        ddr_config.T_REFI =     7999;	//refresh interval (in cycles core clock)
         ddr_config.T_RFC_XPR =  90;	//tRFC - Refresh to ACT or REF
-        ddr_config.T_RCD =      0b1111;	//ACTIVATE to READ/WRITE (in DDR clock cycles)
-        ddr_config.T_RP =       0b1111;	//PRECHARGE to ACTIVATE (in DDR clock cycles)
-        ddr_config.T_RC =       40;	//ACIVATE to ACIVATE (in DDR clock cycles)
-        ddr_config.T_RAS =      30;	 //ACTIVATE to PRECHARGE (in DDR clock cycles)
-        ddr_config.T_WTR =      0b0111;	//delay from start of internal write transaction to internal read command(in DDR clock cycles)
-        ddr_config.T_RTP =      0b0111;	//internal read command to precharge delay(in DDR clock cycles)
+        ddr_config.T_RCD =      0b1110;	//ACTIVATE to READ/WRITE (in DDR clock cycles)
+        ddr_config.T_RP =       0b1110;	//PRECHARGE to ACTIVATE (in DDR clock cycles)
+        ddr_config.T_RC =       33;	//ACIVATE to ACIVATE (in DDR clock cycles)
+        ddr_config.T_RAS =      24;	 //ACTIVATE to PRECHARGE (in DDR clock cycles)
+        ddr_config.T_RRD =      5;
+        ddr_config.T_WTR =      0b0101;	//delay from start of internal write transaction to internal read command(in DDR clock cycles)
+        ddr_config.T_RTP =      0b0101;	//internal read command to precharge delay(in DDR clock cycles)
         ddr_config.T_XSDLL =    32;	//exit self refresh and DLL lock delay (in x16 clocks)
-        ddr_config.T_MOD =      10;	//MRS command update delay (in DDR clock cycles)
+        ddr_config.T_MOD =      12;	//MRS command update delay (in DDR clock cycles)
     }
 
     if (FreqMode == DDR3_1066)
@@ -2065,10 +2079,11 @@ static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
         ddr_config.T_RP =       0b1110;
         ddr_config.T_RC =       30;
         ddr_config.T_RAS =      22;
+        ddr_config.T_RRD =      4;
         ddr_config.T_WTR =      0b0100; //4
         ddr_config.T_RTP =      0b0100;
         ddr_config.T_XSDLL =    32; //dfi_clk_1x = 3750
-        ddr_config.T_MOD =      8;
+        ddr_config.T_MOD =      12;
     }
     /*
     if (FreqMode == DDR3_800)
@@ -2343,10 +2358,33 @@ void ddr_disable_dram_clk(DdrHlbId hlbId)
 void crg_ddr_config_freq (uint32_t phy_base_addr, DdrBurstLength burstLength)
 {
     uint32_t reg;
+    uint32_t i = 0, timeout = 1000;
+
     crg_remove_writelock();
-    //crg_ddr_write_CRG_DDR_PLL_PRDIV (CRG_DDR_BASE, 0x01);
-    //crg_ddr_write_CRG_DDR_PLL_FBDIV (CRG_DDR_BASE, 0x40);
-    //crg_ddr_write_CRG_DDR_PLL_PSDIV (CRG_DDR_BASE, 0x01);
+
+/*
+    crg_ddr_write_CRG_DDR_PLL_PRDIV (CRG_DDR_BASE, 0x01);
+    crg_ddr_write_CRG_DDR_PLL_FBDIV (CRG_DDR_BASE, 0x40);
+    crg_ddr_write_CRG_DDR_PLL_PSDIV (CRG_DDR_BASE, 0x01);
+    crg_ddr_write_CRG_DDR_PLL_CTRL (CRG_DDR_BASE, 1);
+
+    reg = crg_ddr_read_CRG_DDR_PLL_CTRL(CRG_DDR_BASE); // waiting dividers update
+    while ((reg & (1<<0)) && (i < timeout)) {
+        reg = crg_ddr_read_CRG_DDR_PLL_CTRL(CRG_DDR_BASE);
+        i++;
+    };
+    printf("PLL reset %d\n", timeout);
+
+    timeout = 1000;
+    reg = crg_ddr_read_CRG_DDR_PLL_STATE(CRG_DDR_BASE); 
+    while (!(reg & (1<<0)) && (i < timeout)) {
+        reg = crg_ddr_read_CRG_DDR_PLL_STATE(CRG_DDR_BASE);
+        i++;
+    };
+    printf("PLL wait %d\n", timeout);
+
+    crg_remove_writelock();
+*/
     switch (DDR_FREQ)
     {
       case DDR3_800:

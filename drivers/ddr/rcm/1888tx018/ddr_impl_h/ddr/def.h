@@ -80,6 +80,6 @@ DECLARE_ENUM_VAL( DDR3_800,                           0b00 )
 DECLARE_ENUM_VAL( DDR3_1066,                          0b01 )
 DECLARE_ENUM_VAL( DDR3_1333,                          0b10 )
 DECLARE_ENUM_VAL( DDR3_1600,                          0b11 )
-DECLARE_ENUM_VAL( DDR3_DEFAULT,                       DDR3_1066 )
+DECLARE_ENUM_VAL( DDR3_DEFAULT,                       DDR3_1600 )
 END_ENUM( CrgDdrFreq )
 #endif // __DDR_DEF_H__
