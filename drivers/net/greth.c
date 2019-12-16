@@ -710,13 +710,13 @@ static const struct eth_ops greth_ops = {
         .start        = greth_init,
         .send         = greth_send,
         .recv         = greth_recv,
-	.free_pkt     = greth_free_pkt,
+		.free_pkt     = greth_free_pkt,
         .stop         = greth_halt,
         .write_hwaddr = greth_set_hwaddr,
 };
 
 static const struct udevice_id greth_ids[] = {
-        { .compatible = "rc-module,greth" },
+        { .compatible = "rcm,greth" },
         { }
 };
 

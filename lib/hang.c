@@ -6,7 +6,7 @@
  * This file consolidates all the different hang() functions implemented in
  * u-boot.
  */
-#define DEBUG_MPW7705 1
+#define DEBUG_1888TX018 1
 
 #include <common.h>
 #include <bootstage.h>

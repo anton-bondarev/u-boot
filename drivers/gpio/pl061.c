@@ -153,7 +153,7 @@ static const struct dm_gpio_ops pl061_ops = {
 };
 
 static const struct udevice_id pl061_ids[] = {
-	{ .compatible = "rc-module,pl061" },
+	{ .compatible = "rcm,pl061" },
 	{ }
 };
 

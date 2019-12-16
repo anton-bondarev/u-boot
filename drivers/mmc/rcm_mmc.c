@@ -33,7 +33,7 @@
 #ifdef DEBUG 
 	#define Debug(...)  debug(__VA_ARGS__)
 #else
-	#define Debug(...)  delay_loop(1500)
+	#define Debug(...)  delay_loop(3000)
 #endif	
 
 DECLARE_GLOBAL_DATA_PTR;

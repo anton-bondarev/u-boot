@@ -303,7 +303,7 @@ int get_ddr3_spd_bypath(const char * spdpath, ddr3_spd_eeprom_t* spd)
 
                 if(dm_i2c_read(devp, 0, (uint8_t*)spd, sizeof(ddr3_spd_eeprom_t)))
                 {
-                    printf("Unable to read SPD\n");
+                    debug("Unable to read SPD\n");
                     return -EIO;
                 }
 #ifdef SPD_DEBUG
