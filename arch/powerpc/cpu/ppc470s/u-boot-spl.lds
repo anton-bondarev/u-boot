@@ -6,7 +6,7 @@ SECTIONS
     . = CONFIG_SPL_TEXT_BASE;
     .text :
     {
-       LONG(0xbeefc0de);                              /* magic */
+       LONG(0xdeadc0de);                              /* magic */
        LONG(0);                                       /* length filled by rumboot-packimage */
        LONG(_start);                                  /* entry 0 */
        LONG(_start_secondary);                        /* entry 1 */
