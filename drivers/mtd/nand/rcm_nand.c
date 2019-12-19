@@ -512,9 +512,9 @@ static void rcm_nand_set_timing( struct rcm_nand_chip* chip, uint32_t offset, co
         }
         rcm_nand_set( chip, offset, timing_reg_wr );
         timing_reg_rd = rcm_nand_get( chip, offset );
-        NAND_DBG_PRINT_INF( "rcm_nand_set_timing: reg=%02x,wr=%08x,rd=%08x(%u,%u,%u,%u)\n",
-                            offset, timing_reg_wr, timing_reg_rd,
-                            (timing_reg_rd>>24)&0xff, (timing_reg_rd>>16)&0xff, (timing_reg_rd>>8)&0xff, (timing_reg_rd>>0)&0xff )
+        //NAND_DBG_PRINT_INF( "rcm_nand_set_timing: reg=%02x,wr=%08x,rd=%08x(%u,%u,%u,%u)\n",
+        //                    offset, timing_reg_wr, timing_reg_rd,
+        //                    (timing_reg_rd>>24)&0xff, (timing_reg_rd>>16)&0xff, (timing_reg_rd>>8)&0xff, (timing_reg_rd>>0)&0xff )
 }
 
 static void rcm_nand_set_timings( struct rcm_nand_chip* chip, uint32_t* timings, uint32_t freq ) {
@@ -536,7 +536,7 @@ static int rcm_nand_hw_init( struct rcm_nand_chip* chip, uint32_t* timings, uint
 
         chip->ctrl_id = rcm_nand_get( chip, NAND_REG_id );
         chip->ctrl_ver = rcm_nand_get( chip, NAND_REG_version );   // 0x000008B4
-        NAND_DBG_PRINT_INF( "rcm_nand_init: id=%08x,version=%08x,ecc mode=%d\n", chip->ctrl_id, chip->ctrl_ver, NAND_ECC_MODE )
+        //NAND_DBG_PRINT_INF( "rcm_nand_init: id=%08x,version=%08x,ecc mode=%d\n", chip->ctrl_id, chip->ctrl_ver, NAND_ECC_MODE )
 
         if( chip->ctrl_id != RCM_NAND_CTRL_ID )
                 return -ENXIO;
@@ -860,7 +860,7 @@ static int rcm_nand_read_id( struct rcm_nand_chip* chip, int cs ) {
         chip->chip_size[cs] = (uint64_t) type->chipsize << 20;
         //chip->mtd.ecc_strength = type->ecc.strength_ds;
         //chip->mtd.ecc_step_size = type->ecc.step_ds;
-
+/*
         NAND_DBG_PRINT_INF( "rcm_nand_read_id: %s,CS=%d,%s,chipsize=%u,size=%llu,writesize=%u,oobsize=%u,erasesize=%u\n", 
                             chip->mtd.name,
                             cs,
@@ -870,7 +870,7 @@ static int rcm_nand_read_id( struct rcm_nand_chip* chip, int cs ) {
                             chip->mtd.writesize,                        // размер страницы в байтах
                             chip->mtd.oobsize,                          // размер дополнительной области в байтах
                             chip->mtd.erasesize )                       // размер блока в байтах (число страниц в блоке * размер страницы)
-
+*/
         //NAND_DBG_PRINT_INF( "rcm_nand_read_id: ecc_strength=%u,ecc_step_size=%u\n",
         //                    chip->mtd.ecc_strength,
         //                    chip->mtd.ecc_step_size )
@@ -1132,8 +1132,6 @@ static int rcm_nand_read( struct mtd_info* mtd, loff_t off, size_t len, size_t* 
 }
 
 static int rcm_nand_lsif0_config( const struct device_node *of_node ) {
-    	//struct regmap* lsif0_config;
-        //int ret;
         void* lsif0_io;
 #ifndef __UBOOT__
         struct device_node* tmp_of_node;
@@ -1142,20 +1140,6 @@ static int rcm_nand_lsif0_config( const struct device_node *of_node ) {
                 NAND_DBG_PRINT_ERR( "of_parse_phandle(config): error\n" )
                 return -ENOENT;
         }
-        //lsif0_config = syscon_node_to_regmap( tmp_of_node );
-        //if( ( ret = regmap_write( lsif0_config, NAND_RADDR_EXTEND, 1 ) ) != 0 ) {
-        //        NAND_DBG_PRINT_ERR( "regmap_write(NAND_RADDR_EXTEND): error %d\n", ret )
-        //        return ret;
-        //}
-
-        //if( ( ret = regmap_write( lsif0_config, NAND_WADDR_EXTEND, 1 ) ) != 0 ) {
-        //        NAND_DBG_PRINT_ERR( "regmap_write(NAND_WADDR_EXTEND): error %d\n", ret )
-        //        return ret;
-        //}
-        //if( ( lsif0_io = of_iomap( tmp_of_node, 0 ) ) == NULL ) {
-        //        NAND_DBG_PRINT_ERR( "of_iomap(config): error\n" )
-        //        return -EIO;
-        //}
         if( of_address_to_resource( tmp_of_node, 0, &res ) != 0 ) {
 		NAND_DBG_PRINT_ERR( "of_address_to_resource(config): error\n" )
                 return -ENODEV;
@@ -1171,12 +1155,7 @@ static int rcm_nand_lsif0_config( const struct device_node *of_node ) {
                 NAND_DBG_PRINT_ERR( "of_property_read_u32_array: config-reg read error\n" )
                 return ret;
         }
-        //if( ( lsif0_io = ioremap( config_reg[0], config_reg[1] ) ) == NULL ) {
-        //        NAND_DBG_PRINT_ERR( "ioremap(config): error\n" )
-	//	return -ENOMEM;
-        //}
         lsif0_io = (void*)config_reg[0];
-        NAND_DBG_PRINT_INF( "lsif0_io=%p\n", lsif0_io )
         IOWRITE32( 0x00000001, lsif0_io + EXT_MEM_MUX_MODE );
 #endif
         IOWRITE32( 0x00000001, lsif0_io + NAND_RADDR_EXTEND );
@@ -1243,8 +1222,6 @@ static int rcm_nand_probe( rcm_nand_device* ofdev ) {
 #else // __UBOOT__
         uint32_t reg[2];
 
-        NAND_DBG_PRINT_INF( "%s\n", DRIVER_NAME );
-
         of_node = (struct device_node*)ofnode_to_np( ofdev->node );
 
         chip = (struct rcm_nand_chip*)calloc( 1, sizeof( struct rcm_nand_chip ) );
@@ -1254,11 +1231,6 @@ static int rcm_nand_probe( rcm_nand_device* ofdev ) {
 #endif // __UBOOT__
         chip->dev = ofdev;
 
-        //chip->io = of_iomap( of_node, 0 );
-        //if( !chip->io ) {
-        //        dev_err( &ofdev->dev, "of_iomap: failed\n" );
-        //        return -EIO;
-        //}
 #ifndef __UBOOT__
         if( of_address_to_resource( of_node, 0, &res ) != 0 ) {
 		dev_err( &ofdev->dev, "of_address_to_resource: failed\n" );
@@ -1273,12 +1245,7 @@ static int rcm_nand_probe( rcm_nand_device* ofdev ) {
                 NAND_DBG_PRINT_ERR( "of_property_read_u32_array: reg read error\n" )
                 return err;
         }
-        //if( ( chip->io = ioremap( reg[0], reg[1] ) ) == NULL ) {
-        //        dev_err( &ofdev->dev, "ioremap: error\n" );
-	//	return -ENOMEM;
-        //}
         chip->io = (void*)reg[0];
-        NAND_DBG_PRINT_INF( "chip->io=%p\n", chip->io )
 #endif
         if( ( err = rcm_nand_lsif0_config( of_node ) ) != 0 ) {
                 dev_err( &ofdev->dev, "lsif0 config: failed\n" );
@@ -1436,7 +1403,7 @@ U_BOOT_DRIVER(rcm_nand) = {
 };
 
 void board_nand_init( void ) {
-        NAND_DBG_PRINT_INF( "%s\n", __FUNCTION__ );
+        //NAND_DBG_PRINT_INF( "%s\n", __FUNCTION__ );
         struct udevice *dev;
         int ret;
 
