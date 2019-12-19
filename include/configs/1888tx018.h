@@ -146,4 +146,46 @@
 
 #define CONFIG_SPD_EEPROM
 
+#define CONFIG_MTD_PARTITIONS
+#define CONFIG_SYS_MAX_NAND_DEVICE 1
+#define CONFIG_SYS_NAND_MAX_CHIPS 8
+
+#define CONFIG_SYS_NAND_BASE 0x3C032000 /*???????????????????????????*/
+
+#define CONFIG_CMD_UBIFS
+
+#ifndef CONFIG_NAND
+#define CONFIG_NAND 
+#endif
+
+#ifndef CONFIG_CMD_NAND
+#define CONFIG_CMD_NAND
+#endif
+
+#ifndef CONFIG_CMD_UBI
+#define CONFIG_CMD_UBI
+#endif
+
+#ifndef CONFIG_RBTREE
+#define CONFIG_RBTREE
+#endif
+
+#define CONFIG_MTD_DEVICE
+#define CONFIG_MTD_PARTITIONS
+
+#ifndef CONFIG_CMD_MTDPARTS
+#define CONFIG_CMD_MTDPARTS
+#endif
+
+#ifndef CONFIG_LZO
+#define CONFIG_LZO
+#endif
+
+#define CONFIG_MTD_UBI_WL_THRESHOLD 4096
+#define CONFIG_MTD_UBI_BEB_LIMIT 20
+
+/*#define CONFIG_MTD_RCM_NAND*/
+/*#define CONFIG_OF_LIVE*/
+#define CONFIG_SYS_NAND_SELF_INIT
+
 #endif /* __1888TX018_H */

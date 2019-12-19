@@ -121,4 +121,24 @@
 #define GBETH0_MDC              PINMUX_HW_PIN(LSIF0, mGPIO5, 6)
 #define GBETH0_MDIO             PINMUX_HW_PIN(LSIF0, mGPIO5, 7)
 
+#define NAND_D0                 PINMUX_HW_PIN(LSIF0, mGPIO3, 0)
+#define NAND_D1                 PINMUX_HW_PIN(LSIF0, mGPIO3, 1)
+#define NAND_D2                 PINMUX_HW_PIN(LSIF0, mGPIO3, 2)
+#define NAND_D3                 PINMUX_HW_PIN(LSIF0, mGPIO3, 3)
+#define NAND_D4                 PINMUX_HW_PIN(LSIF0, mGPIO3, 4)
+#define NAND_D5                 PINMUX_HW_PIN(LSIF0, mGPIO3, 5)
+#define NAND_D6                 PINMUX_HW_PIN(LSIF0, mGPIO3, 6)
+#define NAND_D7                 PINMUX_HW_PIN(LSIF0, mGPIO3, 7)
+
+#define NAND_READY1N            PINMUX_HW_PIN(LSIF0, mGPIO4, 0)
+#define NAND_READY2N            PINMUX_HW_PIN(LSIF0, mGPIO4, 1)
+
+#define NAND_REN                PINMUX_HW_PIN(LSIF0, mGPIO7, 4)
+#define NAND_CLE                PINMUX_HW_PIN(LSIF0, mGPIO7, 5)
+#define NAND_CE2N               PINMUX_HW_PIN(LSIF0, mGPIO7, 6)
+#define NAND_CE1N               PINMUX_HW_PIN(LSIF0, mGPIO7, 7)
+
+#define NAND_ALE                PINMUX_HW_PIN(LSIF0, mGPIO8, 0)
+#define NAND_WEN                PINMUX_HW_PIN(LSIF0, mGPIO8, 1)
+#define NAND_WPN                PINMUX_HW_PIN(LSIF0, mGPIO8, 7)
 

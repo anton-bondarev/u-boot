@@ -260,4 +260,10 @@ config SPL_NAND_SIMPLE
 	  expose the cmd_ctrl() interface.
 endif
 
+config MTD_RCM_NAND
+    bool "RC-Module SoC NAND support"
+    depends on TARGET_1888TX018
+    help
+        Support for NAND flash boot attached to the 1888TX018 SoC's
+
 endif   # if NAND

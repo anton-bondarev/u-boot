@@ -2,7 +2,8 @@
 #include "1888tx018-pinfunc.h"
 
 /dts-v1/;
-/ {
+/
+	{
 	compatible = "rcm,1888tx018";
 	#address-cells = <1>;
 	#size-cells = <1>;
@@ -23,7 +24,7 @@
 		uart0 = &uart0;
 		spd0 = &spd0;
 		spd1 = &spd1;
-	}; 
+	};
 
 	lsif0 {
 	    u-boot,dm-pre-reloc;
@@ -33,7 +34,6 @@
 
 		#address-cells = <1>;
 		#size-cells = <1>;
-
 
 		mgpio0: mgpio0@0x3C040000 {
 		    compatible = "rcm,pl061";
@@ -56,11 +56,11 @@
 			};
 		};
 
-		mgpio1: mgpio1@0x3C050000 {
+		mgpio1: mgpio1@0x3C041000 {
 		    compatible = "rcm,pl061";
 		    #address-cells = <1>;
 		    #size-cells = <0>;
-		    reg = <0x3C050000 0x1000>;
+		    reg = <0x3C041000 0x1000>;
 			pinctrl {
 					compatible = "rcm,pl061-pinctrl";
 					
@@ -73,11 +73,32 @@
 			};
 		};
 
-		mgpio4: mgpio4@0x3C080000 {
+		mgpio3: mgpio3@0x3C043000 {
+			compatible = "rcm,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x3C043000 0x1000>;
+			pinctrl {
+					compatible = "rcm,pl061-pinctrl";
+					
+					pinctrl_nand0_1_default: nand0_1_default {
+						pinmux = 	<NAND_D0>,
+									<NAND_D1>,
+									<NAND_D2>,
+									<NAND_D3>,
+									<NAND_D4>,
+									<NAND_D5>,
+									<NAND_D6>,
+									<NAND_D7>;
+					};
+			};
+		};
+
+		mgpio4: mgpio4@0x3C044000 {
 		    compatible = "rcm,pl061";
 		    #address-cells = <1>;
 		    #size-cells = <0>;
-		    reg = <0x3C080000 0x1000>;
+		    reg = <0x3C044000 0x1000>;
 			pinctrl {
 					compatible = "rcm,pl061-pinctrl";
 					
@@ -87,14 +108,19 @@
 									<GBETH0_TXD0>,
 									<GBETH0_TXD1>;
 					};
+
+					pinctrl_nand0_2_default: nand0_2_default {
+						pinmux =	<NAND_READY1N>,
+									<NAND_READY2N>;
+					};
 			};
 		};
 
-		mgpio5: mgpio5@0x3C090000 {
+		mgpio5: mgpio5@0x3C045000 {
 		    compatible = "rcm,pl061";
 		    #address-cells = <1>;
 		    #size-cells = <0>;
-		    reg = <0x3C090000 0x1000>;
+		    reg = <0x3C045000 0x1000>;
 			pinctrl {
 					compatible = "rcm,pl061-pinctrl";
 					
@@ -111,15 +137,124 @@
 			};
 		};
 
+		mgpio7: mgpio7@0x3C047000 {
+		    compatible = "rcm,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+			reg = <0x3C047000 0x1000>;
+			pinctrl {
+					compatible = "rcm,pl061-pinctrl";
+					
+					pinctrl_nand0_3_default: nand0_3_default {
+						pinmux =	<NAND_REN>,
+									<NAND_CLE>,
+									<NAND_CE2N>,
+									<NAND_CE1N>;
+					};
+			};
+		};
+
+		mgpio8: mgpio8@0x3C048000 {
+		    compatible = "rcm,pl061";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+			reg = <0x3C048000 0x1000>;
+			pinctrl {
+					compatible = "rcm,pl061-pinctrl";
+
+					pinctrl_nand0_4_default: nand0_4_default {
+						pinmux =	<NAND_ALE>,
+									<NAND_WEN>,
+									<NAND_WPN>;
+					};
+			};
+		};
+
 		greth1: greth0@0x3C034000 {
 			compatible = "rcm,greth";
             reg = <0x3C034000 0x1000>;			
-			mac-address = [ EC 17 66 77 05 80 ]; // [ EC 17 66 77 05 00 ];
-			//pinctrl-names = "default";
-			//pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;
+			mac-address = [ EC 17 66 77 05 80 ]; /* [ EC 17 66 77 05 00 ];*/
+			pinctrl-names = "default";
+			/*pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;*/
+//			pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;
 			status = "okay";
 		};
 
+		nand0: nand0@0x3C032000 {
+			compatible = "rcm,nand";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x3C032000 0x1000>;
+			ranges = <0x00000000 0x20000000 0x20000000>;
+			clock-frequency = <100000000>;
+			config-reg = <0x3C03F000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;
+			status = "okay";
+			timings = < 200		/* tADL_min (ONFI_2_0_Gold.pdf,page 47)*/
+						20		/* tALH_min */
+						50		/* tALS_min */
+						20		/* tCH_min */
+						20		/* tCLH_min */
+						50		/* tCLS_min */
+						70		/* tCS_min */
+						20		/* tDH_min */
+						40		/* tDS_min */
+						100		/* tWC_min */
+						30		/* tWH_min */
+						50		/* tWP_min */
+						100		/* tWW_min */
+						25		/* tAR_min */
+						20		/* tCLR_min */
+						0		/* tCOH_min */
+						10		/* tIR_min */
+						100		/* tRC_min */
+						30		/* tREH_min */
+						0		/* tRHOH_min */
+						200		/* tRHW_min */
+						0		/* tRLOH_min */
+						50		/* tRP_min */
+						40		/* tRR_min */
+						120		/* tWHR_min */
+						100		/* tCEA_max */
+						100		/* tCHZ_max */
+						40		/* tREA_max */
+						200		/* tRHZ_max */
+						200 >;  /* tWB_max */
+			/*interrupt-parent = <&MPIC>;*/
+			/*interrupts = <109 0>;*/
+
+			partitions {
+					compatible = "fixed-partitions";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					partition@0 {						/* SPL — загрузчик U-Boot */
+						label = "uboot_spl";
+						reg = <0x00000 0x40000>;		/* 256 KB,2 блока */
+					};
+
+					partition@40000 {					/* сам uboot */
+						label = "uboot";
+						reg = <0x40000 0x1000000>;		/* 16 MB,128 блоков */
+					};
+
+					partition@1040000 {					/* переменные среды uboot */
+						label = "uboot_env";
+						reg = <0x1040000 0x40000>;		/* 256 KB,2 блока */
+					};
+
+					partition@1050000 {					/* ось */
+						label = "linux";
+						reg = <0x1080000 0x1000000>;	/* 16 MB,128 блоков */
+					};
+
+					partition@2050000 {					/* файловая система */
+						label = "rootfs";
+						reg = <0x2080000 0xDF80000>;	/* 0x2080000..0x10000000-1 (223KiB,1788 блоков)*/
+					};
+			};
+		};
 	};
 
 	lsif1 {
