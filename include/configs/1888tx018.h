@@ -65,7 +65,7 @@
 
 /* #define CONFIG_SPL_FRAMEWORK */
 
-#define CONFIG_SYS_MALLOC_LEN   (2*1024*1024)
+#define CONFIG_SYS_MALLOC_LEN   (2*2*1024*1024)
 
 #define CONFIG_VERY_BIG_RAM
 #define CONFIG_MAX_MEM_MAPPED   ((phys_size_t)256 << 20)
@@ -147,12 +147,13 @@
 #define CONFIG_SPD_EEPROM
 
 #define CONFIG_MTD_PARTITIONS
-#define CONFIG_SYS_MAX_NAND_DEVICE 1
+#define CONFIG_SYS_MAX_NAND_DEVICE 8
 #define CONFIG_SYS_NAND_MAX_CHIPS 8
 
 #define CONFIG_SYS_NAND_BASE 0x3C032000 /*???????????????????????????*/
 
 #define CONFIG_CMD_UBIFS
+/*#define CONFIG_MTDPARTS*/
 
 #ifndef CONFIG_NAND
 #define CONFIG_NAND 
@@ -187,5 +188,6 @@
 /*#define CONFIG_MTD_RCM_NAND*/
 /*#define CONFIG_OF_LIVE*/
 #define CONFIG_SYS_NAND_SELF_INIT
+/*#define CONFIG_MTDIDS_DEFAULT "mtd0"*/
 
 #endif /* __1888TX018_H */

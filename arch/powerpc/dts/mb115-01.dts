@@ -174,8 +174,8 @@
 			compatible = "rcm,greth";
             reg = <0x3C034000 0x1000>;			
 			mac-address = [ EC 17 66 77 05 80 ]; /* [ EC 17 66 77 05 00 ];*/
-			pinctrl-names = "default";
-			/*pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;*/
+			//pinctrl-names = "default";
+			//pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;
 			status = "okay";
 		};
 
@@ -430,7 +430,7 @@
 			compatible = "rcm,mmc-0.2";
 			reg = <0x3C064000 0x1000>;
 			carddetect-gpio = <&gpio1 1 0>;
-			u-boot,dm-pre-reloc;
+			/*u-boot,dm-pre-reloc;*/
 			status = "okay";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_sdio_default>;

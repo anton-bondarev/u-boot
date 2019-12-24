@@ -111,7 +111,7 @@ static struct miscdevice ubi_ctrl_cdev = {
 #ifndef __UBOOT__
 static struct ubi_device *ubi_devices[UBI_MAX_DEVICES];
 #else
-struct ubi_device *ubi_devices[UBI_MAX_DEVICES];
+struct ubi_device *ubi_devices[UBI_MAX_DEVICES] = { 0 };
 #endif
  
 #ifndef __UBOOT__

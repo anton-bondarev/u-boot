@@ -46,9 +46,9 @@ struct vfsmount;
 
 #define INODE_LOCKED_MAX	64
 
-struct super_block *ubifs_sb;
+struct super_block *ubifs_sb = {0};
 
-static struct inode *inodes_locked_down[INODE_LOCKED_MAX];
+static struct inode *inodes_locked_down[INODE_LOCKED_MAX] = {0};
 
 int set_anon_super(struct super_block *s, void *data)
 {
@@ -149,7 +149,8 @@ void set_nlink(struct inode *inode, unsigned int nlink)
 	} else {
 		/* Yes, some filesystems do change nlink from zero to one */
 		if (inode->i_nlink == 0)
-			atomic_long_dec(&inode->i_sb->s_remove_count);
+			//atomic_long_dec(&inode->i_sb->s_remove_count);
+			inode->i_sb->s_remove_count.counter--;
 
 		inode->__i_nlink = nlink;
 	}
