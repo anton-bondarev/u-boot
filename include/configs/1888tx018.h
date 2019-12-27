@@ -96,11 +96,6 @@
 #define CONFIG_SYS_SPI_U_BOOT_OFFS      0x40000
 #define CONFIG_SYS_SPI_CLK 100000000
 
-
-#define CONFIG_ENV_OFFSET               0x140000
-#define CONFIG_ENV_SIZE                 0x4000
-#define CONFIG_ENV_SECT_SIZE            0x10000
-
 #define CONFIG_BOOTCOMMAND "run kernelsd"
 #define CONFIG_USE_BOOTARGS
 #define CONFIG_BOOTARGS "console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
@@ -189,5 +184,20 @@
 /*#define CONFIG_OF_LIVE*/
 #define CONFIG_SYS_NAND_SELF_INIT
 /*#define CONFIG_MTDIDS_DEFAULT "mtd0"*/
+
+#ifdef CONFIG_ENV_IS_IN_NAND
+    #define CONFIG_ENV_OFFSET               0x40000
+    #define CONFIG_ENV_SIZE                 0x4000
+    #define CONFIG_ENV_SECT_SIZE            0x20000
+#else
+    #define CONFIG_ENV_OFFSET               0x140000
+    #define CONFIG_ENV_SIZE                 0x4000
+    #define CONFIG_ENV_SECT_SIZE            0x10000
+#endif
+
+#ifdef CONFIG_SPL_NAND_SUPPORT
+    #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x80000
+    #define BOOT_DEVICE_NAND                4
+#endif
 
 #endif /* __1888TX018_H */
