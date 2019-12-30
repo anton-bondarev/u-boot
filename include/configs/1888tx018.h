@@ -87,6 +87,7 @@
 #define CONFIG_SPL_SPI_LOAD
 #define CONFIG_SPL_EDCL_LOAD
 
+#define BOOT_DEVICE_NAND 10
 #define BOOT_DEVICE_SPI 11
 #define BOOT_DEVICE_EDCL 12
 
@@ -145,10 +146,7 @@
 #define CONFIG_SYS_MAX_NAND_DEVICE 8
 #define CONFIG_SYS_NAND_MAX_CHIPS 8
 
-#define CONFIG_SYS_NAND_BASE 0x3C032000 /*???????????????????????????*/
-
 #define CONFIG_CMD_UBIFS
-/*#define CONFIG_MTDPARTS*/
 
 #ifndef CONFIG_NAND
 #define CONFIG_NAND 
@@ -180,10 +178,7 @@
 #define CONFIG_MTD_UBI_WL_THRESHOLD 4096
 #define CONFIG_MTD_UBI_BEB_LIMIT 20
 
-/*#define CONFIG_MTD_RCM_NAND*/
-/*#define CONFIG_OF_LIVE*/
 #define CONFIG_SYS_NAND_SELF_INIT
-/*#define CONFIG_MTDIDS_DEFAULT "mtd0"*/
 
 #ifdef CONFIG_ENV_IS_IN_NAND
     #define CONFIG_ENV_OFFSET               0x40000
@@ -196,8 +191,9 @@
 #endif
 
 #ifdef CONFIG_SPL_NAND_SUPPORT
-    #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x80000
-    #define BOOT_DEVICE_NAND                4
+    /*#define CONFIG_SPL_NAND_RAW_ONLY*/
+    #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x8C0000
+    #define CONFIG_SYS_NAND_U_BOOT_SIZE     0x160000
 #endif
 
 #endif /* __1888TX018_H */

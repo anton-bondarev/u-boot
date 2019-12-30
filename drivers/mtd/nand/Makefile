@@ -11,6 +11,7 @@ endif
 
 obj-$(CONFIG_SPL_NAND_AM33XX_BCH) += am335x_spl_bch.o
 obj-$(CONFIG_SPL_NAND_DENALI) += denali_spl.o
+obj-$(CONFIG_SPL_NAND_RCM) += rcm_nand.o
 obj-$(CONFIG_SPL_NAND_SIMPLE) += nand_spl_simple.o
 obj-$(CONFIG_SPL_NAND_LOAD) += nand_spl_load.o
 obj-$(CONFIG_SPL_NAND_ECC) += nand_ecc.o
@@ -72,5 +73,6 @@ obj-$(CONFIG_NAND_FSL_IFC) += fsl_ifc_spl.o
 obj-$(CONFIG_NAND_MXC) += mxc_nand_spl.o
 obj-$(CONFIG_NAND_MXS) += mxs_nand_spl.o mxs_nand.o
 obj-$(CONFIG_NAND_SUNXI) += sunxi_nand_spl.o
+obj-$(CONFIG_MTD_RCM_NAND) += rcm_nand.o
 
 endif # drivers

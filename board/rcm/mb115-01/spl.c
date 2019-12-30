@@ -108,11 +108,13 @@ void board_boot_order(u32 *spl_boot_list)
 	switch (spl_boot_list[0]) {
 	case BOOT_DEVICE_SPI:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;
-		spl_boot_list[2] = BOOT_DEVICE_EDCL;
+		spl_boot_list[2] = BOOT_DEVICE_NAND;
+		spl_boot_list[3] = BOOT_DEVICE_EDCL;
 		break;
 	case BOOT_DEVICE_MMC1:
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
-		spl_boot_list[2] = BOOT_DEVICE_EDCL;
+		spl_boot_list[2] = BOOT_DEVICE_NAND;
+		spl_boot_list[3] = BOOT_DEVICE_EDCL;
 		break;
 	}
 }
