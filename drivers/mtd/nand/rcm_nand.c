@@ -498,10 +498,11 @@ static void rcm_nand_update_control( struct rcm_nand_chip* chip,
                           ( oob_ecc << CTRL_REG_OOB_ECC_SHIFT ) |
                           ( oob_size << CTRL_REG_OOB_SIZE_SHIFT ) |
                           ( command << CTRL_REG_FCMD_SHIFT );
+        mb();
         rcm_nand_set( chip, NAND_REG_control, wr_reg );
 }
 
-static int rcm_nand_wait_ready( struct rcm_nand_chip* chip ) {
+static int rcm_nand_wait_ready( struct rcm_nand_chip* chip, uint32_t mask ) {
         int ret = -1;
         uint32_t status, timeout = NAND_READY_TIMEOUT;
 
@@ -510,7 +511,7 @@ static int rcm_nand_wait_ready( struct rcm_nand_chip* chip ) {
                 //if( ( status & 0x0000007F ) !=  0x00000060 ) {
                 //        NAND_DBG_PRINT_ERR( "rcm_nand_wait_ready: flash status=%08x\n", status )
                 //}
-                if( status & ( STAT_REG_CONT_READY | STAT_REG_NAND_READY ) ) { // todo проверить, нужен ли второй бит?
+                if( ( status & mask ) == mask ) {
                         ret = 0;
                         break;
                 }
@@ -563,7 +564,7 @@ static int rcm_nand_hw_init( struct rcm_nand_chip* chip, uint32_t* timings, uint
         rcm_nand_set( chip, NAND_REG_sw_rst, 0x0 );                   // запись 0,затем 1 в данный регистр инициирует
         rcm_nand_set( chip, NAND_REG_sw_rst, 0x1 );                   // программный сброс ведущего интерфейса записи AXI 
         rcm_nand_set( chip, NAND_REG_sw_rstn_r, 0x1 );                // программный сброс ведущего интерфейса чтения AXI, автоматически обнуляется
-        if( rcm_nand_wait_ready( chip ) ) return -EIO;
+        if( rcm_nand_wait_ready( chip, STAT_REG_CONT_READY ) ) return -EIO;
         rcm_nand_set_timings( chip, timings, freq/1000000 );
         return 0;
 }
@@ -587,7 +588,7 @@ static void rcm_nand_prepare_dma_write( struct rcm_nand_chip* chip, size_t bytes
 }
 
 static int rcm_nand_core_reset( struct rcm_nand_chip* chip, uint32_t chip_select ) {
-        if( rcm_nand_wait_ready( chip ) )
+        if( rcm_nand_wait_ready( chip, STAT_REG_CONT_READY ) )
                 return -EIO;
 
         INIT_COMPLETION( chip )
@@ -620,7 +621,7 @@ static int rcm_nand_core_reset( struct rcm_nand_chip* chip, uint32_t chip_select
 
 static int rcm_nand_core_erase( struct rcm_nand_chip* chip, loff_t off ) {
         int cs;
-        if( rcm_nand_wait_ready( chip ) )
+        if( rcm_nand_wait_ready( chip, STAT_REG_CONT_READY | STAT_REG_NAND_READY ) )
                 return -EIO;
 
         cs = rcm_nand_chip_offset( chip, &off );
@@ -656,8 +657,8 @@ static int rcm_nand_core_erase( struct rcm_nand_chip* chip, loff_t off ) {
 } 
 
 static void rcm_nand_core_read_id( struct rcm_nand_chip* chip, uint32_t chip_select, size_t bytes) {
-         //if( rcm_nand_wait_ready( chip ) )
-                //return -EIO;
+        //if( rcm_nand_wait_ready( chip, STAT_REG_CONT_READY | STAT_REG_NAND_READY ) )
+        //        return -EIO;
 
         rcm_nand_prepare_dma_read( chip, bytes );
         INIT_COMPLETION( chip )
@@ -690,14 +691,14 @@ static int rcm_nand_core_read( struct rcm_nand_chip* chip, loff_t off ) {
         int cs;
         //loff_t page;
 
-        if( rcm_nand_wait_ready( chip ) )
+        if( rcm_nand_wait_ready( chip, STAT_REG_CONT_READY | STAT_REG_NAND_READY ) )
                 return -EIO;
 
         memset( chip->dma_area, 0xff, chip->mtd.writesize + chip->mtd.oobsize );
         cs = rcm_nand_chip_offset( chip, &off ); 
         //page = off & (~(chip->mtd.writesize-1)); 
         //NAND_DBG_PRINT_INF( "rcm_nand_core_read: cs=%u,off=%08llX,page=%08llX\n", cs, off, page )
- 
+
         rcm_nand_prepare_dma_read( chip, chip->mtd.writesize + chip->mtd.oobsize );
         INIT_COMPLETION( chip )
         chip->state = MNAND_READ;
@@ -727,7 +728,7 @@ static int rcm_nand_core_read( struct rcm_nand_chip* chip, loff_t off ) {
 #if ( NAND_ECC_MODE == NAND_ECC_MODE_4BITS )
         if( chip->empty ) {                                                                     // читаемая страница чистая,но корректор пытается исправить ошибки
                 memset( chip->dma_area, 0xff, chip->mtd.writesize + chip->mtd.oobsize );        // уберем это
-                NAND_DBG_PRINT_WRN( "rcm_nand_core_read: page is empty\n" )
+                //NAND_DBG_PRINT_WRN( "rcm_nand_core_read: page is empty\n" )
         }
 #endif
         return chip->err ? -EIO : 0;
@@ -779,7 +780,7 @@ ret:
 static int rcm_nand_core_write( struct rcm_nand_chip* chip, loff_t off ) { 
         int cs;
 
-        if( rcm_nand_wait_ready( chip ) )
+        if( rcm_nand_wait_ready( chip, STAT_REG_CONT_READY | STAT_REG_NAND_READY ) )
                 return -EIO;
 
 #if ( NAND_ECC_MODE == NAND_ECC_MODE_4BITS )
@@ -810,6 +811,7 @@ static int rcm_nand_core_write( struct rcm_nand_chip* chip, loff_t off ) {
                                  0,                                                             // 1-hw write protect enabled (почему?)
                                  ENABLE_ECC_OOB,                                                // 0-запретить проверку коррекции ошибок
                                  FLASH_CMD_PROGRAM_PAGE );                                      // команда для flash
+        mb();
         rcm_nand_set( chip, NAND_REG_cdb_buffer_enable, 0x1 );
         WAIT_FOR_COMPLETION_IO( chip )
         rcm_nand_set( chip, NAND_REG_irq_mask_nand, 0 );
@@ -1542,12 +1544,12 @@ MODULE_DESCRIPTION("RCM SoC NAND controller driver");
         IOWRITE32( 0x000000F0, (void*)MGPIO7_GPIOAFSEL );                                                               \
         IOWRITE32( 0x00000083, (void*)MGPIO8_GPIOAFSEL );
 
-#define CHIPSIZE        0x8000000
-#define OOBSIZE         64
-#define PAGESIZE        0x800
+#define CHIPSIZE        (chip->size)                    // 0x8000000
+#define OOBSIZE         (chip->oob_size)                // 64
+#define PAGESIZE        (chip->write_size)              // 0x800
 #define RDDMACNT        (PAGESIZE+OOBSIZE)
-#define PAGEMASK        0x7ff
-#define PAGESIZESHIFT   11
+#define PAGEMASK        (chip-writesize-1)              // 0x7ff
+#define PAGESIZESHIFT   (ffs(chip->write_size)-1)       // 11
 #if ( NAND_ECC_MODE == NAND_ECC_MODE_NO_ECC )
         #define OOBSIZE_CTRL OOBSIZE
 #elif ( NAND_ECC_MODE == NAND_ECC_MODE_4BITS )
@@ -1557,7 +1559,8 @@ MODULE_DESCRIPTION("RCM SoC NAND controller driver");
 #endif
 
 struct rcm_spl_nand_chip {
-        uint8_t id;
+        uint8_t man_id;
+        uint8_t dev_id;
         uint64_t size;
         uint32_t write_size;
         uint32_t oob_size;
@@ -1637,7 +1640,7 @@ static int nand_spl_wait_irq( uint32_t mask ) {
                         return 0;
                 }
         }
-        printf( "%s: read timeout\n", __FUNCTION__ );
+        printf( "%s: read failed\n", __FUNCTION__ );
         return -1;
 }
 
@@ -1660,7 +1663,8 @@ static int nand_spl_read_param( uint32_t cs, struct rcm_spl_nand_chip* chip, uin
         WRNAND( 0, NAND_REG_row_addr_read_d );
         WRNAND( CTRL( cs, 0, 256, 1, 1, 0, 0, 0, FLASH_CMD_READ_ID ), NAND_REG_control );
         if( nand_spl_wait_irq( IRQ_READID ) == 0 ) {
-                chip->id = 0;
+                chip->man_id = dst[0];
+                chip->dev_id = dst[1];
                 chip->write_size = 1024 << (dst[3] & 0x3);
                 chip->oob_size =  (8 << (dst[3] & 0x01)) * (chip->write_size >> 9); 
                 chip->erase_size =  (64 * 1024) << (dst[3] & 0x03);
@@ -1681,7 +1685,7 @@ static int nand_spl_read_param( uint32_t cs, struct rcm_spl_nand_chip* chip, uin
         return -1;
 }
 
-static int nand_spl_read_page( uint32_t offs, uint32_t size, void* dst ) {
+static int nand_spl_read_page( uint32_t offs, uint32_t size, void* dst, const struct rcm_spl_nand_chip* chip ) {
         uint32_t cs = ( offs >= CHIPSIZE ) ? 1 : 0;
         nand_spl_init_dma( dst, size );
         WRNAND( IRQ_READ_FINISH, NAND_REG_irq_mask_nand );
@@ -1692,38 +1696,95 @@ static int nand_spl_read_page( uint32_t offs, uint32_t size, void* dst ) {
         return nand_spl_wait_irq( IRQ_READ_FINISH );
 }
 
-int nand_spl_load_image( uint32_t offs, unsigned int size, void *dst ) {
-        int err;
-        struct rcm_spl_nand_chips chips = { 0 };
+static int nand_spl_read_page_with_check( uint32_t offs, uint32_t size, void* dst, const struct rcm_spl_nand_chip* chip ) {
+        int i;
+        void* p[2];
+        
+        p[0] = dst, p[1] = dst+RDDMACNT;
+        for( i=0; i<READ_RETRY_CNT; i++ ) {
+                if( !nand_spl_read_page( offs, RDDMACNT, p[0], chip ) ) break;
 
-        printf( "%s: start offs=%08x,size=%08x,dst=%08x\n", __FUNCTION__, offs, size, (uint32_t)dst );
+        }
+        if( i == READ_RETRY_CNT )
+                return -1;
 
-        if( nand_spl_read_param( 0, &chips.chip[0], dst ) ||
-            nand_spl_read_param( 1, &chips.chip[1], dst ) ) {
+        for( i=1; i<=READ_RETRY_CNT; i++ ) {
+                if( !nand_spl_read_page( offs, RDDMACNT, p[i&1], chip ) && !memcmp( p[0], p[1], RDDMACNT ) )
+                        return 0;
+        }
+        return -1;
+}
+
+static int nand_spl_init_chips_param( struct rcm_spl_nand_chips* chips, void* dma_buf ) {
+        int i;
+
+        for( i=0; i<READ_RETRY_CNT; i++ ) {
+                if( !nand_spl_read_param( 0, &chips->chip[0], dma_buf ) &&
+                    !nand_spl_read_param( 1, &chips->chip[1], dma_buf ) ) break;
+        }
+
+        if( i == READ_RETRY_CNT ) {
                 printf( "%s: parameters read error\n", __FUNCTION__ );
                 return -1;
         }
-        if( memcmp( &chips.chip[0], &chips.chip[1], sizeof( struct rcm_spl_nand_chip ) ) ) {
+
+        if( memcmp( &chips->chip[0], &chips->chip[1], sizeof( struct rcm_spl_nand_chip ) ) ) {
                 printf( "%s: chis is different\n", __FUNCTION__ );
                 return -1;
         }
-        chips.full_size = chips.chip[0].size + chips.chip[1].size;
-        printf( "%s: fs=%llu,id=%02x,sz=%llu,ws=%u,os=%u,es=%u\n",
-                __FUNCTION__,chips.full_size, chips.chip[0].id, chips.chip[0].size, chips.chip[0].write_size, chips.chip[0].oob_size, chips.chip[0].erase_size );
+        chips->full_size = chips->chip[0].size + chips->chip[1].size;
+        printf( "%s: fs=%llu,dev_id=%02x,sz=%llu,ws=%u,os=%u,es=%u\n", __FUNCTION__,
+                chips->full_size, 
+                chips->chip[0].dev_id,
+                chips->chip[0].size,
+                chips->chip[0].write_size,
+                chips->chip[0].oob_size,
+                chips->chip[0].erase_size );
+        return 0;
+}
 
+#define NAND_LOAD_OFF_SPL
+//#define NAND_TEST_SPL
+
+int nand_spl_load_image( uint32_t offs, unsigned int size, void *dst ) {
+        int err;
+        struct rcm_spl_nand_chips chips = { 0 };
+        const struct rcm_spl_nand_chip* chip = &chips.chip[0];
+        printf( "%s: start offs=%08x,size=%08x,dst=%08x\n", __FUNCTION__, offs, size, (uint32_t)dst );
+
+        if( ( err = nand_spl_init_chips_param( &chips, dst ) ) != 0 )
+                return err;
+
+#ifdef NAND_TEST_SPL
+        offs = 0;
+#endif
         while(1) {
-                err = nand_spl_read_page( offs, RDDMACNT, dst );
+#ifdef NAND_DBG_READ_CHECK
+                err = nand_spl_read_page_with_check( offs, RDDMACNT, dst, &chips.chip[0] );
+#else
+                err = nand_spl_read_page( offs, RDDMACNT, dst, &chips.chip[0] );
+#endif
                 if( err ) {
-                        printf( "%s: error\n", __FUNCTION__ );
+                        printf( "%s: error offs=%08x\n", __FUNCTION__, offs );
                         return err;
                 }
+#ifndef NAND_TEST_SPL
                 if( size <= PAGESIZE ) {
                         printf( "%s: succesfull\n", __FUNCTION__ );
-                        return 0;
+                        #ifdef NAND_LOAD_OFF_SPL
+                                return -1;
+                        #else
+                                return 0;
+                        #endif
                 }
                 size -= PAGESIZE;
                 offs += PAGESIZE;
                 dst += PAGESIZE;
+#else
+                offs += PAGESIZE, offs %= chips.full_size;
+                mb();
+                if( !( offs & 0x1ffff ) ) printf( "%s: ok offs=%08x\n", __FUNCTION__, offs );
+#endif
         }
 }
 
