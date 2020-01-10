@@ -76,3 +76,4 @@ obj-$(CONFIG_NAND_SUNXI) += sunxi_nand_spl.o
 obj-$(CONFIG_MTD_RCM_NAND) += rcm_nand.o
 
 endif # drivers
+

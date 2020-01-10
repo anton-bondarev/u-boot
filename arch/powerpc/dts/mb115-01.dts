@@ -26,6 +26,19 @@
 		spd1 = &spd1;
 	};
 
+	sram_nor_arbiter0: sram_nor_arbiter {
+		u-boot,dm-pre-reloc;
+		compatible = "rcm,sram-nor-arbiter";
+		syscon-reg = <0x38000000 0x1000>;
+		control-reg = <0x3C03F000 0x1000>;
+		sram-nor-mux = <0>;	/*1*/		// 0 to route extmem wires to LSIF0, 1 - to MCIF
+		/* in case of LSIF0 following lines will be needed */
+		ext-mem-mux-mode = <1>; /*//*/
+		ce-manage = <2>; //0
+		status = "disabled";//"okay";
+	};
+
+
 	lsif0 {
 	    u-boot,dm-pre-reloc;
 	    compatible = "simple-bus";

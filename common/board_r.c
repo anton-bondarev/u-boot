@@ -330,6 +330,13 @@ static int initr_manual_reloc_cmdtable(void)
 }
 #endif
 
+#if defined(CONFIG_MTD_RCM_NOR)
+static int initr_arbiter(void)
+{
+	rcm_mtd_arbiter_init();
+}
+#endif
+
 #if defined(CONFIG_MTD_NOR_FLASH)
 static int initr_flash(void)
 {
@@ -736,6 +743,9 @@ static init_fnc_t init_sequence_r[] = {
 	arch_early_init_r,
 #endif
 	power_init_board,
+#ifdef CONFIG_MTD_RCM_NOR
+	initr_arbiter,
+#endif
 #ifdef CONFIG_MTD_NOR_FLASH
 	initr_flash,
 #endif
