@@ -29,13 +29,13 @@
 	sram_nor_arbiter0: sram_nor_arbiter {
 		u-boot,dm-pre-reloc;
 		compatible = "rcm,sram-nor-arbiter";
-		syscon-reg = <0x38000000 0x1000>;
-		control-reg = <0x3C03F000 0x1000>;
+		sctl-reg = <0x38000000 0x1000>; /* переделать на <&sctl> */
+		lsif-reg = <0x3C03F000 0x1000>; /* переделать на <&lsif0> */
 		sram-nor-mux = <0>;	/*1*/		// 0 to route extmem wires to LSIF0, 1 - to MCIF
 		/* in case of LSIF0 following lines will be needed */
 		ext-mem-mux-mode = <1>; /*//*/
 		ce-manage = <2>; //0
-		status = "disabled";//"okay";
+		status = "okay";
 	};
 
 
@@ -236,7 +236,35 @@
 			/*interrupt-parent = <&MPIC>;*/
 			/*interrupts = <109 0>;*/
 		};
-	};
+
+		sram_nor0: sram_nor0@0x3C030000 {
+				compatible = "rcm,sram-nor","simple-bus";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				reg = <0x3C030000 0x1000>;
+				ranges = <0x00000000 0x20000000 0x10000000>;
+				cs-mode = <1>;  /* 0 - cs in address, 1 - cs in reg */
+				addr-size = <22>; /* min 10 max 26 bit */
+				timings = <0x1f1f0808>;
+				// interrupt-parent = <&MPIC>;
+				// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
+				status = "disabled";
+		};
+
+		sram_nor1: sram_nor1@0x3C040000 {
+				compatible = "rcm,sram-nor","simple-bus";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				reg = <0x3C040000 0x1000>;
+				ranges = <0x00000000 0x30000000 0x08000000>;
+				cs-mode = <1>;  /* 0 - cs in address, 1 - cs in reg */
+				addr-size = <26>; /* min 10 max 26 bit */
+				timings = <0x1f1f0808>;
+				// interrupt-parent = <&MPIC>;
+				// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
+				status = "disabled";
+			};
+		};
 
 	lsif1 {
 	    u-boot,dm-pre-reloc;

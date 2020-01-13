@@ -1759,7 +1759,7 @@ static int nand_spl_init_chips_param( struct rcm_spl_nand_chips* chips, void* dm
 }
 
 // если нужно считать образ,но не передавать ему управление
-//#define NAND_LOAD_OFF_SPL
+#define NAND_LOAD_OFF_SPL
 // если нужно протестировать корректность чтения NAND
 //#define NAND_TEST_SPL
 

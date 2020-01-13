@@ -334,6 +334,7 @@ static int initr_manual_reloc_cmdtable(void)
 static int initr_arbiter(void)
 {
 	rcm_mtd_arbiter_init();
+	return 0;
 }
 #endif
 
