@@ -1764,15 +1764,9 @@ static int nand_spl_init_chips_param( struct rcm_spl_nand_chips* chips, void* dm
         return 0;
 }
 
-<<<<<<< HEAD
-// если нужно считать образ,но не передавать ему управление
-#define NAND_LOAD_OFF_SPL
-// если нужно протестировать корректность чтения NAND
-=======
 // if need read image,but don't give him control
-//#define NAND_LOAD_OFF_SPL
+#define NAND_LOAD_OFF_SPL
 // if need testing for read from NAND
->>>>>>> feature/PRJ1019-50-nand-nand-device
 //#define NAND_TEST_SPL
 
 int nand_spl_load_image( uint32_t offs, unsigned int size, void *dst ) {
