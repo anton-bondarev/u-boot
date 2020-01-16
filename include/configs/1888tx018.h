@@ -152,11 +152,11 @@
 #ifndef CONFIG_NAND
 #define CONFIG_NAND 
 #endif
-
+/*
 #ifndef CONFIG_CMD_NAND
 #define CONFIG_CMD_NAND
 #endif
-
+*/
 #ifndef CONFIG_CMD_UBI
 #define CONFIG_CMD_UBI
 #endif
@@ -195,6 +195,21 @@
     /*#define CONFIG_SPL_NAND_RAW_ONLY*/
     #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x880000
     #define CONFIG_SYS_NAND_U_BOOT_SIZE     0x160000
+#endif
+
+#ifdef CONFIG_MTD_RCM_NOR
+    /* #define CONFIG_CFI_FLASH */
+    #define CONFIG_FLASH_CFI_DRIVER
+    #define CONFIG_FLASH_CFI_MTD
+    #define CONFIG_SYS_FLASH_CFI
+    #define CONFIG_SYS_FLASH_CFI_WIDTH      FLASH_CFI_16BIT
+    #define CONFIG_SYS_FLASH_BASE0          0x20000000
+    #define CONFIG_SYS_FLASH_BASE1          0x28000000
+    #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0, CONFIG_SYS_FLASH_BASE1
+    #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE0
+    /* #define CONFIG_SYS_MAX_FLASH_BANKS_DETECT not now,later */
+    /* #define CONFIG_SYS_MAX_FLASH_BANKS      2 */
+
 #endif
 
 #endif /* __1888TX018_H */

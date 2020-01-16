@@ -50,6 +50,11 @@
 #include <linux/err.h>
 #include <efi_loader.h>
 
+#ifdef CONFIG_MTD_RCM_NOR
+extern void rcm_mtd_arbiter_init(void);
+extern void rcm_sram_nor_init(void);
+#endif
+
 DECLARE_GLOBAL_DATA_PTR;
 
 ulong monitor_flash_len;
@@ -334,6 +339,11 @@ static int initr_manual_reloc_cmdtable(void)
 static int initr_arbiter(void)
 {
 	rcm_mtd_arbiter_init();
+	return 0;
+}
+static int initr_sram_nor(void)
+{
+	rcm_sram_nor_init();
 	return 0;
 }
 #endif
@@ -746,6 +756,7 @@ static init_fnc_t init_sequence_r[] = {
 	power_init_board,
 #ifdef CONFIG_MTD_RCM_NOR
 	initr_arbiter,
+	initr_sram_nor,
 #endif
 #ifdef CONFIG_MTD_NOR_FLASH
 	initr_flash,

@@ -127,6 +127,9 @@
                 ofnode_read_u32_array(np_to_ofnode(DEVNODE),NAME,PARR,PSIZE)
 #endif
 
+#define WRITEL(P) (WSWAP(writel(P)))
+#define READL(P) (RSWAP(readl(P)))
+
 typedef u32 (*reg_readl_fn)(void *rcm_mtd, u32 offset);
 typedef void (*reg_writel_read_fn)(void *rcm_mtd, u32 offset, u32 val);
 
@@ -187,8 +190,8 @@ static int rcm_controller_setup( rcm_sram_nor_device *pdev )
 		dev_err(&pdev->dev, "chip-num must be defined\n");
 		return ret;
 	}
-	if (chip_num > 0x2F) {
-		dev_err(&pdev->dev, "chip_num must be between 0 and 0x2F\n");
+	if (chip_num > 0x3F) {
+		dev_err(&pdev->dev, "chip_num must be between 0 and 0x3F\n");
 		return -EINVAL;
 	}
 
@@ -377,7 +380,7 @@ U_BOOT_DRIVER(rcm_sram_nor) = {
         .of_match = rcm_sram_nor_ids,
         .probe = rcm_mtd_probe
 };
-
+/*
 flash_info_t flash_info[CONFIG_SYS_MAX_FLASH_BANKS];
 
 void flash_print_info( flash_info_t* flash_info ) {
@@ -406,6 +409,19 @@ int flash_erase( flash_info_t* flash_info, int offset, int length ) {
 int write_buff( flash_info_t* flash_info, uchar* src, ulong addr, ulong cnt ) {
         DBG_PRINT( "%s\n", __FUNCTION__ );
         return 0;
+}
+*/
+
+void rcm_sram_nor_init( void ) {
+        struct udevice *dev;
+        int ret;
+
+        ret = uclass_get_device_by_driver( UCLASS_MTD,
+                                           DM_GET_DRIVER(rcm_sram_nor),
+                                           &dev );
+        if( ret && ret != -ENODEV ) {
+                dev_err(&pdev->dev, "Failed to initialize RCM SRAM NOR,error=%d\n", ret );
+        }
 }
 
 #endif

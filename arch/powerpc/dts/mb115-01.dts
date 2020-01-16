@@ -20,7 +20,7 @@
 
 	aliases {
 		spi0 = &spi0;
-		mmc0 = &mmc0;
+		//mmc0 = &mmc0;
 		uart0 = &uart0;
 		spd0 = &spd0;
 		spd1 = &spd1;
@@ -44,8 +44,8 @@
 		lsif-reg = <0x3C03F000 0x1000>; /* переделать на <&lsif0> */
 		sram-nor-mux = <0>;	/*1*/		// 0 to route extmem wires to LSIF0, 1 - to MCIF
 		/* in case of LSIF0 following lines will be needed */
-		ext-mem-mux-mode = <0>; 		/*//*/
-		ce-manage = <0>;
+		ext-mem-mux-mode = <0>;			/* page 913 */
+		ce-manage = <2>;				/* page 913 + confluence */
 		status = "okay";
 	};
 
@@ -246,8 +246,8 @@
 			compatible = "rcm,greth";
             reg = <0x3C034000 0x1000>;			
 			mac-address = [ EC 17 66 77 05 80 ]; /* [ EC 17 66 77 05 00 ];*/
-			//pinctrl-names = "default";
-			//pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;
+			// pinctrl-names = "default";
+			// pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;
 			status = "okay";
 		};
 
@@ -260,8 +260,9 @@
 			clock-frequency = <100000000>;
 			config-reg = <0x3C03F000 0x1000>;
 			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;
-			status = "okay";
+			// pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;
+			// status = "okay";
+			status = "disabled";
 			timings = < 200		/* tADL_min (ONFI_2_0_Gold.pdf,page 47)*/
 						20		/* tALH_min */
 						50		/* tALS_min */
@@ -296,14 +297,14 @@
 			/*interrupts = <109 0>;*/
 		};
 
-		sram_nor0: sram_nor0@0x3C030000 {  /* ID="NOR" */
+		sram_nor0: sram_nor0@0x3C030000 {  /* ID="NOR"?????????? */
 				compatible = "rcm,sram-nor","simple-bus";
-				chip-num = <0x18>;			/* ce<5>,ce<4>*/
+				chip-num = <0x3F>;			/* ce<5>,ce<4>*/
 				#address-cells = <1>;
 				#size-cells = <1>;
 				reg = <0x3C030000 0x1000>;
 				ranges = <0x00000000 0x20000000 0x10000000>;
-				cs-mode = <1>;  /* 0 - cs in address, 1 - cs in reg */
+				cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
 				addr-size = <26>; /* min 10 max 26 bit */
 				timings = <0x1f1f0808>;
 				// interrupt-parent = <&MPIC>;
@@ -311,22 +312,23 @@
 				// status = "disabled";
 				status = "okay";
 		};
-
-		sram_nor1: sram_nor1@0x3C031000 {  /* ID="SRAM" */
+/*
+		sram_nor1: sram_nor1@0x3C031000 { 						// ID="SRAM"?????????
 				compatible = "rcm,sram-nor","simple-bus";
-				chip-num = <0x00>;			/* ce<5>,ce<4>*/
+				chip-num = <0x010>;								//+8 if cs-mode is 0 don't care
 				#address-cells = <1>;
 				#size-cells = <1>;
 				reg = <0x3C031000 0x1000>;
-				ranges = <0x00000000 0x30000000 0x08000000>;
-				cs-mode = <1>;  /* 0 - cs in address, 1 - cs in reg */
-				addr-size = <22>; /* min 10 max 26 bit */
+				ranges = <0x00000000 0x30000000 0x08000000>;	// 0x8000000-28 бит, 28-1 т.к. чипа 2,еще -1 на 2 т.к. каждый 16 разр., 26 бит на чип шина и выходит
+				cs-mode = <0>;  								// 0 - cs in address, 1 - cs in chip-num
+				addr-size = <26>;								// min 10 max 26 bit
 				timings = <0x1f1f0808>;
 				// interrupt-parent = <&MPIC>;
 				// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
 				status = "disabled";
-				// status = "okay";
+				//status = "okay";
 			};
+*/
 		};
 
 	lsif1 {
@@ -499,15 +501,15 @@
 		};		
 
 
-		mmc0: mmc0@0x3C064000 {
-			compatible = "rcm,mmc-0.2";
-			reg = <0x3C064000 0x1000>;
-			carddetect-gpio = <&gpio1 1 0>;
-			/*u-boot,dm-pre-reloc;*/
-			status = "okay";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_sdio_default>;
-		};
+//		mmc0: mmc0@0x3C064000 {
+//			compatible = "rcm,mmc-0.2";
+//			reg = <0x3C064000 0x1000>;
+//			carddetect-gpio = <&gpio1 1 0>;
+//			/*u-boot,dm-pre-reloc;*/
+//			status = "okay";
+//			pinctrl-names = "default";
+//			pinctrl-0 = <&pinctrl_sdio_default>;
+//		};
 
 
         usb: musb@0x3C06D000 {

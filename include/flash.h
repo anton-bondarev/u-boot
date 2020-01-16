@@ -83,11 +83,6 @@ typedef unsigned long flash_sect_t;
 #define CFI_FLASH_SHIFT_WIDTH	3
 
 /* Prototypes */
-
-#ifdef CONFIG_MTD_RCM_NOR
-extern void rcm_mtd_arbiter_init(void);
-#endif
-
 extern unsigned long flash_init (void);
 extern void flash_print_info (flash_info_t *);
 extern int flash_erase	(flash_info_t *, int, int);
