@@ -469,8 +469,13 @@ static int should_load_env(void)
 static int initr_env(void)
 {
 	/* initialize environment */
-	if (should_load_env())
+	if (should_load_env()) {
+#ifndef CONFIG_MTD_RCM_NOR
 		env_relocate();
+#else
+		env_load();
+#endif
+	}
 	else
 		set_default_env(NULL);
 #ifdef CONFIG_OF_CONTROL

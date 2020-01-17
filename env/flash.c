@@ -40,11 +40,11 @@ DECLARE_GLOBAL_DATA_PTR;
 #define LOADENV
 #endif
 
-#if !defined(CONFIG_TARGET_X600) || !defined(CONFIG_SPL_BUILD)
+#if !defined(CONFIG_TARGET_X600) || !defined(CONFIG_SPL_BUILD) || defined(CONFIG_MTD_RCM_NOR)
 #define INITENV
 #endif
 
-#ifdef ENV_IS_EMBEDDED
+#if defined ENV_IS_EMBEDDED && !defined CONFIG_MTD_RCM_NOR
 env_t *env_ptr = &environment;
 
 static __maybe_unused env_t *flash_addr = (env_t *)CONFIG_ENV_ADDR;
