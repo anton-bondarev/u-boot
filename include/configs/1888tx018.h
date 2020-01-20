@@ -186,7 +186,7 @@
     #define CONFIG_ENV_SIZE                 0x4000
     #define CONFIG_ENV_SECT_SIZE            0x20000
 #elif defined CONFIG_ENV_IS_IN_FLASH
-    #define CONFIG_ENV_OFFSET               0x00000
+    #define CONFIG_ENV_OFFSET               0x1040000
     #define CONFIG_ENV_SIZE                 0x4000
     #define CONFIG_ENV_SECT_SIZE            0x20000
     #define CONFIG_SPL_ENV_SUPPORT
@@ -214,6 +214,10 @@
     #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
     #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE0
     #define CONFIG_SYS_FLASH_BANKS_LIST     { CONFIG_SYS_FLASH_BASE0, CONFIG_SYS_FLASH_BASE1 }
+    #define CONFIG_SYS_FLASH_EMPTY_INFO     /* flinfo show E and/or RO */
+    #define CONFIG_FLASH_SHOW_PROGRESS      100
+    #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
+    /*#define CONFIG_SYS_WRITE_SWAPPED_DATA*/
     /* #define CONFIG_SYS_MAX_FLASH_BANKS_DETECT not now,later */
     /* #define CONFIG_SYS_MAX_FLASH_BANKS      2 */
 #endif

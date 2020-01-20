@@ -109,7 +109,7 @@ int set_default_vars(int nvars, char * const vars[])
 int env_import(const char *buf, int check)
 {
 	env_t *ep = (env_t *)buf;
-
+	
 	if (check) {
 		uint32_t crc;
 

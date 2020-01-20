@@ -15,7 +15,7 @@
 #include <configs/1888tx018.h>
 
 #ifndef __UBOOT__
-            #include <linux/module.h>
+        #include <linux/module.h>
         #include <linux/slab.h>
         #include <linux/mtd/map.h>
         #include <linux/mtd/cfi.h>
@@ -29,6 +29,7 @@
         #endif
 #else
         typedef unsigned char uchar;
+		#include <asm/tlb47x.h>
         #include <dm/of.h>
         #include <dm/device.h>
         #include <dm/of_access.h>
@@ -415,6 +416,8 @@ int write_buff( flash_info_t* flash_info, uchar* src, ulong addr, ulong cnt ) {
 void rcm_sram_nor_init( void ) {
         struct udevice *dev;
         int ret;
+
+		//tlb47x_map( 0x1020000000, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
 
         ret = uclass_get_device_by_driver( UCLASS_MTD,
                                            DM_GET_DRIVER(rcm_sram_nor),

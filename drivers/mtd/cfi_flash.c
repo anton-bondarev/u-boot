@@ -32,6 +32,7 @@
 #define DBGP printf( "%s(%s,%u)\n", __FILE__, __FUNCTION__, __LINE__ );
 #define DBGB432(A) printf( "%08x: %08x %08x %08x %08x\n", (u32)A, flash_read32(A), flash_read32(A+4), flash_read32(A+8), flash_read32(A+12) );
 #define DBGB1632(A) DBGB432(A) DBGB432(A+16) DBGB432(A+32) DBGB432(A+48)
+//#define DBGRW
 /*
  * This file implements a Common Flash Interface (CFI) driver for
  * U-Boot.
@@ -139,16 +140,25 @@ __weak unsigned long cfi_flash_bank_size(int i)
 
 __maybe_weak void flash_write8(u8 value, void *addr)
 {
+	#ifdef DBGRW
+		printf( "%s:%08x-%02x\n", __FUNCTION__, (u32)addr, value );
+	#endif
 	__raw_writeb(value, addr);
 }
 
 __maybe_weak void flash_write16(u16 value, void *addr)
 {
+	#ifdef DBGRW
+		printf( "%s:%08x-%04x\n", __FUNCTION__, (u32)addr, value );
+	#endif
 	__raw_writew(value, addr);
 }
 
 __maybe_weak void flash_write32(u32 value, void *addr)
 {
+	#ifdef DBGRW
+		printf( "%s:%08x-%08x\n", __FUNCTION__, (u32)addr, value );
+	#endif
 	__raw_writel(value, addr);
 }
 
@@ -160,17 +170,29 @@ __maybe_weak void flash_write64(u64 value, void *addr)
 
 __maybe_weak u8 flash_read8(void *addr)
 {
-	return __raw_readb(addr);
+	u8 value = __raw_readb(addr);
+	#ifdef DBGRW
+		printf( "%s:%08x-%02x\n", __FUNCTION__, (u32)addr, value );
+	#endif
+	return value;
 }
 
 __maybe_weak u16 flash_read16(void *addr)
 {
-	return __raw_readw(addr);
+	u16 value = __raw_readw(addr);
+	#ifdef DBGRW
+		printf( "%s:%08x-%04x\n", __FUNCTION__, (u32)addr, value );
+	#endif
+	return value;
 }
 
 __maybe_weak u32 flash_read32(void *addr)
 {
-	return __raw_readl(addr);
+	u32 value = __raw_readl(addr);
+	#ifdef DBGRW
+		printf( "%s:%08x-%08x\n", __FUNCTION__, (u32)addr, value );
+	#endif
+	return value;
 }
 
 __maybe_weak u64 flash_read64(void *addr)
@@ -300,13 +322,13 @@ static inline uchar flash_read_uchar(flash_info_t *info, uint offset)
 	base = (unsigned long)cp & ~3ul;
 	offs = (unsigned long)cp & 3ul;
 	retval = flash_read32((void*)base);
-	while( offs ) retval >>= (8<<offs);
+	while( offs-- ) retval >>= 8;
 	return (uchar)retval;
 #else
 	uchar retval;
 
 	cp = flash_map(info, 0, offset);
-#if defined(__LITTLE_ENDIAN) || defined(CONFIG_SYS_WRITE_SWAPPED_DATA)
+#if defined(__LITTLE_ENDIAN) || defined(CONFIG_SYS_WRITE_SWAPPED_DATA) 
 	retval = flash_read8(cp);
 #else
 	retval = flash_read8(cp + info->portwidth - 1);
@@ -1357,7 +1379,7 @@ int write_buff(flash_info_t *info, uchar *src, ulong addr, ulong cnt)
 			CONFIG_FLASH_SHOW_PROGRESS);
 	}
 #endif
-
+	//printf( "%s(%llx,%llu)\n", __FUNCTION__, addr, cnt );
 	/* get lower aligned address */
 	wp = (addr & ~(info->portwidth - 1));
 
@@ -1375,6 +1397,8 @@ int write_buff(flash_info_t *info, uchar *src, ulong addr, ulong cnt)
 		}
 		for (; (cnt == 0) && (i < info->portwidth); ++i)
 			flash_add_byte(info, &cword, flash_read8(p + i));
+
+		printf( "cword: %08x\n", cword.w32 );
 
 		rc = flash_write_cfiword(info, wp, cword);
 		if (rc != 0)
@@ -2352,6 +2376,7 @@ static void flash_protect_default(void)
 	} apl[] = CONFIG_SYS_FLASH_AUTOPROTECT_LIST;
 #endif
 
+#ifndef CONFIG_MTD_RCM_NOR
 	/* Monitor protection ON by default */
 #if (CONFIG_SYS_MONITOR_BASE >= CONFIG_SYS_FLASH_BASE) && \
 	(!defined(CONFIG_MONITOR_IS_IN_RAM))
@@ -2359,6 +2384,7 @@ static void flash_protect_default(void)
 		      CONFIG_SYS_MONITOR_BASE,
 		      CONFIG_SYS_MONITOR_BASE + monitor_flash_len  - 1,
 		      flash_get_info(CONFIG_SYS_MONITOR_BASE));
+#endif
 #endif
 
 	/* Environment protection ON by default */

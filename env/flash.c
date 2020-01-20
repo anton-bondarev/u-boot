@@ -223,6 +223,7 @@ done:
 #ifdef INITENV
 static int env_flash_init(void)
 {
+	printf( "%s(%08x)\n", __FUNCTION__, (u32)env_ptr->data );
 	if (crc32(0, env_ptr->data, ENV_SIZE) == env_ptr->crc) {
 		gd->env_addr	= (ulong)&(env_ptr->data);
 		gd->env_valid	= ENV_VALID;
@@ -243,6 +244,8 @@ static int env_flash_save(void)
 	char	*saved_data = NULL;
 #if CONFIG_ENV_SECT_SIZE > CONFIG_ENV_SIZE
 	ulong	up_data = 0;
+
+	printf( "%s\n", __FUNCTION__ );
 
 	up_data = end_addr + 1 - ((long)flash_addr + CONFIG_ENV_SIZE);
 	debug("Data to save 0x%lx\n", up_data);
@@ -349,7 +352,7 @@ static int env_flash_load(void)
 		puts("*** Warning - some problems detected "
 		     "reading environment; recovered successfully\n\n");
 #endif /* CONFIG_ENV_ADDR_REDUND */
-
+	printf( "%s(%08x)\n", __FUNCTION__, (u32)flash_addr );
 	return env_import((char *)flash_addr, 1);
 }
 #endif /* LOADENV */
