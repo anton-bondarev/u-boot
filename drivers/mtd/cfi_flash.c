@@ -124,7 +124,6 @@ phys_addr_t cfi_flash_bank_addr(int i)
 __weak phys_addr_t cfi_flash_bank_addr(int i)
 {
 	static const u32 config_sys_flash_banks_list[] = CONFIG_SYS_FLASH_BANKS_LIST;
-//	printf( "%08x:%u\n", config_sys_flash_banks_list[i], i );
 	return (phys_addr_t) config_sys_flash_banks_list[i];
 }
 #endif
@@ -140,25 +139,16 @@ __weak unsigned long cfi_flash_bank_size(int i)
 
 __maybe_weak void flash_write8(u8 value, void *addr)
 {
-	#ifdef DBGRW
-		printf( "%s:%08x-%02x\n", __FUNCTION__, (u32)addr, value );
-	#endif
 	__raw_writeb(value, addr);
 }
 
 __maybe_weak void flash_write16(u16 value, void *addr)
 {
-	#ifdef DBGRW
-		printf( "%s:%08x-%04x\n", __FUNCTION__, (u32)addr, value );
-	#endif
 	__raw_writew(value, addr);
 }
 
 __maybe_weak void flash_write32(u32 value, void *addr)
 {
-	#ifdef DBGRW
-		printf( "%s:%08x-%08x\n", __FUNCTION__, (u32)addr, value );
-	#endif
 	__raw_writel(value, addr);
 }
 
@@ -170,29 +160,17 @@ __maybe_weak void flash_write64(u64 value, void *addr)
 
 __maybe_weak u8 flash_read8(void *addr)
 {
-	u8 value = __raw_readb(addr);
-	#ifdef DBGRW
-		printf( "%s:%08x-%02x\n", __FUNCTION__, (u32)addr, value );
-	#endif
-	return value;
+	return __raw_readb(addr);
 }
 
 __maybe_weak u16 flash_read16(void *addr)
 {
-	u16 value = __raw_readw(addr);
-	#ifdef DBGRW
-		printf( "%s:%08x-%04x\n", __FUNCTION__, (u32)addr, value );
-	#endif
-	return value;
+	return __raw_readw(addr);
 }
 
 __maybe_weak u32 flash_read32(void *addr)
 {
-	u32 value = __raw_readl(addr);
-	#ifdef DBGRW
-		printf( "%s:%08x-%08x\n", __FUNCTION__, (u32)addr, value );
-	#endif
-	return value;
+	return __raw_readl(addr);
 }
 
 __maybe_weak u64 flash_read64(void *addr)
@@ -315,27 +293,16 @@ static void flash_printqry(struct cfi_qry *qry)
 static inline uchar flash_read_uchar(flash_info_t *info, uint offset)
 {
 	uchar *cp;
-#if defined CONFIG_MTD_RCM_NOR
-	unsigned long base, offs;
-	u32 retval;
-	cp = flash_map(info, 0, offset);
-	base = (unsigned long)cp & ~3ul;
-	offs = (unsigned long)cp & 3ul;
-	retval = flash_read32((void*)base);
-	while( offs-- ) retval >>= 8;
-	return (uchar)retval;
-#else
 	uchar retval;
 
 	cp = flash_map(info, 0, offset);
-#if defined(__LITTLE_ENDIAN) || defined(CONFIG_SYS_WRITE_SWAPPED_DATA) 
+#if defined(__LITTLE_ENDIAN) || defined(CONFIG_SYS_WRITE_SWAPPED_DATA)
 	retval = flash_read8(cp);
 #else
 	retval = flash_read8(cp + info->portwidth - 1);
 #endif
 	flash_unmap(info, 0, offset, cp);
 	return retval;
-#endif
 }
 
 /*-----------------------------------------------------------------------
@@ -372,10 +339,7 @@ static ulong flash_read_long (flash_info_t *info, flash_sect_t sect,
 	for (x = 0; x < 4 * info->portwidth; x++)
 		debug("addr[%x] = 0x%x\n", x, flash_read8(addr + x));
 #endif
-
-#if defined CONFIG_MTD_RCM_NOR
-	retval = flash_read32(addr);
-#elif defined(__LITTLE_ENDIAN) || defined(CONFIG_SYS_WRITE_SWAPPED_DATA)
+#if defined(__LITTLE_ENDIAN) || defined(CONFIG_SYS_WRITE_SWAPPED_DATA)
 	retval = ((flash_read8(addr) << 16) |
 		  (flash_read8(addr + info->portwidth) << 24) |
 		  (flash_read8(addr + 2 * info->portwidth)) |
@@ -492,6 +456,7 @@ static int flash_isequal(flash_info_t *info, flash_sect_t sect, uint offset,
 		break;
 	}
 	flash_unmap(info, sect, offset, addr);
+
 	return retval;
 }
 
@@ -772,9 +737,7 @@ static void flash_add_byte(flash_info_t *info, cfiword_t *cword, uchar c)
 #endif
 		break;
 	case FLASH_CFI_32BIT:
-#if defined CONFIG_MTD_RCM_NOR
-		cword->w32 = (cword->w32 << 8) | c;
-#elif defined(__LITTLE_ENDIAN) && !defined(CONFIG_SYS_WRITE_SWAPPED_DATA)
+#if defined(__LITTLE_ENDIAN) && !defined(CONFIG_SYS_WRITE_SWAPPED_DATA)
 		l = c;
 		l <<= 24;
 		cword->w32 = (cword->w32 >> 8) | l;
@@ -1379,7 +1342,7 @@ int write_buff(flash_info_t *info, uchar *src, ulong addr, ulong cnt)
 			CONFIG_FLASH_SHOW_PROGRESS);
 	}
 #endif
-	//printf( "%s(%llx,%llu)\n", __FUNCTION__, addr, cnt );
+
 	/* get lower aligned address */
 	wp = (addr & ~(info->portwidth - 1));
 
@@ -1397,8 +1360,6 @@ int write_buff(flash_info_t *info, uchar *src, ulong addr, ulong cnt)
 		}
 		for (; (cnt == 0) && (i < info->portwidth); ++i)
 			flash_add_byte(info, &cword, flash_read8(p + i));
-
-		printf( "cword: %08x\n", cword.w32 );
 
 		rc = flash_write_cfiword(info, wp, cword);
 		if (rc != 0)
@@ -2203,12 +2164,12 @@ ulong flash_get_size(phys_addr_t base, int banknum)
 		    info->chipwidth == FLASH_CFI_BY8) {
 			size_ratio >>= 1;
 		}
-#ifdef CONFIG_MTD_RCM_NOR
-		else if (info->portwidth == FLASH_CFI_32BIT &&
-		    info->chipwidth == FLASH_CFI_BY16) {
-			size_ratio >>= 1;
-		}
-#endif
+//#ifdef CONFIG_MTD_RCM_NOR
+//		else if (info->portwidth == FLASH_CFI_32BIT &&
+//		    info->chipwidth == FLASH_CFI_BY16) {
+//			size_ratio >>= 1;
+//		}
+//#endif
 		debug("size_ratio %d port %d bits chip %d bits\n",
 		      size_ratio, info->portwidth << CFI_FLASH_SHIFT_WIDTH,
 		      info->chipwidth << CFI_FLASH_SHIFT_WIDTH);
@@ -2220,7 +2181,7 @@ ulong flash_get_size(phys_addr_t base, int banknum)
 			debug("[truncated from %ldMiB]", info->size >> 20);
 			info->size = max_size;
 		}
-		debug("found %d erase regions\n", num_erase_regions);
+		/*debug*/printf("found %d erase regions\n", num_erase_regions);
 		sect_cnt = 0;
 		sector = base;
 		for (i = 0; i < num_erase_regions; i++) {
@@ -2238,8 +2199,8 @@ ulong flash_get_size(phys_addr_t base, int banknum)
 			tmp >>= 16;
 			erase_region_size =
 				(tmp & 0xffff) ? ((tmp & 0xffff) * 256) : 128;
-			debug("erase_region_count = %d ", erase_region_count);
-			debug("erase_region_size = %d\n", erase_region_size);
+			/*debug*/printf("erase_region_count = %d ", erase_region_count);
+			/*debug*/printf("erase_region_size = %d\n", erase_region_size);
 			for (j = 0; j < erase_region_count; j++) {
 				if (sector - base >= info->size)
 					break;

@@ -352,7 +352,7 @@ static int env_flash_load(void)
 		puts("*** Warning - some problems detected "
 		     "reading environment; recovered successfully\n\n");
 #endif /* CONFIG_ENV_ADDR_REDUND */
-	printf( "%s(%08x)\n", __FUNCTION__, (u32)flash_addr );
+	printf( "from address %08x\n", (u32)flash_addr );
 	return env_import((char *)flash_addr, 1);
 }
 #endif /* LOADENV */

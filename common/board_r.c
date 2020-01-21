@@ -49,6 +49,7 @@
 #include <linux/compiler.h>
 #include <linux/err.h>
 #include <efi_loader.h>
+#include <asm/tlb47x.h>
 
 #ifdef CONFIG_MTD_RCM_NOR
 extern void rcm_mtd_arbiter_init(void);
@@ -336,13 +337,10 @@ static int initr_manual_reloc_cmdtable(void)
 #endif
 
 #if defined(CONFIG_MTD_RCM_NOR)
-static int initr_arbiter(void)
-{
+static int initr_rcm_sram_nor(void)
+{   /* todo-move to spl */
+	tlb47x_map( 0x1020000000, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
 	rcm_mtd_arbiter_init();
-	return 0;
-}
-static int initr_sram_nor(void)
-{
 	rcm_sram_nor_init();
 	return 0;
 }
@@ -760,8 +758,7 @@ static init_fnc_t init_sequence_r[] = {
 #endif
 	power_init_board,
 #ifdef CONFIG_MTD_RCM_NOR
-	initr_arbiter,
-	initr_sram_nor,
+	initr_rcm_sram_nor,
 #endif
 #ifdef CONFIG_MTD_NOR_FLASH
 	initr_flash,

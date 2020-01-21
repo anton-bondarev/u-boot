@@ -78,7 +78,7 @@
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
 /*#define CONFIG_SYS_DRAM_TEST*/
 
-#define CONFIG_SYS_MAX_FLASH_BANKS      2 //?
+#define CONFIG_SYS_MAX_FLASH_BANKS      1//2 //?
 #define CONFIG_SYS_MAX_FLASH_SECT       1024
 
 #define CONFIG_CHIP_SELECTS_PER_CTRL    2
@@ -188,7 +188,7 @@
 #elif defined CONFIG_ENV_IS_IN_FLASH
     #define CONFIG_ENV_OFFSET               0x1040000
     #define CONFIG_ENV_SIZE                 0x4000
-    #define CONFIG_ENV_SECT_SIZE            0x20000
+    #define CONFIG_ENV_SECT_SIZE            0x40000
     #define CONFIG_SPL_ENV_SUPPORT
     #define CONFIG_TPL_ENV_SUPPORT
 #else
@@ -217,7 +217,7 @@
     #define CONFIG_SYS_FLASH_EMPTY_INFO     /* flinfo show E and/or RO */
     #define CONFIG_FLASH_SHOW_PROGRESS      100
     #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
-    /*#define CONFIG_SYS_WRITE_SWAPPED_DATA*/
+    #define CONFIG_SYS_WRITE_SWAPPED_DATA
     /* #define CONFIG_SYS_MAX_FLASH_BANKS_DETECT not now,later */
     /* #define CONFIG_SYS_MAX_FLASH_BANKS      2 */
 #endif
