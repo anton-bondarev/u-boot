@@ -14,6 +14,8 @@
 #include <linux/mtd/partitions.h>
 #include <configs/1888tx018.h>
 
+#define CONFIG_PPC_DCR
+
 #ifndef __UBOOT__
         #include <linux/module.h>
         #include <linux/slab.h>
@@ -37,6 +39,7 @@
         #include <regmap.h>
         #include <flash.h>
         #include <mtd/cfi_flash.h>
+        #include <asm/tlb47x.h>
 #endif
 
 #define NORMC_ID_VAL_lsif               0x20524F4E
@@ -112,6 +115,33 @@
         #define RSWAP(B) (B)
 
 #else
+
+#ifdef CONFIG_PPC_DCR // page 982
+/* todo - mast uses analog from ddr_init!!! */
+        static u32 DCR_READ(u32 addr,u32 offs) {
+            u32 res;
+            addr+=offs;
+            asm volatile   (
+            "mfdcrx (%0), (%1) \n\t"       // mfdcrx RT, RA
+            :"=r"(res)
+            :"r"((u32) addr)
+            :  
+            );
+            DBG_PRINT( "%s: %08x,%08x\n", __FUNCTION__, addr, res )
+        return res;
+        };
+
+        static void DCR_WRITE(u32 addr, u32 offs, u32 value) {
+            addr+=offs;
+            asm volatile   (
+            "mtdcrx (%0), (%1) \n\t"       // mtdcrx RA, RS
+            ::"r"((u32) addr), "r"((u32) value)
+            :  
+            );
+            DBG_PRINT( "%s: %08x,%08x\n", __FUNCTION__, addr, value )
+        };
+
+#endif
         #define WSWAP(B) cpu_to_le32(B)
         #define RSWAP(B) le32_to_cpu(B)
 
@@ -134,47 +164,54 @@ typedef u32 (*reg_readl_fn)(void *rcm_mtd, u32 offset);
 typedef void (*reg_writel_read_fn)(void *rcm_mtd, u32 offset, u32 val);
 
 struct rcm_mtd {
-	void *regs;
+    void *regs;
 #ifdef CONFIG_PPC_DCR
-	dcr_host_t dcr_host;
+    #ifndef __UBOOT__
+            dcr_host_t dcr_host;
+    #else
+            u32 dcr_host;
+    #endif
 #endif /* CONFIG_PPC_DCR */
-	u32 high_addr;
-	reg_readl_fn readl_fn;
-	reg_writel_read_fn writel_fn;
+        u32 high_addr;
+        reg_readl_fn readl_fn;
+        reg_writel_read_fn writel_fn;
 };
 
 u32 lsif_reg_readl(void *base, u32 offset)
 {
-	struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
-	return RSWAP(readl(rcm_mtd->regs + offset));
+    struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
+    return RSWAP(readl(rcm_mtd->regs + offset));
 }
 
 void lsif_reg_writel(void *base, u32 offset, u32 val)
 {
-	struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
-	writel(WSWAP(val), rcm_mtd->regs + offset);
+    struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
+    writel(WSWAP(val), rcm_mtd->regs + offset);
 }
 
 #ifdef CONFIG_PPC_DCR
+
 u32 dcr_reg_readl(void *base, u32 offset)
 {
-	struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
-	return dcr_read(rcm_mtd->dcr_host, offset);
+    struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
+    return DCR_READ(rcm_mtd->dcr_host, offset);
 }
 
 void dcr_reg_writel(void *base, u32 offset, u32 val)
 {
-	struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
-	dcr_write(rcm_mtd->dcr_host, offset, val);
+    struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
+    DCR_WRITE(rcm_mtd->dcr_host, offset, val);
+    DCR_READ(rcm_mtd->dcr_host, offset ); // убрать
 }
+
 #endif
 
 static int rcm_controller_setup( rcm_sram_nor_device *pdev )
 {
         struct rcm_mtd *rcm_mtd;
         struct device_node *of_node;
-	u32 chip_num, timings, cs_mode, addr_size;
-	int ret;
+    u32 chip_num, timings, cs_mode, addr_size;
+    int ret;
 
 #ifndef __UBOOT__
         rcm_mtd = platform_get_drvdata(pdev);
@@ -184,79 +221,80 @@ static int rcm_controller_setup( rcm_sram_nor_device *pdev )
         of_node = (struct device_node*)ofnode_to_np( pdev->node );
 #endif
 
-	// get mux mode, chip-num, cs_mode and timings
-	ret = of_property_read_u32(of_node, "chip-num", &chip_num);
-	if (ret != 0) {
-		dev_err(&pdev->dev, "chip-num must be defined\n");
-		return ret;
-	}
-	if (chip_num > 0x3F) {
-		dev_err(&pdev->dev, "chip_num must be between 0 and 0x3F\n");
-		return -EINVAL;
-	}
+    // get mux mode, chip-num, cs_mode and timings
+    ret = of_property_read_u32(of_node, "chip-num", &chip_num);
+    if (ret != 0) {
+        dev_err(&pdev->dev, "chip-num must be defined\n");
+        return ret;
+    }
+    if (chip_num > 0x3F) {
+        dev_err(&pdev->dev, "chip_num must be between 0 and 0x3F\n");
+        return -EINVAL;
+    }
 
-	ret = of_property_read_u32(of_node, "cs-mode", &cs_mode);
-	if (ret != 0) {
-		dev_err(&pdev->dev, "cs_mode must be defined\n");
-		return ret;
-	}
-	if (cs_mode > 1) {
-		dev_err(&pdev->dev, "cs-mode must be 0 or 1\n");
-		return -EINVAL;
-	}
+    ret = of_property_read_u32(of_node, "cs-mode", &cs_mode);
+    if (ret != 0) {
+        dev_err(&pdev->dev, "cs_mode must be defined\n");
+        return ret;
+    }
+    if (cs_mode > 1) {
+        dev_err(&pdev->dev, "cs-mode must be 0 or 1\n");
+        return -EINVAL;
+    }
 
-	ret = of_property_read_u32(of_node, "addr-size", &addr_size);
-	if (ret != 0) {
-		dev_err(&pdev->dev, "addr-size must be defined\n");
-		return ret;
-	}
-	if (addr_size < 10 || addr_size > 26) {
-		dev_err(&pdev->dev, "addr-size must be between 10 and 26\n");
-		return -EINVAL;
-	}
+    ret = of_property_read_u32(of_node, "addr-size", &addr_size);
+    if (ret != 0) {
+        dev_err(&pdev->dev, "addr-size must be defined\n");
+        return ret;
+    }
+    if (addr_size < 10 || addr_size > 26) {
+        dev_err(&pdev->dev, "addr-size must be between 10 and 26\n");
+        return -EINVAL;
+    }
 
-	if (of_property_read_u32(of_node, "timings",
-				 &timings)) {
-		dev_warn(&pdev->dev, "Setup default NOR timings\n");
-		timings = SRAMNOR_TIMINGS;
-	}
+    if (of_property_read_u32(of_node, "timings",
+                 &timings)) {
+        dev_warn(&pdev->dev, "Setup default NOR timings\n");
+        timings = SRAMNOR_TIMINGS;
+    }
 
-	{
-		// check id and version first
-		u32 id = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_id);
-		u32 version = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_version);
-		u32 config = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_config);
+    {
+        // check id and version first
+        u32 id = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_id);
+        u32 version = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_version);
+        u32 config = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_config);
 #ifdef RCM_SRAM_NOR_DBG
-		DBG_PRINT("TRACE: rcm_controller_setup: id %x, ver %x, conf %x\n",
-		       id, version, config);
+        DBG_PRINT("TRACE: rcm_controller_setup: id %x, ver %x, conf %x\n",
+               id, version, config);
 #endif
-		if ((id != NORMC_ID_VAL_lsif && id != NORMC_ID_VAL_mcif) ||
-		    version != NORMC_VERSION_VAL)
-			dev_warn(&pdev->dev,
-				 "Check chip ID (%x) and version (%x)\n", id,
-				 version);
+        if ((id != NORMC_ID_VAL_lsif && id != NORMC_ID_VAL_mcif) ||
+            version != NORMC_VERSION_VAL)
+            dev_warn(&pdev->dev,
+                 "Check chip ID (%x) and version (%x)\n", id,
+                 version);
 #ifdef RCM_SRAM_NOR_DBG
                 DBG_PRINT( "ID: %c%c%c%c\n", (uint8_t)(id>>0), (uint8_t)(id>>8), (uint8_t)(id>>16), (uint8_t)(id>>24) )
 #endif
-		// configure controller
-		config = (chip_num << SRAMNOR__chip_num_i) |
-			 (cs_mode << SRAMNOR__ce_mode_i) |
-			 (addr_size << SRAMNOR__addr_size_i) |
-			 (0 << SRAMNOR__ecc_mode_i); // switch off ECC
+        // configure controller
+        config = (chip_num << SRAMNOR__chip_num_i) |
+             (cs_mode << SRAMNOR__ce_mode_i) |
+             (addr_size << SRAMNOR__addr_size_i) |
+             (0 << SRAMNOR__ecc_mode_i); // switch off ECC
 
+        rcm_mtd->writel_fn(rcm_mtd, SRAMNOR_REG_config, config);
 #ifdef RCM_SRAM_NOR_DBG
-		DBG_PRINT("TRACE: rcm_controller_setup: write config %x\n", config);
+        DBG_PRINT( "TRACE: rcm_controller_setup: config write %x, read %x\n",
+                   config,
+                   rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_config) );
 #endif
-		rcm_mtd->writel_fn(rcm_mtd, SRAMNOR_REG_config, config);
+        rcm_mtd->writel_fn(rcm_mtd, SRAMNOR_REG_reserve,
+                rcm_mtd->high_addr << 28);
 
-		rcm_mtd->writel_fn(rcm_mtd, SRAMNOR_REG_reserve,
-				rcm_mtd->high_addr << 28);
+        // setup timings
+        rcm_mtd->writel_fn(rcm_mtd, SRAMNOR_REG_timings, timings);
+    }
 
-		// setup timings
-		rcm_mtd->writel_fn(rcm_mtd, SRAMNOR_REG_timings, timings);
-	}
-
-	return 0;
+    return 0;
 }
 
 static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
@@ -285,38 +323,52 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
 
         if (of_property_read_bool( of_node, "dcr-reg" )) {
 #ifdef CONFIG_PPC_DCR
-		const u32 *ranges;
-		u32 rlen;
-		phys_addr_t phys_addr =
-			dcr_resource_start(pdev->dev.of_node, 0);
-		rcm_mtd->dcr_host =
-			dcr_map(pdev->dev.of_node, phys_addr,
-				dcr_resource_len(pdev->dev.of_node, 0));
-		rcm_mtd->readl_fn = &dcr_reg_readl;
-		rcm_mtd->writel_fn = &dcr_reg_writel;
-
-		ranges = of_get_property(pdev->dev.of_node, "ranges", &rlen);
-		if (!ranges || rlen < 2) {
-			dev_err(&pdev->dev, "memory ranges must be defined\n");
-			return -ENOENT;
-		}
-		rcm_mtd->high_addr =
-			ranges[1]; // save high addr of ranges for controller setup
-
-#else
-		dev_err(&pdev->dev, "DCR functionality not avaliable\n");
-		return -ENOENT;
+    #ifndef __UBOOT__
+        const u32 *ranges;
+        u32 rlen;
+        phys_addr_t phys_addr =
+            dcr_resource_start(pdev->dev.of_node, 0);
+        rcm_mtd->dcr_host =
+            dcr_map(pdev->dev.of_node, phys_addr,
+                dcr_resource_len(pdev->dev.of_node, 0));
+        ranges = of_get_property(of_node, "ranges", &rlen);
+        if (!ranges || rlen < 2) {
+            dev_err(&pdev->dev, "memory ranges must be defined\n");
+            return -ENOENT;
+        }
+    #else
+        u32 dcr_reg[2];
+        u32 ranges[4];
+        if( of_property_read_u32_array( of_node, "dcr-reg", dcr_reg, 2 ) ) {
+            dev_err(&pdev->dev, "read dcr-rev property failed\n");
+            return -ENOENT;
+        }
+        DBG_PRINT( "dcr-reg=%08x,%08x\n", dcr_reg[0], dcr_reg[1] )
+        rcm_mtd->dcr_host = dcr_reg[0];
+        if( of_property_read_u32_array( of_node, "ranges", ranges, 4 ) ) {
+            dev_err(&pdev->dev, "read memory ranges failed\n");
+            return -ENOENT;
+        }
+        DBG_PRINT( "addr-high=%08x\n", ranges[1] )
+    #endif
+        rcm_mtd->high_addr =
+            ranges[1]; // save high addr of ranges for controller setup
+        rcm_mtd->readl_fn = &dcr_reg_readl;
+        rcm_mtd->writel_fn = &dcr_reg_writel;
+#else // !CONFIG_PPC_DCR
+        dev_err(&pdev->dev, "DCR functionality not avaliable\n");
+        return -ENOENT;
 #endif
-	} else {
+    } else {
 #ifndef __UBOOT__
-		ctrl = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-		if (!ctrl) {
-			dev_err(&pdev->dev, "failed to get control resource\n");
-			return -ENOENT;
-		}
-		rcm_mtd->regs = devm_ioremap_resource(&pdev->dev, ctrl);
-		if (IS_ERR(rcm_mtd->regs))
-			return PTR_ERR(rcm_mtd->regs);
+        ctrl = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+        if (!ctrl) {
+            dev_err(&pdev->dev, "failed to get control resource\n");
+            return -ENOENT;
+        }
+        rcm_mtd->regs = devm_ioremap_resource(&pdev->dev, ctrl);
+        if (IS_ERR(rcm_mtd->regs))
+            return PTR_ERR(rcm_mtd->regs);
 #else
                 u32 reg[2];
                 u32 ranges[3];
@@ -326,43 +378,50 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
                         return -ENOENT;
                 }
                 rcm_mtd->regs = (void*)reg[0];
-                rcm_mtd->high_addr = ranges[1];
+                rcm_mtd->high_addr = ranges[1]; // это лишнее и неправильное,убрать и проверить
                 DBG_PRINT( "Reg=%08x,addr=%08x\n", (u32)rcm_mtd->regs, rcm_mtd->high_addr )
 #endif
                 rcm_mtd->readl_fn = &lsif_reg_readl;
                 rcm_mtd->writel_fn = &lsif_reg_writel;
         }
 
-	if (rcm_controller_setup(pdev)) {
-		dev_err(&pdev->dev, "hw setup failed\n");
-		return -ENXIO;
-	}
-
-	dev_info(&pdev->dev, "registered\n");
-	return 0;
+    if (rcm_controller_setup(pdev)) {
+        dev_err(&pdev->dev, "hw setup failed\n");
+        return -ENXIO;
+    }
+/* flash connect via LSIF */
+    //tlb47x_inval( 0x20000000, TLBSID_256M );
+    //tlb47x_map( 0x1020000000ull, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
+/* flash connect via MCIF */
+	tlb47x_inval( 0x20000000, TLBSID_256M );
+	tlb47x_map( 0x0600000000ull, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
+	tlb47x_inval( 0xa0000000, TLBSID_256M );
+	tlb47x_map( 0x0610000000ull, 0xa0000000, TLBSID_256M, TLB_MODE_RWX );
+    dev_info(&pdev->dev, "registered\n");
+    return 0;
 }
 
 #ifndef __UBOOT__
 
 static int rcm_mtd_remove(struct platform_device *pdev)
 {
-	return 0;
+    return 0;
 }
 
 static const struct of_device_id rcm_mtd_match[] = {
-	{ .compatible = "rcm,sram-nor" },
-	{},
+    { .compatible = "rcm,sram-nor" },
+    {},
 };
 MODULE_DEVICE_TABLE(of, rcm_mtd_match);
 
 static struct platform_driver rcm_mtd_driver = {
-	.probe = rcm_mtd_probe,
-	.remove = rcm_mtd_remove,
-	.driver =
-		{
-			.name = "rcm-sram-nor",
-			.of_match_table = rcm_mtd_match,
-		},
+    .probe = rcm_mtd_probe,
+    .remove = rcm_mtd_remove,
+    .driver =
+        {
+            .name = "rcm-sram-nor",
+            .of_match_table = rcm_mtd_match,
+        },
 };
 
 module_platform_driver(rcm_mtd_driver);

@@ -338,8 +338,7 @@ static int initr_manual_reloc_cmdtable(void)
 
 #if defined(CONFIG_MTD_RCM_NOR)
 static int initr_rcm_sram_nor(void)
-{   /* todo-move to spl */
-	tlb47x_map( 0x1020000000, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
+{ 
 	rcm_mtd_arbiter_init();
 	rcm_sram_nor_init();
 	return 0;

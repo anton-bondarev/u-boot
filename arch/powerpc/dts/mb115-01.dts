@@ -40,13 +40,29 @@
 			<&lsif0_mgpio6_sram_nor>,
 			<&lsif0_mgpio7_sram_nor>,
 			<&lsif0_mgpio8_sram_nor>;
-		sctl-reg = <0x38000000 0x1000>; /* переделать на <&sctl> */
-		lsif-reg = <0x3C03F000 0x1000>; /* переделать на <&lsif0> */
-		sram-nor-mux = <0>;	/*1*/		// 0 to route extmem wires to LSIF0, 1 - to MCIF
+		sctl-reg = <0x38000000 0x1000>;		/* переделать на <&sctl> */
+		lsif-reg = <0x3C03F000 0x1000>;		/* переделать на <&lsif0> */
+		sram-nor-mux = <1>;					/* 0 to route extmem wires to LSIF0, 1 - to MCIF */
 		/* in case of LSIF0 following lines will be needed */
-		ext-mem-mux-mode = <0>;			/* page 913 */
-		ce-manage = <2>;				/* page 913 + confluence */
+		ext-mem-mux-mode = <0>;				/* page 913 */
+		ce-manage = <2>;					/* page 913 + confluence (MCIF-cs0..3=>1, cs4,5=>2) */
 		status = "okay";
+	};
+
+	sram_plb_nor1: sram_plb_nor1@0x80190000 {
+		compatible = "rcm,sram-nor","simple-bus";
+		#address-cells = <2>;
+		#size-cells = <1>;
+		chip-num = <0x3F>;
+		dcr-reg = <0x80190000 0x1000>;
+		ranges = <0x00000000 0x6 0x00000000 0x10000000>;
+		cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
+		addr-size = <26>; /* min 10 max 26 bit */
+		timings = <0x1f1f0808>;
+		// interrupt-parent = <&MPIC>;
+		// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
+		status = "okay";
+		//status = "disabled";
 	};
 
 	lsif0 {
@@ -299,7 +315,7 @@
 
 		sram_nor0: sram_nor0@0x3C030000 {  /* ID="NOR"?????????? */
 				compatible = "rcm,sram-nor","simple-bus";
-				chip-num = <0x3F>;			/* ce<5>,ce<4>*/
+				chip-num = <0x3F>;			/* ce<5>,ce<4>???*/
 				#address-cells = <1>;
 				#size-cells = <1>;
 				reg = <0x3C030000 0x1000>;
@@ -309,8 +325,8 @@
 				timings = <0x1f1f0808>;
 				// interrupt-parent = <&MPIC>;
 				// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
-				// status = "disabled";
-				status = "okay";
+				status = "disabled";
+				// status = "okay";
 		};
 /*
 		sram_nor1: sram_nor1@0x3C031000 { 						// ID="SRAM"?????????

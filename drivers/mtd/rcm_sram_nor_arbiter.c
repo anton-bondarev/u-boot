@@ -10,6 +10,8 @@
 #include <linux/kernel.h>
 #include <linux/io.h> 
 
+#define CONFIG_PPC_DCR
+
 #ifndef __UBOOT__
         #include <linux/module.h>
         #include <linux/of.h>
@@ -97,6 +99,7 @@ static void plb6mcif_test_read( void ) { // потом убрать
         typedef struct udevice rcm_mtd_arbiter_device;
 
         static int REGMAP_WRITE( struct regmap* map, unsigned int reg, unsigned int val ) {
+                DBG_PRINT( "%s: %08x,%08x\n", __FUNCTION__, (uint32_t)(map->base)+reg, val )
                 return regmap_write( map, reg, cpu_to_le32( val ) );
         }
 
@@ -105,6 +108,7 @@ static void plb6mcif_test_read( void ) { // потом убрать
                 int ret = regmap_read( map, reg, &retval );
                 if( ret == 0 )
                         *val = le32_to_cpu( retval );
+                DBG_PRINT( "%s: %08x,%08x\n", __FUNCTION__, (uint32_t)(map->base)+reg, *val )
                 return ret;
         }
 
@@ -185,6 +189,7 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev)
         if( sram_nor_mux == 1 ) {                                                       // конфигурация для mcif
 #ifdef CONFIG_PPC_DCR
                 plb6mcif_initbridge();
+                plb6mcif_test_read();
 #endif
                 ret = REGMAP_WRITE( sctl, SRAM_NOR_CTRL, ce_manage << 1 | 1 );          // стр.922
                 if( ret != 0 ) {
