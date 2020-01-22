@@ -14,8 +14,6 @@
 #include <linux/mtd/partitions.h>
 #include <configs/1888tx018.h>
 
-#define CONFIG_PPC_DCR
-
 #ifndef __UBOOT__
         #include <linux/module.h>
         #include <linux/slab.h>
@@ -64,38 +62,6 @@
 #define SRAMNOR_REG_data_ecc_write_mem  0x24
 #define SRAMNOR_REG_data_ecc_read_mem   0x28
 
-#define CNTRL1_FLASH_addr               0x055 // page 31
-#define CNTRL2_FLASH_addr               0x555 // page 27
-#define CNTRL3_FLASH_addr               0x2AA // page 27
-
-#define CFI_ENTER_cmd_data              0x98
-#define UNLOCK1_cmd_data                0xAA
-#define UNLOCK2_cmd_data                0x55
-#define READ_STAT_cmd_data              0x70 // page 56
-#define READ_BUF_cmd_data               0xF0
-#define PRG_WORD_cmd_data               0xA0 // page 45
-#define WRITE_BUF_ENTER_cmd_data        0x25 // page 27
-#define WRITE_BUF_START_cmd_data        0x29 // page 27
-#define ERASE_SECT_ENTER_cmd_data       0x80 // page 29
-#define ERASE_SECT_START_cmd_data       0x30 // page 29
-
-#define CFI_MANUFACT_ID_OFF             0x00 // 0x001 (page 58)
-#define CFI_DEVICE_ID_OFF               0x01 // 0x227e
-#define CFI_PROTECTION_OFF              0x02
-#define CFI_INDICATOR_BITS_OFF          0x03
-#define CFI_LOW_SOFT_BITS_OFF           0x0C
-#define CFI_DEVICE_ID2_OFF              0x0E // 0x2228=1Gb,0x2223=512Mb,0x2222=256Mb,0x2221=128Mb
-#define CFI_DEVICE_ID3_OFF              0x0F // 0x2201
-
-#define STAT_REG_RESERVED               0x00 // page 34
-#define STAT_REG_SECTOR_LOCKED          0x01
-#define STAT_REG_PROGRAM_SUSPEND        0x02
-#define STAT_REG_WRITE_ABORT            0x03
-#define STAT_REG_PROGRAM                0x04
-#define STAT_REG_ERASE                  0x05
-#define STAT_REG_ERASE_SUSPEND          0x06
-#define STAT_REG_DEVICE_READY           0x07
-
 #define RCM_SRAM_NOR_DBG
 
 #ifdef RCM_SRAM_NOR_DBG
@@ -114,38 +80,11 @@
         #define WSWAP(B) (B)
         #define RSWAP(B) (B)
 
-#else
+#else // is defined __UBOOT__
+        typedef struct udevice rcm_sram_nor_device;
 
-#ifdef CONFIG_PPC_DCR // page 982
-/* todo - mast uses analog from ddr_init!!! */
-        static u32 DCR_READ(u32 addr,u32 offs) {
-            u32 res;
-            addr+=offs;
-            asm volatile   (
-            "mfdcrx (%0), (%1) \n\t"       // mfdcrx RT, RA
-            :"=r"(res)
-            :"r"((u32) addr)
-            :  
-            );
-            DBG_PRINT( "%s: %08x,%08x\n", __FUNCTION__, addr, res )
-        return res;
-        };
-
-        static void DCR_WRITE(u32 addr, u32 offs, u32 value) {
-            addr+=offs;
-            asm volatile   (
-            "mtdcrx (%0), (%1) \n\t"       // mtdcrx RA, RS
-            ::"r"((u32) addr), "r"((u32) value)
-            :  
-            );
-            DBG_PRINT( "%s: %08x,%08x\n", __FUNCTION__, addr, value )
-        };
-
-#endif
         #define WSWAP(B) cpu_to_le32(B)
         #define RSWAP(B) le32_to_cpu(B)
-
-        typedef struct udevice rcm_sram_nor_device;
 
         #define of_property_read_bool(DEVNODE,NAME) \
                 ofnode_read_bool(np_to_ofnode(DEVNODE),NAME)
@@ -155,16 +94,33 @@
 
         #define of_property_read_u32_array(DEVNODE,NAME,PARR,PSIZE) \
                 ofnode_read_u32_array(np_to_ofnode(DEVNODE),NAME,PARR,PSIZE)
-#endif
 
-#define WRITEL(P) (WSWAP(writel(P)))
-#define READL(P) (RSWAP(readl(P)))
+        void cfi_flash_bank_setup(  u32 addr, unsigned int idx );
+
+#ifdef CONFIG_PPC_DCR // page 982
+        static u32 DCR_READ(u32 addr,u32 offs) {
+                u32 res;
+                addr+=offs; // mfdcrx RT, RA
+                asm volatile ( "mfdcrx (%0), (%1) \n\t" :"=r"(res) :"r"((u32) addr) : );
+                DBG_PRINT( "DCR_READ: %08x,%08x\n", addr, res )
+                return res;
+        };
+
+        static void DCR_WRITE(u32 addr, u32 offs, u32 value) {
+                addr+=offs; // mtdcrx RA, RS
+                asm volatile ( "mtdcrx (%0), (%1) \n\t" ::"r"((u32) addr), "r"((u32) value) : );
+                DBG_PRINT( "DCR_WRITE: %08x,%08x\n", addr, value )
+        };
+
+#endif /* CONFIG_PPC_DCR */
+
+#endif  // is defined __UBOOT__
 
 typedef u32 (*reg_readl_fn)(void *rcm_mtd, u32 offset);
 typedef void (*reg_writel_read_fn)(void *rcm_mtd, u32 offset, u32 val);
 
 struct rcm_mtd {
-    void *regs;
+        void *regs;
 #ifdef CONFIG_PPC_DCR
     #ifndef __UBOOT__
             dcr_host_t dcr_host;
@@ -175,6 +131,9 @@ struct rcm_mtd {
         u32 high_addr;
         reg_readl_fn readl_fn;
         reg_writel_read_fn writel_fn;
+#ifdef __UBOOT__
+        u32 flash_base[2];
+#endif
 };
 
 u32 lsif_reg_readl(void *base, u32 offset)
@@ -201,10 +160,9 @@ void dcr_reg_writel(void *base, u32 offset, u32 val)
 {
     struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
     DCR_WRITE(rcm_mtd->dcr_host, offset, val);
-    DCR_READ(rcm_mtd->dcr_host, offset ); // убрать
 }
 
-#endif
+#endif /* CONFIG_PPC_DCR */
 
 static int rcm_controller_setup( rcm_sram_nor_device *pdev )
 {
@@ -263,18 +221,14 @@ static int rcm_controller_setup( rcm_sram_nor_device *pdev )
         u32 id = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_id);
         u32 version = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_version);
         u32 config = rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_config);
-#ifdef RCM_SRAM_NOR_DBG
-        DBG_PRINT("TRACE: rcm_controller_setup: id %x, ver %x, conf %x\n",
-               id, version, config);
-#endif
+        DBG_PRINT("TRACE: rcm_controller_setup: id %x, ver %x, conf %x\n", id, version, config);
+
         if ((id != NORMC_ID_VAL_lsif && id != NORMC_ID_VAL_mcif) ||
             version != NORMC_VERSION_VAL)
             dev_warn(&pdev->dev,
                  "Check chip ID (%x) and version (%x)\n", id,
                  version);
-#ifdef RCM_SRAM_NOR_DBG
-                DBG_PRINT( "ID: %c%c%c%c\n", (uint8_t)(id>>0), (uint8_t)(id>>8), (uint8_t)(id>>16), (uint8_t)(id>>24) )
-#endif
+
         // configure controller
         config = (chip_num << SRAMNOR__chip_num_i) |
              (cs_mode << SRAMNOR__ce_mode_i) |
@@ -301,8 +255,7 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
 {
         struct rcm_mtd *rcm_mtd;
         struct device_node *of_node;
-
-        DBG_PRINT( "%s\n", __FUNCTION__ );
+        bool dcr_reg;
 
 #ifndef __UBOOT__
         struct resource *ctrl;
@@ -321,7 +274,9 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
         pdev->priv = rcm_mtd;
 #endif
 
-        if (of_property_read_bool( of_node, "dcr-reg" )) {
+        dcr_reg = of_property_read_bool( of_node, "dcr-reg" );
+
+        if( dcr_reg ) {
 #ifdef CONFIG_PPC_DCR
     #ifndef __UBOOT__
         const u32 *ranges;
@@ -385,20 +340,35 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
                 rcm_mtd->writel_fn = &lsif_reg_writel;
         }
 
-    if (rcm_controller_setup(pdev)) {
-        dev_err(&pdev->dev, "hw setup failed\n");
-        return -ENXIO;
-    }
-/* flash connect via LSIF */
-    //tlb47x_inval( 0x20000000, TLBSID_256M );
-    //tlb47x_map( 0x1020000000ull, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
-/* flash connect via MCIF */
-	tlb47x_inval( 0x20000000, TLBSID_256M );
-	tlb47x_map( 0x0600000000ull, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
-	tlb47x_inval( 0xa0000000, TLBSID_256M );
-	tlb47x_map( 0x0610000000ull, 0xa0000000, TLBSID_256M, TLB_MODE_RWX );
-    dev_info(&pdev->dev, "registered\n");
-    return 0;
+        if (rcm_controller_setup(pdev)) {
+                dev_err(&pdev->dev, "hw setup failed\n");
+                return -ENXIO;
+        }
+
+#ifdef __UBOOT__
+
+        if( of_property_read_u32_array( of_node, "mmap_flash_base", rcm_mtd->flash_base, dcr_reg ? 2 : 1 ) ) {
+                dev_err(&pdev->dev, "failed to get resource for plb remap\n");
+                return -ENOENT;
+        }
+
+        if( dcr_reg ) { // flash connect via MCIF
+                tlb47x_inval( rcm_mtd->flash_base[0], TLBSID_256M );
+                tlb47x_map( 0x0600000000ull, rcm_mtd->flash_base[0], TLBSID_256M, TLB_MODE_RWX );
+                tlb47x_inval( rcm_mtd->flash_base[1], TLBSID_256M );
+                tlb47x_map( 0x0610000000ull, rcm_mtd->flash_base[1], TLBSID_256M, TLB_MODE_RWX );
+                cfi_flash_bank_setup( rcm_mtd->flash_base[0], 0 );
+                cfi_flash_bank_setup( rcm_mtd->flash_base[1], 1 );
+        }
+        else { // flash connect via LSIF
+                tlb47x_inval(  rcm_mtd->flash_base[0], TLBSID_256M );
+                tlb47x_map( 0x1020000000ull,  rcm_mtd->flash_base[0], TLBSID_256M, TLB_MODE_RWX );
+                cfi_flash_bank_setup( rcm_mtd->flash_base[0], 0 );
+        }
+#endif
+
+        dev_info(&pdev->dev, "registered\n");
+        return 0;
 }
 
 #ifndef __UBOOT__
@@ -428,6 +398,29 @@ module_platform_driver(rcm_mtd_driver);
 
 #else
 
+static struct flash_banks {
+        u32 base[CONFIG_SYS_MAX_FLASH_BANKS];
+        unsigned int count;
+} flash_banks = { {0} };
+
+unsigned int cfi_flash_bank_count( void ) {
+        return flash_banks.count;
+}
+
+void cfi_flash_bank_setup(  u32 addr, unsigned int i ) {
+        if( i < CONFIG_SYS_MAX_FLASH_BANKS ) {
+                flash_banks.base[i] = addr;
+                flash_banks.count++;
+        }
+        //DBG_PRINT( "%s: %5u: %08x\n", "cfi_flash_bank_add", i, addr );
+}
+
+phys_addr_t cfi_flash_bank_addr(int i) {
+        phys_addr_t phys_addr = ( i < flash_banks.count ) ? (phys_addr_t) flash_banks.base[i] : (phys_addr_t)(-1ll);
+        // DBG_PRINT( "%s: %5u: %08llx\n", "cfi_flash_bank_addr", i, phys_addr );
+	return phys_addr;
+}
+
 static const struct udevice_id rcm_sram_nor_ids[] = {
         { .compatible = "rcm,sram-nor" },
         { /* end of list */ }
@@ -439,37 +432,6 @@ U_BOOT_DRIVER(rcm_sram_nor) = {
         .of_match = rcm_sram_nor_ids,
         .probe = rcm_mtd_probe
 };
-/*
-flash_info_t flash_info[CONFIG_SYS_MAX_FLASH_BANKS];
-
-void flash_print_info( flash_info_t* flash_info ) {
-        DBG_PRINT( "%s\n", __FUNCTION__ );
-}
-
-unsigned long flash_init( void ) {
-        struct udevice *dev;
-        int ret;
-
-        DBG_PRINT( "%s\n", __FUNCTION__ );
-        ret = uclass_get_device_by_driver( UCLASS_MTD,
-                                           DM_GET_DRIVER(rcm_sram_nor),
-                                           &dev );
-        if( ret && ret != -ENODEV ) {
-                DBG_PRINT( "Failed to initialize RCM SRAM-NOR controller,error=%d\n", ret );
-        }
-        return 0x10000000;
-}
-
-int flash_erase( flash_info_t* flash_info, int offset, int length ) {
-        DBG_PRINT( "%s\n", __FUNCTION__ );
-        return 0;
-}
-
-int write_buff( flash_info_t* flash_info, uchar* src, ulong addr, ulong cnt ) {
-        DBG_PRINT( "%s\n", __FUNCTION__ );
-        return 0;
-}
-*/
 
 void rcm_sram_nor_init( void ) {
         struct udevice *dev;

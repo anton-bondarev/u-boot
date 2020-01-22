@@ -121,11 +121,14 @@ phys_addr_t cfi_flash_bank_addr(int i)
 	return flash_info[i].base;
 }
 #else
+
+#ifndef CONFIG_MTD_RCM_NOR
 __weak phys_addr_t cfi_flash_bank_addr(int i)
 {
-	static const u32 config_sys_flash_banks_list[] = CONFIG_SYS_FLASH_BANKS_LIST;
-	return (phys_addr_t) config_sys_flash_banks_list[i];
+	return ((phys_addr_t []) CONFIG_SYS_FLASH_BANKS_LIST)[i];
 }
+#endif
+
 #endif
 
 __weak unsigned long cfi_flash_bank_size(int i)
@@ -2394,6 +2397,9 @@ unsigned long flash_init(void)
 
 	/* Init: no FLASHes known */
 	for (i = 0; i < CONFIG_SYS_MAX_FLASH_BANKS; ++i) {
+#ifdef CONFIG_MTD_RCM_NOR
+		if( i >= cfi_flash_bank_count() ) break;
+#endif
 		flash_info[i].flash_id = FLASH_UNKNOWN;
 
 		/* Optionally write flash configuration register */

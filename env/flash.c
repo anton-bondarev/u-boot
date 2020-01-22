@@ -44,6 +44,10 @@ DECLARE_GLOBAL_DATA_PTR;
 #define INITENV
 #endif
 
+#ifdef CONFIG_MTD_RCM_NOR
+ 	__weak phys_addr_t cfi_flash_bank_addr(int i);
+#endif
+
 #if defined ENV_IS_EMBEDDED && !defined CONFIG_MTD_RCM_NOR
 env_t *env_ptr = &environment;
 
@@ -352,7 +356,10 @@ static int env_flash_load(void)
 		puts("*** Warning - some problems detected "
 		     "reading environment; recovered successfully\n\n");
 #endif /* CONFIG_ENV_ADDR_REDUND */
-	printf( "from address %08x\n", (u32)flash_addr );
+#ifdef CONFIG_MTD_RCM_NOR
+	flash_addr = (env_t*)((u32)cfi_flash_bank_addr(0)+CONFIG_ENV_OFFSET);
+	printf( "(from address %08x)", (u32)flash_addr );
+#endif
 	return env_import((char *)flash_addr, 1);
 }
 #endif /* LOADENV */

@@ -209,17 +209,19 @@
     #define CONFIG_FLASH_CFI_MTD
     #define CONFIG_SYS_FLASH_CFI
     #define CONFIG_SYS_FLASH_CFI_WIDTH      FLASH_CFI_16BIT
-    #define CONFIG_SYS_FLASH_BASE0          0x20000000 /* MCIF and LSIF */
-    #define CONFIG_SYS_FLASH_BASE1          0xa0000000 /* MCIF only */
-    #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
-    #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE0
-    #define CONFIG_SYS_FLASH_BANKS_LIST     { CONFIG_SYS_FLASH_BASE0, CONFIG_SYS_FLASH_BASE1 }
     #define CONFIG_SYS_FLASH_EMPTY_INFO     /* flinfo show E and/or RO */
     #define CONFIG_FLASH_SHOW_PROGRESS      100
     #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
     #define CONFIG_SYS_WRITE_SWAPPED_DATA
+    #ifndef CONFIG_PPC_DCR
+        #define CONFIG_PPC_DCR
+    #endif
+
+    #define CONFIG_SYS_FLASH_BASE           0x20000000
+    #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE
+
     /* #define CONFIG_SYS_MAX_FLASH_BANKS_DETECT not now,later */
-    /* #define CONFIG_SYS_MAX_FLASH_BANKS      2 */
+    /*#define CONFIG_SYS_MAX_FLASH_BANKS      1*/       /* for LSIF */
 #endif
 
 #endif /* __1888TX018_H */

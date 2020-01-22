@@ -45,7 +45,10 @@
 		sram-nor-mux = <1>;					/* 0 to route extmem wires to LSIF0, 1 - to MCIF */
 		/* in case of LSIF0 following lines will be needed */
 		ext-mem-mux-mode = <0>;				/* page 913 */
-		ce-manage = <2>;					/* page 913 + confluence (MCIF-cs0..3=>1, cs4,5=>2) */
+/* page 913 + confluence (MCIF-cs0..3=>1, cs4,5=>2 controller)*/
+		ce-manage = <2>;
+/* LSIF-all 1 controller,chip-num=0x10 */
+	/*	ce-manage = <0>; */
 		status = "okay";
 	};
 
@@ -56,6 +59,7 @@
 		chip-num = <0x3F>;
 		dcr-reg = <0x80190000 0x1000>;
 		ranges = <0x00000000 0x6 0x00000000 0x10000000>;
+		mmap_flash_base = <0x20000000 0x10000000>;
 		cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
 		addr-size = <26>; /* min 10 max 26 bit */
 		timings = <0x1f1f0808>;
@@ -313,39 +317,23 @@
 			/*interrupts = <109 0>;*/
 		};
 
-		sram_nor0: sram_nor0@0x3C030000 {  /* ID="NOR"?????????? */
+		sram_nor0: sram_nor0@0x3C030000 {
 				compatible = "rcm,sram-nor","simple-bus";
-				chip-num = <0x3F>;			/* ce<5>,ce<4>???*/
+				chip-num = <0x10>; /*CS4+0 ce-manage*/
 				#address-cells = <1>;
 				#size-cells = <1>;
 				reg = <0x3C030000 0x1000>;
 				ranges = <0x00000000 0x20000000 0x10000000>;
-				cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
+				mmap_flash_base = <0x20000000>;
+				cs-mode = <1>;  /* 0 - cs in address, 1 - cs in reg */
 				addr-size = <26>; /* min 10 max 26 bit */
 				timings = <0x1f1f0808>;
 				// interrupt-parent = <&MPIC>;
 				// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
-				status = "disabled";
-				// status = "okay";
-		};
-/*
-		sram_nor1: sram_nor1@0x3C031000 { 						// ID="SRAM"?????????
-				compatible = "rcm,sram-nor","simple-bus";
-				chip-num = <0x010>;								//+8 if cs-mode is 0 don't care
-				#address-cells = <1>;
-				#size-cells = <1>;
-				reg = <0x3C031000 0x1000>;
-				ranges = <0x00000000 0x30000000 0x08000000>;	// 0x8000000-28 бит, 28-1 т.к. чипа 2,еще -1 на 2 т.к. каждый 16 разр., 26 бит на чип шина и выходит
-				cs-mode = <0>;  								// 0 - cs in address, 1 - cs in chip-num
-				addr-size = <26>;								// min 10 max 26 bit
-				timings = <0x1f1f0808>;
-				// interrupt-parent = <&MPIC>;
-				// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
-				status = "disabled";
 				//status = "okay";
-			};
-*/
+				status = "disabled";
 		};
+	};
 
 	lsif1 {
 	    u-boot,dm-pre-reloc;

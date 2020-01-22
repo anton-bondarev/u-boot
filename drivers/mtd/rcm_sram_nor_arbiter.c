@@ -8,9 +8,8 @@
 
 #include <linux/types.h>
 #include <linux/kernel.h>
-#include <linux/io.h> 
-
-#define CONFIG_PPC_DCR
+#include <linux/io.h>
+#include <configs/1888tx018.h>
 
 #ifndef __UBOOT__
         #include <linux/module.h>
@@ -38,32 +37,28 @@
 #define EM3_PLB6MCIF2_DCR_BASE  0x80180000
 #define LSIF0_ID                0x3046494c
 
+#define RCM_ARB_DBG
+
+#ifdef RCM_ARB_DBG
+        #define DBG_PRINT(...) printf( "[RCM_ARB] " __VA_ARGS__ );
+#else
+        #define DBG_PRINT(...) while(0);
+#endif
+
 #ifdef CONFIG_PPC_DCR
 // briges magic
 
-static inline void mtdcrx( uint32_t const addr, uint32_t const wval ) // потом убрать,повтор
-{
-    asm volatile
-    (
-        "mtdcrx %0, %1 \n\t"
-        ::"r"(addr), "r"(wval)
-    );
+static inline void mtdcrx( uint32_t const addr, uint32_t const wval ) {
+        asm volatile ( "mtdcrx %0, %1 \n\t" ::"r"(addr), "r"(wval) );
 }
 
-static inline uint32_t mfdcrx( uint32_t const addr ) // потом убрать,повтор
-{
-    uint32_t rval=0;
-    asm volatile
-    (
-        "mfdcrx %0, %1 \n\t"
-        :"=r"(rval)
-        :"r"(addr)
-    );
-    return rval;
+static inline uint32_t mfdcrx( uint32_t const addr ) {
+        uint32_t rval=0;
+        asm volatile ( "mfdcrx %0, %1 \n\t" :"=r"(rval) :"r"(addr) );
+        return rval;
 }
 
-static void plb6mcif_initbridge(void)
-{
+static void plb6mcif_initbridge( void ) {
         mtdcrx(EM2_PLB6MCIF2_DCR_BASE + 0x0f, 0x00000000);
         mtdcrx(EM2_PLB6MCIF2_DCR_BASE + 0x10, 0x00000004);
         mtdcrx(EM2_PLB6MCIF2_DCR_BASE + 0x11, 0x40009001);
@@ -75,7 +70,7 @@ static void plb6mcif_initbridge(void)
         mtdcrx(EM3_PLB6MCIF2_DCR_BASE + 0x09, 0x400000f1);
 }
 
-static void plb6mcif_test_read( void ) { // потом убрать
+static void plb6mcif_test_read( void ) {
         uint32_t read_val = mfdcrx( EM2_PLB6MCIF2_DCR_BASE + 0x04 );
         printf( "EM2_PLB6MCIF2_DCR_BASE-INTR_EN: %08x\n", read_val );
         read_val = mfdcrx( EM3_PLB6MCIF2_DCR_BASE + 0x04 );
@@ -86,20 +81,14 @@ static void plb6mcif_test_read( void ) { // потом убрать
 
 #ifndef __UBOOT__
         typedef struct platform_device rcm_mtd_arbiter_device;
+
         #define REGMAP_WRITE(MAP,REG,VAL) regmap_write(MAP,REG,VAL)
         #define REGMAP_READ(MAP,REG,VAL) regmap_read(MAP,REG,VAL)
 #else
-        #define RCM_ARB_DBG
-        #ifdef RCM_ARB_DBG
-                #define DBG_PRINT(...) printf( "[RCM_ARB] " __VA_ARGS__ );
-        #else
-                #define DBG_PRINT(...) while(0);
-        #endif
-
         typedef struct udevice rcm_mtd_arbiter_device;
 
         static int REGMAP_WRITE( struct regmap* map, unsigned int reg, unsigned int val ) {
-                DBG_PRINT( "%s: %08x,%08x\n", __FUNCTION__, (uint32_t)(map->base)+reg, val )
+                DBG_PRINT( "REGMAP_WRITE: %08x,%08x\n", (uint32_t)(map->base)+reg, val )
                 return regmap_write( map, reg, cpu_to_le32( val ) );
         }
 
@@ -108,7 +97,7 @@ static void plb6mcif_test_read( void ) { // потом убрать
                 int ret = regmap_read( map, reg, &retval );
                 if( ret == 0 )
                         *val = le32_to_cpu( retval );
-                DBG_PRINT( "%s: %08x,%08x\n", __FUNCTION__, (uint32_t)(map->base)+reg, *val )
+                DBG_PRINT( "REGMAP_READ: %08x,%08x\n", (uint32_t)(map->base)+reg, *val )
                 return ret;
         }
 
@@ -133,8 +122,7 @@ static void plb6mcif_test_read( void ) { // потом убрать
         }
 #endif
 
-static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev)
-{
+static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev) {
 #ifdef __UBOOT__
         struct regmap _control;
         struct regmap _sctl;
@@ -152,7 +140,6 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev)
 #ifndef __UBOOT__
         of_node = pdev->dev.of_node;
 #else
-        DBG_PRINT( "rcm_mtd_arbiter_probe start\n" )
         of_node = (struct device_node*)ofnode_to_np( pdev->node );
 #endif
 
@@ -161,14 +148,12 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev)
                 dev_err( &pdev->dev, "sram-nor-mux should be explicitly defined to 0 or 1\n" );
                 return ret;
         }
-        DBG_PRINT( "sram-nor-mux=%u\n", sram_nor_mux )
 
         ret = of_property_read_u32( of_node, "ce-manage", &ce_manage );
         if( ret != 0 || ce_manage > 7 ) {
                 dev_err( &pdev->dev, "ce-manage should be explicitly defined between 0 to 7\n" );
                 return ret;
         }
-        DBG_PRINT( "ce_manage=%u\n", ce_manage )
 
 #ifndef __UBOOT__
         tmp = of_parse_phandle( of_node, "sctl", 0 );
@@ -186,24 +171,18 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev)
         DBG_PRINT( "sctl: start=%08x,size=%08x\n", (u32)sctl->base_range.start, (u32)sctl->base_range.size )
 #endif
 
-        if( sram_nor_mux == 1 ) {                                                       // конфигурация для mcif
+        if( sram_nor_mux == 1 ) { // mcif
 #ifdef CONFIG_PPC_DCR
                 plb6mcif_initbridge();
                 plb6mcif_test_read();
 #endif
-                ret = REGMAP_WRITE( sctl, SRAM_NOR_CTRL, ce_manage << 1 | 1 );          // стр.922
+                ret = REGMAP_WRITE( sctl, SRAM_NOR_CTRL, ce_manage << 1 | 1 ); // page.922
                 if( ret != 0 ) {
                         dev_err( &pdev->dev, "Write SCTL register error %i\n", ret );
                         return ret;
                 }
-
-                ret = REGMAP_READ( sctl, SRAM_NOR_CTRL, &read_val );                    // потом убрать
-                if( ret != 0 || read_val != ( ce_manage << 1 | 1 ) ) {
-                        dev_err( &pdev->dev, "Bad SCTL register check %08x\n", read_val );
-                        return -EINVAL; //?
-                }
         }
-        else {                                                                          // конфигурация для lsif0
+        else { // lsif0
                 if( ce_manage != 7 )
                         ce_manage = 6 - ce_manage;
 #ifndef __UBOOT__
@@ -216,10 +195,15 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev)
                         return -ENOENT;
                 }
 #ifndef __UBOOT__
-                control = syscon_node_to_regmap(tmp);
+                control = syscon_node_to_regmap( tmp );
 #else
                 DBG_PRINT( "lsif:start=%08x,size=%08x\n", (u32)control->base_range.start, (u32)control->base_range.size );
 #endif
+
+                ret = REGMAP_READ( control, CONTROL_REG_ID, &read_val );
+                if( ret != 0 || read_val != LSIF0_ID )
+                        dev_warn( &pdev->dev, "Check lsif0 id (%08x)\n", read_val );
+
                 ret = REGMAP_WRITE( sctl, SRAM_NOR_CTRL, 0 );
                 if( ret != 0 ) {
                         dev_err( &pdev->dev, "Write SCTL register error %i\n", ret );
@@ -239,22 +223,10 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev)
                         }
                 }
 
-                ret = REGMAP_READ( control, CONTROL_REG_ID, &read_val ); // потом убрать
-                if( ret != 0 || read_val != LSIF0_ID ) {
-                        dev_err( &pdev->dev, "Bad lsif0 id read (%08x)\n", read_val );
-                        return -EINVAL; //?
-                }
-
                 ret = REGMAP_WRITE( control, CONTROL_REG_CE_MANAGE, ce_manage );
                 if( ret != 0 ) {
                         dev_err( &pdev->dev, "Write MII_MUX register error %i\n", ret );
                         return ret;
-                }
-
-                ret = REGMAP_READ( control, CONTROL_REG_CE_MANAGE, &read_val ); // потом убрать
-                if( ret != 0 || read_val != ce_manage ) {
-                        dev_err( &pdev->dev, "Bad ce_manage check (%08x)\n", read_val );
-                        return -EINVAL; //?
                 }
         }
         dev_info( &pdev->dev, "External memory signals routed to %s\n", sram_nor_mux ? "MCIF" : "LSIF0" );

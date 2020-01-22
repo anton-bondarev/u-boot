@@ -12,4 +12,7 @@ config SYS_CONFIG_NAME
 config SYS_TEXT_BASE
 	default 0x4D000040
 
+config PPC_DCR
+	default y
+
 endif
