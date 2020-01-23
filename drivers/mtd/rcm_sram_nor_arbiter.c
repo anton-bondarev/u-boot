@@ -167,8 +167,6 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev) {
 
 #ifndef __UBOOT__
         sctl = syscon_node_to_regmap( tmp );
-#else
-        DBG_PRINT( "sctl: start=%08x,size=%08x\n", (u32)sctl->base_range.start, (u32)sctl->base_range.size )
 #endif
 
         if( sram_nor_mux == 1 ) { // mcif
@@ -196,8 +194,6 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev) {
                 }
 #ifndef __UBOOT__
                 control = syscon_node_to_regmap( tmp );
-#else
-                DBG_PRINT( "lsif:start=%08x,size=%08x\n", (u32)control->base_range.start, (u32)control->base_range.size );
 #endif
 
                 ret = REGMAP_READ( control, CONTROL_REG_ID, &read_val );

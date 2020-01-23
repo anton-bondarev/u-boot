@@ -326,15 +326,12 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
             return PTR_ERR(rcm_mtd->regs);
 #else
                 u32 reg[2];
-                u32 ranges[3];
-                if( of_property_read_u32_array( of_node, "reg", reg, 2 ) ||
-                    of_property_read_u32_array( of_node, "ranges", ranges, 3 ) ) {
+                if( of_property_read_u32_array( of_node, "reg", reg, 2 ) ) {
                         dev_err( &pdev->dev, "failed to get control resource\n" );
                         return -ENOENT;
                 }
                 rcm_mtd->regs = (void*)reg[0];
-                rcm_mtd->high_addr = ranges[1]; // это лишнее и неправильное,убрать и проверить
-                DBG_PRINT( "Reg=%08x,addr=%08x\n", (u32)rcm_mtd->regs, rcm_mtd->high_addr )
+                rcm_mtd->high_addr = 0;
 #endif
                 rcm_mtd->readl_fn = &lsif_reg_readl;
                 rcm_mtd->writel_fn = &lsif_reg_writel;
@@ -450,3 +447,4 @@ void rcm_sram_nor_init( void ) {
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Alexey Spirkov <alexeis@astrosoft.ru>");
 MODULE_DESCRIPTION("RCM SoC SRAM/NOR controller driver");
+

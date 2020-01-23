@@ -67,6 +67,25 @@ bool is_ddr_ok(void)
 
 void usleep(uint32_t usec);
 
+void rcm_nor_init( void )
+{
+	*((u32*)0x3C040420) = 0x000000FF; // MGPIOx_GPIOAFSEL
+	*((u32*)0x3C041420) = 0x000000FF;
+	*((u32*)0x3C042420) = 0x000000FF;
+	*((u32*)0x3C043420) = 0x000000FF;
+	*((u32*)0x3C044420) = 0x000000FF;
+	*((u32*)0x3C045420) = 0x000000FF;
+	*((u32*)0x3C046420) = 0x000000FF;
+	*((u32*)0x3C047420) = 0x000000FF;
+	*((u32*)0x3C048420) = 0x000000FF;
+	*((u32*)0x3800001C) = 0x00000000; // page 922 - mcif-mux-sram
+	*((u32*)0x3C03F004) = 0x00000006; // page 911 - lsif controller
+	*((u32*)0x3C03F030) = 0x00000000;
+	*((u32*)0x3C030008) = 0x001A0110; // page 971 - sram-nor controller
+	*((u32*)0x3C03000C) = 0x1f1f0808;
+	printf( "%s(%u): %08x\n", __FUNCTION__, __LINE__, *((uint32_t*)0x20000000) );
+}
+
 void spl_board_init(void)
 {
 	/* init dram */
@@ -109,12 +128,14 @@ void board_boot_order(u32 *spl_boot_list)
 	case BOOT_DEVICE_SPI:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;
 		spl_boot_list[2] = BOOT_DEVICE_NAND;
-		spl_boot_list[3] = BOOT_DEVICE_EDCL;
+		spl_boot_list[3] = BOOT_DEVICE_NOR;
+		spl_boot_list[4] = BOOT_DEVICE_EDCL;	// for adding new elements increase array size
 		break;
 	case BOOT_DEVICE_MMC1:
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
 		spl_boot_list[2] = BOOT_DEVICE_NAND;
-		spl_boot_list[3] = BOOT_DEVICE_EDCL;
+		spl_boot_list[3] = BOOT_DEVICE_NOR;
+		spl_boot_list[4] = BOOT_DEVICE_EDCL;
 		break;
 	}
 }

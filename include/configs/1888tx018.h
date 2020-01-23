@@ -25,6 +25,7 @@
 #define CONFIG_SPL_TEXT_BASE	0x40000
 #define CONFIG_SYS_UBOOT_BASE	CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_UBOOT_START  CONFIG_SYS_TEXT_BASE
+
 #define RCM_1888TX018_IM0_START           CONFIG_SPL_TEXT_BASE
 #define RCM_1888TX018_IM0_SIZE            (0x40000)
 
@@ -219,6 +220,11 @@
 
     #define CONFIG_SYS_FLASH_BASE           0x20000000
     #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE
+
+    #ifdef CONFIG_SYS_UBOOT_BASE
+        #undef CONFIG_SYS_UBOOT_BASE
+    	#define CONFIG_SYS_UBOOT_BASE       0x20040000 
+    #endif
 
     /* #define CONFIG_SYS_MAX_FLASH_BANKS_DETECT not now,later */
     /*#define CONFIG_SYS_MAX_FLASH_BANKS      1*/       /* for LSIF */

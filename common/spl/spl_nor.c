@@ -6,6 +6,10 @@
 #include <common.h>
 #include <spl.h>
 
+#if defined(CONFIG_SPL_NOR_SUPPORT) && defined(CONFIG_MTD_RCM_NOR)
+	void rcm_nor_init( void );
+#endif
+
 static int spl_nor_load_image(struct spl_image_info *spl_image,
 			      struct spl_boot_device *bootdev)
 {
@@ -15,6 +19,11 @@ static int spl_nor_load_image(struct spl_image_info *spl_image,
 	 * the mkimage header in this SPL NOR driver
 	 */
 	spl_image->flags |= SPL_COPY_PAYLOAD_ONLY;
+
+#ifdef CONFIG_MTD_RCM_NOR
+	rcm_nor_init();
+	printf( "%s(%u): %08x\n", __FUNCTION__, __LINE__, *((uint32_t*)0x20000000) );
+#endif
 
 #ifdef CONFIG_SPL_OS_BOOT
 	if (!spl_start_uboot()) {
@@ -53,6 +62,7 @@ static int spl_nor_load_image(struct spl_image_info *spl_image,
 	 * Load real U-Boot from its location in NOR flash to its
 	 * defined location in SDRAM
 	 */
+	printf( "Load from nor %08x(%08x)\n", CONFIG_SYS_UBOOT_BASE, *((u32*)CONFIG_SYS_UBOOT_BASE ));
 	ret = spl_parse_image_header(spl_image,
 			(const struct image_header *)CONFIG_SYS_UBOOT_BASE);
 	if (ret)

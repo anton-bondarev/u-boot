@@ -2398,7 +2398,7 @@ unsigned long flash_init(void)
 	/* Init: no FLASHes known */
 	for (i = 0; i < CONFIG_SYS_MAX_FLASH_BANKS; ++i) {
 #ifdef CONFIG_MTD_RCM_NOR
-		if( i >= cfi_flash_bank_count() ) break;
+		if( i >= cfi_flash_bank_count() ) break; /* may be 1 or 2 banks,depending on using MSIF or LSIF */
 #endif
 		flash_info[i].flash_id = FLASH_UNKNOWN;
 
