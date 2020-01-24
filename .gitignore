@@ -21,6 +21,7 @@
 *.patch
 *.cfgtmp
 *.edcl
+*.lua
 
 # host programs on Cygwin
 *.exe

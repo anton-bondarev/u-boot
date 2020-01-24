@@ -238,7 +238,7 @@ endif
 
 # cmd to create romboot image
 quiet_cmd_packimage = PACK    $@
-cmd_packimage = cp $< $@; $(objtree)/tools/rumboot-packimage -c -f $@ > /dev/null
+cmd_packimage = cp $< $@; rumboot-packimage -c -f $@
 
 # create rumboot image
 $(obj)/$(SPL_BIN)-dtb.rbi: $(obj)/$(SPL_BIN)-dtb.bin $(obj)/$(SPL_BIN)
