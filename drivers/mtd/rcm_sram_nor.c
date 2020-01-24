@@ -62,7 +62,7 @@
 #define SRAMNOR_REG_data_ecc_write_mem  0x24
 #define SRAMNOR_REG_data_ecc_read_mem   0x28
 
-#define RCM_SRAM_NOR_DBG
+// #define RCM_SRAM_NOR_DBG
 
 #ifdef RCM_SRAM_NOR_DBG
         #ifndef __UBOOT__

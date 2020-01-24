@@ -12,6 +12,7 @@
 #include <spi.h>
 #include <spi_flash.h>
 #include <asm/io.h>
+#include <asm/tlb47x.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -83,7 +84,7 @@ void rcm_nor_init( void )
 	*((u32*)0x3C03F030) = 0x00000000;
 	*((u32*)0x3C030008) = 0x001A0110; // page 971 - sram-nor controller
 	*((u32*)0x3C03000C) = 0x1f1f0808;
-	printf( "%s(%u): %08x\n", __FUNCTION__, __LINE__, *((uint32_t*)0x20000000) );
+	tlb47x_map( 0x1020000000ull, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
 }
 
 void spl_board_init(void)

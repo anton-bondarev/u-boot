@@ -37,7 +37,7 @@
 #define EM3_PLB6MCIF2_DCR_BASE  0x80180000
 #define LSIF0_ID                0x3046494c
 
-#define RCM_ARB_DBG
+// #define RCM_ARB_DBG
 
 #ifdef RCM_ARB_DBG
         #define DBG_PRINT(...) printf( "[RCM_ARB] " __VA_ARGS__ );
@@ -207,16 +207,20 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev) {
                 }
 
                 ret = of_property_read_u32( of_node, "ext-mem-mux-mode", &ext_mem_mux_mode );
-                if( ret == 0 ) {
-                        if( ext_mem_mux_mode < 0 || ext_mem_mux_mode > 2 ) {
-                                dev_err( &pdev->dev, "Illegal ext-mem-mux-mode shuld be between 0 and 2\n" );
-                                return -EINVAL;
-                        }
-                        ret = REGMAP_WRITE( control, CONTROL_REG_EXT_MEM_MUX, ext_mem_mux_mode ); // стр.913
-                        if (ret != 0) {
-                                dev_err( &pdev->dev, "Write MII_MUX register error %i\n", ret );
-                                return ret;
-                        }
+                if( ret != 0 ) {
+                        dev_err( &pdev->dev, "Read ext mem mux mode error\n" );
+                        return ret;
+                }
+
+                if( ext_mem_mux_mode < 0 || ext_mem_mux_mode > 2 ) {
+                        dev_err( &pdev->dev, "Illegal ext-mem-mux-mode shuld be between 0 and 2\n" );
+                        return -EINVAL;
+                }
+
+                ret = REGMAP_WRITE( control, CONTROL_REG_EXT_MEM_MUX, ext_mem_mux_mode ); // page.913
+                if (ret != 0) {
+                        dev_err( &pdev->dev, "Write MII_MUX register error %i\n", ret );
+                        return ret;
                 }
 
                 ret = REGMAP_WRITE( control, CONTROL_REG_CE_MANAGE, ce_manage );
