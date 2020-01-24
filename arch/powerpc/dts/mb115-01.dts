@@ -42,11 +42,11 @@
 			<&lsif0_mgpio8_sram_nor>;
 		sctl-reg = <0x38000000 0x1000>;		/* <&sctl> */
 		lsif-reg = <0x3C03F000 0x1000>;		/* <&lsif0> */
-		sram-nor-mux = <1>;					/* 0 to route extmem wires to LSIF0, 1 - to MCIF, */
+		sram-nor-mux = <0>;					/* 0 to route extmem wires to LSIF0, 1 - to MCIF, */
 		/* in case of LSIF0 following lines will be needed */
 		ext-mem-mux-mode = <0>;				/* page 913 */
-		ce-manage = <2>;					/* MCIF(page 913 + confluence): cs0..3=>1 controller,cs4,5=>2 controller,cs-mode=0,chip-num=0x3F */
-		//ce-manage = <0>;					/* LSIF: all cs=>1 controller,cs-mode=1,chip-num=0x10 */
+		//ce-manage = <2>;					/* MCIF(page 913 + confluence): cs0..3=>1 controller,cs4,5=>2 controller,cs-mode=0,chip-num=0x3F */
+		ce-manage = <0>;					/* LSIF: all cs=>1 controller,cs-mode=1,chip-num=0x10 */
 		status = "okay";					/* dont forget also right set "okay" for sram_plb_nor1 or sram_nor0 */
 	};
 
@@ -63,7 +63,7 @@
 		timings = <0x1f1f0808>;
 		// interrupt-parent = <&MPIC>;
 		// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
-		status = "okay";
+		status = "disabled";
 	};
 
 	lsif0 {
@@ -327,7 +327,7 @@
 				timings = <0x1f1f0808>;
 				// interrupt-parent = <&MPIC>;
 				// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
-				status = "disabled";
+				status = "okay";
 		};
 	};
 

@@ -49,12 +49,6 @@
 #include <linux/compiler.h>
 #include <linux/err.h>
 #include <efi_loader.h>
-#include <asm/tlb47x.h>
-
-#ifdef CONFIG_MTD_RCM_NOR
-extern void rcm_mtd_arbiter_init(void);
-extern void rcm_sram_nor_init(void);
-#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -336,15 +330,6 @@ static int initr_manual_reloc_cmdtable(void)
 }
 #endif
 
-#if defined(CONFIG_MTD_RCM_NOR)
-static int initr_rcm_sram_nor(void)
-{ 
-	rcm_mtd_arbiter_init();
-	rcm_sram_nor_init();
-	return 0;
-}
-#endif
-
 #if defined(CONFIG_MTD_NOR_FLASH)
 static int initr_flash(void)
 {
@@ -466,13 +451,8 @@ static int should_load_env(void)
 static int initr_env(void)
 {
 	/* initialize environment */
-	if (should_load_env()) {
-#ifndef CONFIG_MTD_RCM_NOR
+	if (should_load_env())
 		env_relocate();
-#else
-		env_load();
-#endif
-	}
 	else
 		set_default_env(NULL);
 #ifdef CONFIG_OF_CONTROL
@@ -756,9 +736,6 @@ static init_fnc_t init_sequence_r[] = {
 	arch_early_init_r,
 #endif
 	power_init_board,
-#ifdef CONFIG_MTD_RCM_NOR
-	initr_rcm_sram_nor,
-#endif
 #ifdef CONFIG_MTD_NOR_FLASH
 	initr_flash,
 #endif

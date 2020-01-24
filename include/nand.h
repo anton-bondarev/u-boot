@@ -16,13 +16,14 @@
  * converted, this will go away.
  */
 #ifdef CONFIG_SPL_BUILD
-	#if defined(CONFIG_NAND_FSL_ELBC) || defined(CONFIG_NAND_FSL_IFC)
-		#define CONFIG_SYS_NAND_SELF_INIT
-	#endif
-#elif defined(CONFIG_NAND_FSL_ELBC) || defined(CONFIG_NAND_ATMEL) || defined(CONFIG_NAND_FSL_IFC)
-	#define CONFIG_SYS_NAND_SELF_INIT
-//#elif defined(CONFIG_MTD_RCM_NAND)
-//	#define CONFIG_SYS_NAND_SELF_INIT
+#if defined(CONFIG_NAND_FSL_ELBC) || defined(CONFIG_NAND_FSL_IFC)
+#define CONFIG_SYS_NAND_SELF_INIT
+#endif
+#else
+#if defined(CONFIG_NAND_FSL_ELBC) || defined(CONFIG_NAND_ATMEL)\
+	|| defined(CONFIG_NAND_FSL_IFC)
+#define CONFIG_SYS_NAND_SELF_INIT
+#endif
 #endif
 
 extern void nand_init(void);

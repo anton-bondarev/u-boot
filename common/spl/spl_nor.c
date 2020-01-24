@@ -21,7 +21,7 @@ static int spl_nor_load_image(struct spl_image_info *spl_image,
 	spl_image->flags |= SPL_COPY_PAYLOAD_ONLY;
 
 #ifdef CONFIG_MTD_RCM_NOR
-	rcm_nor_init();
+	//rcm_nor_init();
 #endif
 
 #ifdef CONFIG_SPL_OS_BOOT

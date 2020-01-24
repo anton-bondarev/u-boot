@@ -187,6 +187,7 @@
     #define CONFIG_ENV_SIZE                 0x4000
     #define CONFIG_ENV_SECT_SIZE            0x20000
 #elif defined CONFIG_ENV_IS_IN_FLASH
+    /*CONFIG_ENV_ADDR*/
     #define CONFIG_ENV_OFFSET               0x1040000
     #define CONFIG_ENV_SIZE                 0x4000
     #define CONFIG_ENV_SECT_SIZE            0x40000
@@ -218,7 +219,11 @@
         #define CONFIG_PPC_DCR
     #endif
 
-    #define CONFIG_SYS_FLASH_BASE           0x20000000
+    #define CONFIG_SYS_FLASH_BASE0          0x20000000      /* base address 0 for work via MCIF and LSIF */
+    #define CONFIG_SYS_FLASH_BASE1          0x10000000      /* base address 1 for work via MCIF only */
+    /*#define CONFIG_SYS_MAX_FLASH_BANKS    1*/             /* for work via LSIF  need defined one only memory bank */
+    #define CONFIG_SYS_FLASH_BANKS_LIST     {CONFIG_SYS_FLASH_BASE0,CONFIG_SYS_FLASH_BASE1}
+    #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
     #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE
 
     #ifdef CONFIG_SYS_UBOOT_BASE
@@ -226,8 +231,6 @@
     	#define CONFIG_SYS_UBOOT_BASE       0x20040000 
     #endif
 
-    /* #define CONFIG_SYS_MAX_FLASH_BANKS_DETECT not now,later */
-    /*#define CONFIG_SYS_MAX_FLASH_BANKS      1*/       /* for LSIF */
 #endif
 
 #endif /* __1888TX018_H */

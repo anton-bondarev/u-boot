@@ -172,7 +172,7 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev) {
         if( sram_nor_mux == 1 ) { // mcif
 #ifdef CONFIG_PPC_DCR
                 plb6mcif_initbridge();
-                plb6mcif_test_read();
+                /*plb6mcif_test_read();*/
 #endif
                 ret = REGMAP_WRITE( sctl, SRAM_NOR_CTRL, ce_manage << 1 | 1 ); // page.922
                 if( ret != 0 ) {

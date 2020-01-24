@@ -9,6 +9,11 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#ifdef CONFIG_MTD_RCM_NOR
+	rcm_mtd_arbiter_init();
+	rcm_sram_nor_init();
+#endif
+
 typedef void (*voidcall)(void);
 
 #define SPRN_DBCR0_44X 0x134
@@ -216,3 +221,13 @@ int testdram(void)
 }
 
 #endif
+
+int power_init_board(void)
+{
+#ifdef CONFIG_MTD_RCM_NOR
+	rcm_mtd_arbiter_init();
+	rcm_sram_nor_init();
+	gd->env_valid = ENV_VALID;
+#endif
+	return 0;
+}

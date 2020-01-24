@@ -29,10 +29,6 @@
 #include <mtd/cfi_flash.h>
 #include <watchdog.h>
 
-#define DBGP printf( "%s(%s,%u)\n", __FILE__, __FUNCTION__, __LINE__ );
-#define DBGB432(A) printf( "%08x: %08x %08x %08x %08x\n", (u32)A, flash_read32(A), flash_read32(A+4), flash_read32(A+8), flash_read32(A+12) );
-#define DBGB1632(A) DBGB432(A) DBGB432(A+16) DBGB432(A+32) DBGB432(A+48)
-//#define DBGRW
 /*
  * This file implements a Common Flash Interface (CFI) driver for
  * U-Boot.
@@ -121,14 +117,10 @@ phys_addr_t cfi_flash_bank_addr(int i)
 	return flash_info[i].base;
 }
 #else
-
-#ifndef CONFIG_MTD_RCM_NOR
 __weak phys_addr_t cfi_flash_bank_addr(int i)
 {
-	return ((phys_addr_t []) CONFIG_SYS_FLASH_BANKS_LIST)[i];
+	return ((phys_addr_t [])CONFIG_SYS_FLASH_BANKS_LIST)[i];
 }
-#endif
-
 #endif
 
 __weak unsigned long cfi_flash_bank_size(int i)
@@ -2167,12 +2159,6 @@ ulong flash_get_size(phys_addr_t base, int banknum)
 		    info->chipwidth == FLASH_CFI_BY8) {
 			size_ratio >>= 1;
 		}
-//#ifdef CONFIG_MTD_RCM_NOR
-//		else if (info->portwidth == FLASH_CFI_32BIT &&
-//		    info->chipwidth == FLASH_CFI_BY16) {
-//			size_ratio >>= 1;
-//		}
-//#endif
 		debug("size_ratio %d port %d bits chip %d bits\n",
 		      size_ratio, info->portwidth << CFI_FLASH_SHIFT_WIDTH,
 		      info->chipwidth << CFI_FLASH_SHIFT_WIDTH);
@@ -2184,7 +2170,7 @@ ulong flash_get_size(phys_addr_t base, int banknum)
 			debug("[truncated from %ldMiB]", info->size >> 20);
 			info->size = max_size;
 		}
-		/*debug*/printf("found %d erase regions\n", num_erase_regions);
+		debug("found %d erase regions\n", num_erase_regions);
 		sect_cnt = 0;
 		sector = base;
 		for (i = 0; i < num_erase_regions; i++) {
@@ -2202,8 +2188,8 @@ ulong flash_get_size(phys_addr_t base, int banknum)
 			tmp >>= 16;
 			erase_region_size =
 				(tmp & 0xffff) ? ((tmp & 0xffff) * 256) : 128;
-			/*debug*/printf("erase_region_count = %d ", erase_region_count);
-			/*debug*/printf("erase_region_size = %d\n", erase_region_size);
+			debug("erase_region_count = %d ", erase_region_count);
+			debug("erase_region_size = %d\n", erase_region_size);
 			for (j = 0; j < erase_region_count; j++) {
 				if (sector - base >= info->size)
 					break;
@@ -2289,6 +2275,7 @@ ulong flash_get_size(phys_addr_t base, int banknum)
 			/* XXX - Need to test on x8/x16 in parallel. */
 			info->portwidth >>= 1;
 		}
+
 		flash_write_cmd(info, 0, 0, info->cmd_reset);
 	}
 
@@ -2340,7 +2327,6 @@ static void flash_protect_default(void)
 	} apl[] = CONFIG_SYS_FLASH_AUTOPROTECT_LIST;
 #endif
 
-#ifndef CONFIG_MTD_RCM_NOR
 	/* Monitor protection ON by default */
 #if (CONFIG_SYS_MONITOR_BASE >= CONFIG_SYS_FLASH_BASE) && \
 	(!defined(CONFIG_MONITOR_IS_IN_RAM))
@@ -2348,7 +2334,6 @@ static void flash_protect_default(void)
 		      CONFIG_SYS_MONITOR_BASE,
 		      CONFIG_SYS_MONITOR_BASE + monitor_flash_len  - 1,
 		      flash_get_info(CONFIG_SYS_MONITOR_BASE));
-#endif
 #endif
 
 	/* Environment protection ON by default */
@@ -2397,9 +2382,6 @@ unsigned long flash_init(void)
 
 	/* Init: no FLASHes known */
 	for (i = 0; i < CONFIG_SYS_MAX_FLASH_BANKS; ++i) {
-#ifdef CONFIG_MTD_RCM_NOR
-		if( i >= cfi_flash_bank_count() ) break; /* may be 1 or 2 banks,depending on using MSIF or LSIF */
-#endif
 		flash_info[i].flash_id = FLASH_UNKNOWN;
 
 		/* Optionally write flash configuration register */

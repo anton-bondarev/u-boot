@@ -354,13 +354,10 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
                 tlb47x_map( 0x0600000000ull, rcm_mtd->flash_base[0], TLBSID_256M, TLB_MODE_RWX );
                 tlb47x_inval( rcm_mtd->flash_base[1], TLBSID_256M );
                 tlb47x_map( 0x0610000000ull, rcm_mtd->flash_base[1], TLBSID_256M, TLB_MODE_RWX );
-                cfi_flash_bank_setup( rcm_mtd->flash_base[0], 0 );
-                cfi_flash_bank_setup( rcm_mtd->flash_base[1], 1 );
         }
         else { // flash connect via LSIF
                 tlb47x_inval(  rcm_mtd->flash_base[0], TLBSID_256M );
                 tlb47x_map( 0x1020000000ull,  rcm_mtd->flash_base[0], TLBSID_256M, TLB_MODE_RWX );
-                cfi_flash_bank_setup( rcm_mtd->flash_base[0], 0 );
         }
 #endif
 
@@ -394,29 +391,6 @@ static struct platform_driver rcm_mtd_driver = {
 module_platform_driver(rcm_mtd_driver);
 
 #else
-
-static struct flash_banks {
-        u32 base[CONFIG_SYS_MAX_FLASH_BANKS];
-        unsigned int count;
-} flash_banks = { {0} };
-
-unsigned int cfi_flash_bank_count( void ) {
-        return flash_banks.count;
-}
-
-void cfi_flash_bank_setup(  u32 addr, unsigned int i ) {
-        if( i < CONFIG_SYS_MAX_FLASH_BANKS ) {
-                flash_banks.base[i] = addr;
-                flash_banks.count++;
-        }
-        //DBG_PRINT( "%s: %5u: %08x\n", "cfi_flash_bank_add", i, addr );
-}
-
-phys_addr_t cfi_flash_bank_addr(int i) {
-        phys_addr_t phys_addr = ( i < flash_banks.count ) ? (phys_addr_t) flash_banks.base[i] : (phys_addr_t)(-1ll);
-        // DBG_PRINT( "%s: %5u: %08llx\n", "cfi_flash_bank_addr", i, phys_addr );
-	return phys_addr;
-}
 
 static const struct udevice_id rcm_sram_nor_ids[] = {
         { .compatible = "rcm,sram-nor" },
