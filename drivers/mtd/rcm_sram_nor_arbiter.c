@@ -4,6 +4,7 @@
  *  by the Free Software Foundation.
  *
  *  Copyright (C) 2019 Alexey Spirkov <alexeis@astrosoft.ru>
+ *  Copyright (C) 2020 Vladimir Shalyt <Vladimir.Shalyt@astrosoft.ru>
  */
 
 #include <linux/types.h>
@@ -69,14 +70,14 @@ static void plb6mcif_initbridge( void ) {
         mtdcrx(EM3_PLB6MCIF2_DCR_BASE + 0x11, 0x60009001);
         mtdcrx(EM3_PLB6MCIF2_DCR_BASE + 0x09, 0x400000f1);
 }
-
+/*
 static void plb6mcif_test_read( void ) {
         uint32_t read_val = mfdcrx( EM2_PLB6MCIF2_DCR_BASE + 0x04 );
         printf( "EM2_PLB6MCIF2_DCR_BASE-INTR_EN: %08x\n", read_val );
         read_val = mfdcrx( EM3_PLB6MCIF2_DCR_BASE + 0x04 );
         printf( "EM3_PLB6MCIF2_DCR_BASE-INTR_EN: %08x\n", read_val );
 } // 0xFFE0_01C0
-
+*/
 #endif
 
 #ifndef __UBOOT__

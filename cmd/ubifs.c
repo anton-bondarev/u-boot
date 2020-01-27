@@ -16,8 +16,8 @@
 #include <command.h>
 #include <ubifs_uboot.h>
 
-static int ubifs_initialized = 0;
-static int ubifs_mounted = 0;
+static int ubifs_initialized;
+static int ubifs_mounted;
 
 static int do_ubifs_mount(cmd_tbl_t *cmdtp, int flag, int argc,
 				char * const argv[])

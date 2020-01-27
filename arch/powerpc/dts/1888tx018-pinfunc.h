@@ -220,29 +220,3 @@
 #define SRAM_NOR_BLE_L          PINMUX_HW_PIN(LSIF0, mGPIO8, 5)
 #define SRAM_NOR_OE             PINMUX_HW_PIN(LSIF0, mGPIO8, 6)
 #define SRAM_NOR_WE             PINMUX_HW_PIN(LSIF0, mGPIO8, 7)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

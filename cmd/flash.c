@@ -639,7 +639,7 @@ int flash_sect_protect (int p, ulong addr_first, ulong addr_last)
 
 /**************************************************/
 #if defined(CONFIG_CMD_MTDPARTS)
-# define TMP_ERASE	"erase <part-id>\n    - erase partition(for example nor1,0)\n"
+# define TMP_ERASE	"erase <part-id>\n    - erase partition\n"
 # define TMP_PROT_ON	"protect on <part-id>\n    - protect partition\n"
 # define TMP_PROT_OFF	"protect off <part-id>\n    - make partition writable\n"
 #else

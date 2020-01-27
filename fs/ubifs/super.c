@@ -46,9 +46,9 @@ struct vfsmount;
 
 #define INODE_LOCKED_MAX	64
 
-struct super_block *ubifs_sb = {0};
+struct super_block *ubifs_sb;
 
-static struct inode *inodes_locked_down[INODE_LOCKED_MAX] = {0};
+static struct inode *inodes_locked_down[INODE_LOCKED_MAX];
 
 int set_anon_super(struct super_block *s, void *data)
 {

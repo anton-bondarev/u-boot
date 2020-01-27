@@ -64,7 +64,7 @@ static struct ubifs_compressor zlib_compr = {
 };
 
 /* All UBIFS compressors */
-struct ubifs_compressor *ubifs_compressors[UBIFS_COMPR_TYPES_CNT] = { 0 };
+struct ubifs_compressor *ubifs_compressors[UBIFS_COMPR_TYPES_CNT];
 
 
 #ifdef __UBOOT__

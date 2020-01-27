@@ -4,6 +4,7 @@
  *  by the Free Software Foundation.
  *
  *  Copyright (C) 2019 Alexey Spirkov <alexeis@astrosoft.ru>
+ *  Copyright (C) 2020 Vladimir Shalyt <Vladimir.Shalyt@astrosoft.ru>
  */
 
 #include <linux/err.h>

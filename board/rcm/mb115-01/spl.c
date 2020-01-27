@@ -68,7 +68,7 @@ bool is_ddr_ok(void)
 
 void usleep(uint32_t usec);
 
-void rcm_nor_init( void )
+void rcm_sram_nor_init( void )
 {
 	*((u32*)0x3C040420) = 0x000000FF; // MGPIOx_GPIOAFSEL
 	*((u32*)0x3C041420) = 0x000000FF;
@@ -111,6 +111,8 @@ void spl_board_init(void)
 		puts("Enter HOST mode for EDCL boot\n");
 	else
 		puts("Unknown boot device\n");
+
+	rcm_sram_nor_init();						// GPIOAFSEL+TLB for NOR controller
 }
 
 
@@ -128,14 +130,14 @@ void board_boot_order(u32 *spl_boot_list)
 	switch (spl_boot_list[0]) {
 	case BOOT_DEVICE_SPI:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;
-		spl_boot_list[2] = BOOT_DEVICE_NAND;
-		spl_boot_list[3] = BOOT_DEVICE_NOR;
+		spl_boot_list[2] = BOOT_DEVICE_NOR;		// NOR before NAND, becose now GPIOAFSEL is initialized for NOR earlier(see spl_board_init)
+		spl_boot_list[3] = BOOT_DEVICE_NAND;	// and function for initialization NOR is absent,but for NAND this function exist as self (nand_init)
 		spl_boot_list[4] = BOOT_DEVICE_EDCL;	// for adding new elements increase array size
 		break;
 	case BOOT_DEVICE_MMC1:
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
-		spl_boot_list[2] = BOOT_DEVICE_NAND;
-		spl_boot_list[3] = BOOT_DEVICE_NOR;
+		spl_boot_list[2] = BOOT_DEVICE_NOR;
+		spl_boot_list[3] = BOOT_DEVICE_NAND;
 		spl_boot_list[4] = BOOT_DEVICE_EDCL;
 		break;
 	}
