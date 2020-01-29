@@ -414,8 +414,7 @@ struct ubifs_znode *ubifs_load_znode(struct ubifs_info *c,
 	if (err)
 		goto out;
 
-	// atomic_long_inc(&c->clean_zn_cnt);
-	c->clean_zn_cnt.counter++;
+	atomic_long_inc(&c->clean_zn_cnt);
 
 	/*
 	 * Increment the global clean znode counter as well. It is OK that
@@ -423,8 +422,7 @@ struct ubifs_znode *ubifs_load_znode(struct ubifs_info *c,
 	 * short time (because we might be preempted at this point), the global
 	 * one is only used in shrinker.
 	 */
-	// atomic_long_inc(&ubifs_clean_zn_cnt);
-	c->clean_zn_cnt.counter++;
+	atomic_long_inc(&ubifs_clean_zn_cnt);
 
 	zbr->znode = znode;
 	znode->parent = parent;

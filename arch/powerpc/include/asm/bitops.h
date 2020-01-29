@@ -24,7 +24,16 @@
 #ifndef CONFIG_1888TX018
 #define __INLINE_BITOPS	1
 #else
-int test_and_set_bit(int nr, volatile void * addr);
+static __inline__ int test_and_set_bit(int nr, volatile void * addr)
+{
+	int	mask, retval;
+	volatile unsigned int *a = addr;
+	a += nr >> 5;
+	mask = 1 << (nr & 0x1f);
+	retval = (mask & *a) != 0;
+	*a |= mask;
+	return retval;
+}
 #endif
 
 #if __INLINE_BITOPS

@@ -222,17 +222,6 @@ int testdram(void)
 
 #endif
 
-int test_and_set_bit(int nr, volatile void * addr)
-{
-	int	mask, retval;
-	volatile unsigned int *a = addr;
-	a += nr >> 5;
-	mask = 1 << (nr & 0x1f);
-	retval = (mask & *a) != 0;
-	*a |= mask;
-	return retval;
-}
-
 int power_init_board(void)
 {
 #ifdef CONFIG_MTD_RCM_NOR

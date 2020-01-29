@@ -79,7 +79,7 @@
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
 /*#define CONFIG_SYS_DRAM_TEST*/
 
-#define CONFIG_SYS_MAX_FLASH_BANKS      2       // if NOR via LSIF need 1 (little window)
+#define CONFIG_SYS_MAX_FLASH_BANKS      2       // if NOR via LSIF need 1!!! (little window)+correct mtdpart
 #define CONFIG_SYS_MAX_FLASH_SECT       1024
 
 #define CONFIG_CHIP_SELECTS_PER_CTRL    2
@@ -221,7 +221,6 @@
 
     #define CONFIG_SYS_FLASH_BASE0          0x20000000      /* base address 0 for work via MCIF and LSIF */
     #define CONFIG_SYS_FLASH_BASE1          0x10000000      /* base address 1 for work via MCIF only */
-    /*#define CONFIG_SYS_MAX_FLASH_BANKS    1*/             /* for work via LSIF  need defined one only memory bank */
     #define CONFIG_SYS_FLASH_BANKS_LIST     {CONFIG_SYS_FLASH_BASE0,CONFIG_SYS_FLASH_BASE1}
     #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
     #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE
@@ -232,6 +231,6 @@
     #endif
 
 #endif
-
+#define LWARX_1888TX018
 #endif /* __1888TX018_H */
 

@@ -63,7 +63,7 @@
 #define SRAMNOR_REG_data_ecc_write_mem  0x24
 #define SRAMNOR_REG_data_ecc_read_mem   0x28
 
-// #define RCM_SRAM_NOR_DBG
+//#define RCM_SRAM_NOR_DBG
 
 #ifdef RCM_SRAM_NOR_DBG
         #ifndef __UBOOT__
@@ -115,6 +115,8 @@
 
 #endif /* CONFIG_PPC_DCR */
 
+        static void cfi_flash_bank_addr_update( int i, u32 addr );
+
 #endif  // is defined __UBOOT__
 
 typedef u32 (*reg_readl_fn)(void *rcm_mtd, u32 offset);
@@ -132,9 +134,6 @@ struct rcm_mtd {
         u32 high_addr;
         reg_readl_fn readl_fn;
         reg_writel_read_fn writel_fn;
-#ifdef __UBOOT__
-        u32 flash_base[2];
-#endif
 };
 
 u32 lsif_reg_readl(void *base, u32 offset)
@@ -164,6 +163,51 @@ void dcr_reg_writel(void *base, u32 offset, u32 val)
 }
 
 #endif /* CONFIG_PPC_DCR */
+
+#ifdef __UBOOT__
+
+static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, unsigned int flash_num ) {
+        static char flash_node_name[7] = "flashx";
+        struct rcm_mtd *rcm_mtd = pdev->priv;
+        u32 ranges[4], bus_addr, size;
+        u64 parent_bus_addr;
+
+        flash_node_name[5] = 0x30+flash_num;
+        ofnode flash_node = ofnode_find_subnode( pdev->node, flash_node_name );
+        if( !ofnode_valid( flash_node ) ) {
+                dev_err( &pdev->dev, "failed to get resource for %s\n", flash_node_name );
+                return -ENOENT;
+        }
+        if( ofnode_read_u32_array( flash_node, "ranges", ranges, 4 ) ) {
+            dev_err( &pdev->dev, "failed to read memory ranges\n" );
+            return -ENOENT;
+        }
+        bus_addr = ranges[0];
+        parent_bus_addr = ((u64)ranges[1]<<32) | ranges[2];
+        size = ranges[3];
+        DBG_PRINT( "Memmap: bus addr=%08x,plb addr=%016llx,size=%08x\n", bus_addr, parent_bus_addr, size );
+        if( flash_num ) {                       // was defined before,now must be same
+            if( rcm_mtd->high_addr != ranges[1] ) {
+                    dev_err( &pdev->dev, "high halfs of address must be match\n" );
+                    return -EINVAL;
+            }
+        }
+        else
+            rcm_mtd->high_addr = ranges[1];     // this fist function call,just saving address
+        switch( size ) {
+        case 0x10000000:
+                tlb47x_inval( bus_addr, TLBSID_256M );
+                tlb47x_map( parent_bus_addr, bus_addr, TLBSID_256M, TLB_MODE_RWX );
+                break;
+        default:
+                dev_err( &pdev->dev, "support only 256M window\n" );
+                return -EINVAL;
+       }
+       cfi_flash_bank_addr_update( flash_num, bus_addr );
+       return 0;
+}
+
+#endif /* __UBOOT__ */
 
 static int rcm_controller_setup( rcm_sram_nor_device *pdev )
 {
@@ -292,23 +336,17 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
             dev_err(&pdev->dev, "memory ranges must be defined\n");
             return -ENOENT;
         }
-    #else
+        rcm_mtd->high_addr =
+            ranges[1]; // save high addr of ranges for controller setup
+    #else // for __UBOOT__
         u32 dcr_reg[2];
-        u32 ranges[4];
         if( of_property_read_u32_array( of_node, "dcr-reg", dcr_reg, 2 ) ) {
             dev_err(&pdev->dev, "read dcr-rev property failed\n");
             return -ENOENT;
         }
         DBG_PRINT( "dcr-reg=%08x,%08x\n", dcr_reg[0], dcr_reg[1] )
         rcm_mtd->dcr_host = dcr_reg[0];
-        if( of_property_read_u32_array( of_node, "ranges", ranges, 4 ) ) {
-            dev_err(&pdev->dev, "read memory ranges failed\n");
-            return -ENOENT;
-        }
-        DBG_PRINT( "addr-high=%08x\n", ranges[1] )
-    #endif
-        rcm_mtd->high_addr =
-            ranges[1]; // save high addr of ranges for controller setup
+    #endif // for __UBOOT__
         rcm_mtd->readl_fn = &dcr_reg_readl;
         rcm_mtd->writel_fn = &dcr_reg_writel;
 #else // !CONFIG_PPC_DCR
@@ -332,33 +370,21 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
                         return -ENOENT;
                 }
                 rcm_mtd->regs = (void*)reg[0];
-                rcm_mtd->high_addr = 0;
-#endif
+ #endif
                 rcm_mtd->readl_fn = &lsif_reg_readl;
                 rcm_mtd->writel_fn = &lsif_reg_writel;
+        }
+
+#ifdef __UBOOT__
+        int i, err;
+        for( i = 0; i < CONFIG_SYS_MAX_FLASH_BANKS; i++ ) {
+                if( ( err = set_high_addr_and_map_tlb( pdev, i ) ) != 0 )
+                        return err;
         }
 
         if (rcm_controller_setup(pdev)) {
                 dev_err(&pdev->dev, "hw setup failed\n");
                 return -ENXIO;
-        }
-
-#ifdef __UBOOT__
-
-        if( of_property_read_u32_array( of_node, "mmap_flash_base", rcm_mtd->flash_base, dcr_reg ? 2 : 1 ) ) {
-                dev_err(&pdev->dev, "failed to get resource for plb remap\n");
-                return -ENOENT;
-        }
-
-        if( dcr_reg ) { // flash connect via MCIF
-                tlb47x_inval( rcm_mtd->flash_base[0], TLBSID_256M );
-                tlb47x_map( 0x0600000000ull, rcm_mtd->flash_base[0], TLBSID_256M, TLB_MODE_RWX );
-                tlb47x_inval( rcm_mtd->flash_base[1], TLBSID_256M );
-                tlb47x_map( 0x0610000000ull, rcm_mtd->flash_base[1], TLBSID_256M, TLB_MODE_RWX );
-        }
-        else { // flash connect via LSIF
-                tlb47x_inval(  rcm_mtd->flash_base[0], TLBSID_256M );
-                tlb47x_map( 0x1020000000ull,  rcm_mtd->flash_base[0], TLBSID_256M, TLB_MODE_RWX );
         }
 #endif
 
@@ -392,6 +418,18 @@ static struct platform_driver rcm_mtd_driver = {
 module_platform_driver(rcm_mtd_driver);
 
 #else
+
+static u32 base_addr_list[CONFIG_SYS_MAX_FLASH_BANKS] = CONFIG_SYS_FLASH_BANKS_LIST; // default values from 1888tx018.h
+
+static void cfi_flash_bank_addr_update( int i, u32 addr ) {
+        if( i < sizeof( base_addr_list ) ) {
+                base_addr_list[i] = addr;
+        }
+}
+
+phys_addr_t cfi_flash_bank_addr( int i ) {
+	return (phys_addr_t)base_addr_list[i];
+}
 
 static const struct udevice_id rcm_sram_nor_ids[] = {
         { .compatible = "rcm,sram-nor" },

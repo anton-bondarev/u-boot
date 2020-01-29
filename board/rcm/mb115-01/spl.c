@@ -112,7 +112,7 @@ void spl_board_init(void)
 	else
 		puts("Unknown boot device\n");
 
-	rcm_sram_nor_init();						// GPIOAFSEL+TLB for NOR controller
+	//rcm_sram_nor_init();						// GPIOAFSEL+TLB for NOR controller
 }
 
 

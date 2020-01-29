@@ -149,8 +149,7 @@ void set_nlink(struct inode *inode, unsigned int nlink)
 	} else {
 		/* Yes, some filesystems do change nlink from zero to one */
 		if (inode->i_nlink == 0)
-			//atomic_long_dec(&inode->i_sb->s_remove_count);
-			inode->i_sb->s_remove_count.counter--;
+			atomic_long_dec(&inode->i_sb->s_remove_count);
 
 		inode->__i_nlink = nlink;
 	}
