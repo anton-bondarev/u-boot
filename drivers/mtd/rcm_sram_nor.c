@@ -13,9 +13,9 @@
 #include <linux/io.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
-#include <configs/1888tx018.h>
 
 #ifndef __UBOOT__
+        #include "config/1888tx018.h"
         #include <linux/module.h>
         #include <linux/slab.h>
         #include <linux/mtd/map.h>
@@ -29,6 +29,7 @@
                 #include <asm/dcr.h>
         #endif
 #else
+        #include "configs/1888tx018.h"
         typedef unsigned char uchar;
         #include <dm/of.h>
         #include <dm/device.h>
@@ -80,6 +81,8 @@
 
         #define WSWAP(B) (B)
         #define RSWAP(B) (B)
+        #define DCR_READ(...) dcr_read( __VA_ARGS__ )
+        #define DCR_WRITE(...) dcr_write( __VA_ARGS__ )
 
 #else // is defined __UBOOT__
         typedef struct udevice rcm_sram_nor_device;

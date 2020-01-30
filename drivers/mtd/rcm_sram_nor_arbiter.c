@@ -10,9 +10,9 @@
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
-#include <configs/1888tx018.h>
 
 #ifndef __UBOOT__
+        #include "config/1888tx018.h"
         #include <linux/module.h>
         #include <linux/of.h>
         #include <linux/platform_device.h>
@@ -22,6 +22,7 @@
                 #include <asm/dcr.h>
         #endif
 #else
+        #include <configs/1888tx018.h>
         #include <dm/of.h>
         #include <dm/device.h>
         #include <dm/of_access.h>
@@ -49,6 +50,8 @@
 #ifdef CONFIG_PPC_DCR
 // briges magic
 
+#ifdef __UBOOT__
+
 static inline void mtdcrx( uint32_t const addr, uint32_t const wval ) {
         asm volatile ( "mtdcrx %0, %1 \n\t" ::"r"(addr), "r"(wval) );
 }
@@ -58,6 +61,8 @@ static inline uint32_t mfdcrx( uint32_t const addr ) {
         asm volatile ( "mfdcrx %0, %1 \n\t" :"=r"(rval) :"r"(addr) );
         return rval;
 }
+
+#endif
 
 static void plb6mcif_initbridge( void ) {
         mtdcrx(EM2_PLB6MCIF2_DCR_BASE + 0x0f, 0x00000000);
