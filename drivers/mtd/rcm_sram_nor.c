@@ -282,11 +282,9 @@ static int rcm_controller_setup( rcm_sram_nor_device *pdev )
              (0 << SRAMNOR__ecc_mode_i); // switch off ECC
 
         rcm_mtd->writel_fn(rcm_mtd, SRAMNOR_REG_config, config);
-#ifdef RCM_SRAM_NOR_DBG
         DBG_PRINT( "TRACE: rcm_controller_setup: config write %x, read %x\n",
                    config,
                    rcm_mtd->readl_fn(rcm_mtd, SRAMNOR_REG_config) );
-#endif
         rcm_mtd->writel_fn(rcm_mtd, SRAMNOR_REG_reserve,
                 rcm_mtd->high_addr << 28);
 
