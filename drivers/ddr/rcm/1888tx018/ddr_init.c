@@ -1,4 +1,4 @@
-//#define DEBUG
+// #define DEBUG
 
 // 1333
 //#define SLOW_DOWN 1500
@@ -6,13 +6,15 @@
 // 1066
 #define SLOW_DOWN 1876
 
+#include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <linux/string.h>
 #include "ddr_impl_h/ddr.h"
 #include "ddr_impl_h/ddr_impl.h"
 #include "ddr_impl_h/ddr_regs.h"
 #include "ddr_impl_h/mivem_assert.h"
-#include <stdint.h>
 #include "ddr_impl_h/mivem_macro.h"
-#include <stdbool.h>
 #include "timer.h"
 #include "ddr_impl_h/ppc_476fp_lib_c.h"
 #include "ddr_impl_h/ddr/plb6mcif2.h"
@@ -25,8 +27,8 @@
 //static uint8_t __attribute__((section(".EM0.data"),aligned(16))) volatile ddr0_init_array[128] = { 0 };
 //static uint8_t __attribute__((section(".EM1.data"),aligned(16))) volatile ddr1_init_array[128] = { 0 };
 
-unsigned int *ddr0_init_array = 0x40000000;
-unsigned int *ddr1_init_array = 0x80000000;
+unsigned int *ddr0_init_array = (void*)0x40000000;
+unsigned int *ddr1_init_array = (void*)0x80000000;
 
 #define reg_field(field_right_bit_num_from_ppc_user_manual, value)\
     ((value) << IBM_BIT_INDEX( 32, field_right_bit_num_from_ppc_user_manual ))
@@ -44,20 +46,20 @@ static void ddr_aximcif2_init(const uint32_t baseAddr);
 static void ddr_mcif2arb4_init(const uint32_t baseAddr);
 static void ddr3phy_init(uint32_t baseAddr, const DdrBurstLength burstLen);
 static void ddr3phy_calibrate(const uint32_t baseAddr);
-static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr);
-static void ddr3phy_calibrate_manual_EM1(const unsigned int baseAddr);
+// static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr);
+// static void ddr3phy_calibrate_manual_EM1(const unsigned int baseAddr);
 static void ddr34lmc_dfi_init(const uint32_t baseAddr);
 static void ddr_init_main(DdrHlbId hlbId, DdrInitMode initMode, DdrEccMode eccMode, DdrPmMode powerManagementMode, DdrBurstLength burstLength, DdrPartialWriteMode partialWriteMode);
-static void ddr_set_nopatch_config (CrgDdrFreq FreqMode);
+// static void ddr_set_nopatch_config (CrgDdrFreq FreqMode);
 static void ddr_set_main_config (CrgDdrFreq FreqMode);
 
-void crg_ddr_config_freq ( uint32_t phy_base_addr, const DdrBurstLength burstLen);
-void crg_cpu_upd_cken ();
-void crg_ddr_upd_cken ();
-void crg_cpu_upd_ckdiv ();
-void crg_ddr_upd_ckdiv ();
-void crg_remove_writelock ();
-void crg_set_writelock ();
+static void crg_ddr_config_freq (uint32_t phy_base_addr, const DdrBurstLength burstLen);
+// static void crg_cpu_upd_cken(void);
+// static void crg_ddr_upd_cken(void);
+//static void crg_cpu_upd_ckdiv(void);
+static void crg_ddr_upd_ckdiv(void);
+static void crg_remove_writelock(void);
+static void crg_set_writelock(void);
 
 static volatile uint32_t ioread32(uint32_t const base_addr)
 {
@@ -137,22 +139,24 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
         DdrPartialWriteMode partialWriteMode
 );
 
-void wait_some_time ()
+static void wait_some_time(void)
 {
     volatile uint32_t counter;
     for (counter = 0; counter < 100000; counter++)
         ;
 }
-void wait_some_time_1 ()
-{
-    volatile uint32_t counter;
-    for (counter = 0; counter < 1000; counter++)
-        ;
-}
+
+// static void wait_some_time_1(void)
+// {
+//     volatile uint32_t counter;
+//     for (counter = 0; counter < 1000; counter++)
+//         ;
+// }
 
 //*************************************************DDR INIT FUNCTIONS*************************************************/
 
-void init_mmu() {
+static void init_mmu(void)
+{
     asm volatile (
 	// initialize MMUCR
 	"addis 0, 0, 0x0000   \n\t"  // 0x0000
@@ -173,7 +177,8 @@ void init_mmu() {
     );   
 };
 
-void write_tlb_entry4 () {
+static void write_tlb_entry4(void)
+{
 
  asm volatile (
 	"addis 3, 0, 0x0000   \n\t"  // 0x0000, 0x0000
@@ -195,7 +200,8 @@ void write_tlb_entry4 () {
 
 };
 
-void write_tlb_entry8 () {
+static void write_tlb_entry8(void)
+{
 
  asm volatile (
 	"addis 3, 0, 0x0000   \n\t"  // 0x0000, 0x0000
@@ -217,7 +223,8 @@ void write_tlb_entry8 () {
 
 };
 
-uint32_t read_dcr_reg(uint32_t addr) {
+static uint32_t read_dcr_reg(uint32_t addr)
+{
   uint32_t res;
 
   asm volatile   (
@@ -229,7 +236,8 @@ uint32_t read_dcr_reg(uint32_t addr) {
   return res;
 };
 
-void write_dcr_reg(uint32_t addr, uint32_t value) {
+static void write_dcr_reg(uint32_t addr, uint32_t value)
+{
 
   asm volatile   (
   "mtdcrx (%0), (%1) \n\t"       // mtdcrx RA, RS
@@ -238,22 +246,22 @@ void write_dcr_reg(uint32_t addr, uint32_t value) {
 	);
 };
 
-void report_DDR_core_regs (uint32_t baseAddr)
-{
-    volatile uint32_t cntr;
-    volatile uint32_t current_address = baseAddr;
-    
-    // rumboot_printf("  report_DDR_core_regs    baseAddr = 0x%08x\n", baseAddr);
-    
-    for (cntr = 0; cntr < 0xFF; cntr++)
-    {
-        // rumboot_printf("  reg %03x = 0x%08x\n", cntr, dcrread32 (current_address));
-        current_address +=1;
-        wait_some_time_1 ();
-    }
-}
+// static void report_DDR_core_regs(uint32_t baseAddr)
+// {
+//     volatile uint32_t cntr;
+//     volatile uint32_t current_address = baseAddr;
+//    
+//     // rumboot_printf("  report_DDR_core_regs    baseAddr = 0x%08x\n", baseAddr);
+//    
+//     for (cntr = 0; cntr < 0xFF; cntr++)
+//     {
+//         // rumboot_printf("  reg %03x = 0x%08x\n", cntr, dcrread32 (current_address));
+//         current_address +=1;
+//         wait_some_time_1 ();
+//     }
+// }
 
-void commutate_plb6()
+static void commutate_plb6(void)
 {
     uint32_t dcr_val=0;
     init_mmu();
@@ -287,7 +295,13 @@ static int validate_dimm_parameters(dimm_params_t * params, int no)
         result = 1;
     }
 
-    return 0; /*result*/;
+	if (params->primary_sdram_width < 32)
+	{
+		printf("Unsupported DIMM primary data width == %u in slot %i\n", params->primary_sdram_width, no);
+		result = 1;
+	}
+
+    return result;
 }
 
 
@@ -393,7 +407,7 @@ static void ddr_set_config_from_spd(int slowdown, int dimm0_invalid, int dimm1_i
 
     if(slowdown != 0)
     {
-        printf("DDR slow down from %d to %d\n", 1000000/time_base*2, 1000000/SLOW_DOWN*2);
+        printf("DDR slow down from %ld to %d\n", 1000000/time_base*2, 1000000/SLOW_DOWN*2);
         time_base = SLOW_DOWN;
     }
 
@@ -470,7 +484,8 @@ static void ddr_set_config_from_spd(int slowdown, int dimm0_invalid, int dimm1_i
 
 }
 
-static void dump_ddr_config()
+#ifdef DEBUG
+static void dump_ddr_config(void)
 {
     printf("Current ddr_config:\n");
     printf("uint32_t T_RDDATA_EN_BC4 =  %d\n", ddr_config.T_RDDATA_EN_BC4);
@@ -499,13 +514,14 @@ static void dump_ddr_config()
     printf("uint32_t T_ROW_WIDTH =      %d\n", ddr_config.T_ROW_WIDTH);
     printf("uint32_t T_ADDR_MODE =      %d\n", ddr_config.T_ADDR_MODE);
 }
+#endif
 
 void ddr_init (int slowdown)
 {
     int dimm0_params_invalid = 1;
     int dimm1_params_invalid = 1;
     dimm_params_t dpar0, dpar1;
-    int res;
+    // int res;
     DdrHlbId hlbId = DdrHlbId_Default;
     DdrBurstLength bl = DdrBurstLength_Default;
 
@@ -1407,34 +1423,34 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     // report_DDR_core_regs (baseAddr);
 }
 
-char * print_reg(uint32_t val, int len)
-{
-    uint32_t x = val, mask;
+// char * print_reg(uint32_t val, int len)
+// {
+//     uint32_t x = val, mask;
+// 
+// 
+//     while(len)
+//     {
+// 	mask = 1 << (len-1);
+// 	if (x&mask)
+// 	{
+// 	    // rumboot_printf("1");
+// 	}
+// 	else
+// 	{
+// 	    // rumboot_printf("0");
+// 	}
+// 	len--;
+//     }
+//     // rumboot_printf("\n");
+// 
+// }
 
-
-    while(len)
-    {
-	mask = 1 << (len-1);
-	if (x&mask)
-	{
-	    // rumboot_printf("1");
-	}
-	else
-	{
-	    // rumboot_printf("0");
-	}
-	len--;
-    }
-    // rumboot_printf("\n");
-
-}
-
-static void _ddr3phy_calibrate(const uint32_t baseAddr)
-{
-   dcrwrite32(0x01, baseAddr + DDR3PHY_PHYREG02);
-   usleep(6);  //  in microseconds
-   dcrwrite32(0x00, baseAddr + DDR3PHY_PHYREG02);  //  Stop calibration
-}
+// static void _ddr3phy_calibrate(const uint32_t baseAddr)
+// {
+//    dcrwrite32(0x01, baseAddr + DDR3PHY_PHYREG02);
+//    usleep(6);  //  in microseconds
+//    dcrwrite32(0x00, baseAddr + DDR3PHY_PHYREG02);  //  Stop calibration
+// }
 
 static void ddr3phy_calibrate(const uint32_t baseAddr)
 {
@@ -1574,8 +1590,8 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
     
     ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA1); //Start calibration
     
-    volatile uint32_t rdata;
-    volatile uint32_t i;
+    // volatile uint32_t rdata;
+    // volatile uint32_t i;
     
 
     do
@@ -1779,210 +1795,210 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
 }
 
 
-static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr)	//#ev
-{
-    
-   unsigned int reg;
-   
-    //#ev ручная подстройка задержек для скорости 1066
-   if (DDR_FREQ == DDR3_1066) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xf);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x7);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x1);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
-      
-   }
+// static void ddr3phy_calibrate_manual_EM0(const unsigned int baseAddr)	//#ev
+// {
+//
+//    unsigned int reg;
+//
+//     //#ev ручная подстройка задержек для скорости 1066
+//    if (DDR_FREQ == DDR3_1066) {
+//
+//    ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xf);	// CMD AND ADDRESS DLL delay  (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x7);	// CK DLL delay (0-7)
+//
+//    ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
+//
+//    ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//
+//    ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x1);  // Write DQS DLL delay (0-7)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x1);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
+//
+//     }
+// 
+// 
+//    //#ev ручная подстройка задержек для скорости 1333
+//    if (DDR_FREQ == DDR3_1333) {
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
+//       
+//    }
+//    
+//    //#ev ручная подстройка задержек для скорости 1600
+//    if (DDR_FREQ == DDR3_1600) {
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
+//     
+//    }
+//    usleep(10);  //  in microseconds #ev 
+//    
+//    
+//    
+//    // email from INNO, did
+//   // please configure the register 0x11b[7:4] to 0x07, this will decrease the skew of the clock
+//   reg = MEM32(baseAddr + 0x11B);
+//   reg &= ~0xf0;
+//   MEM32(baseAddr + 0x11B) = reg | 0x70;
+// }
 
-
-   //#ev ручная подстройка задержек для скорости 1333
-   if (DDR_FREQ == DDR3_1333) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
-      
-   }
-   
-   //#ev ручная подстройка задержек для скорости 1600
-   if (DDR_FREQ == DDR3_1600) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
-    
-   }
-   usleep(10);  //  in microseconds #ev 
-   
-   
-   
-   // email from INNO, did
-  // please configure the register 0x11b[7:4] to 0x07, this will decrease the skew of the clock
-  reg = MEM32(baseAddr + 0x11B);
-  reg &= ~0xf0;
-  MEM32(baseAddr + 0x11B) = reg | 0x70;
-}
-
-static void ddr3phy_calibrate_manual_EM1(const unsigned int baseAddr)	//#ev
-{
-    
-   unsigned int reg;
-   
-    //#ev ручная подстройка задержек для скорости 1066
-   if (DDR_FREQ == DDR3_1066) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA8); //  Write leveling bypass mode
-    
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0x8);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x4);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0x8);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0x8);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0x8);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0x8);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x2);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x2);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x2);  // Write DQS DLL delay (0-7)-старший байт (слева)
-   /*
-   ddr3phy_write_DDR3PHY_PHYREG70(baseAddr,0x77);	// CS0 A_DM0 TX de-skew - CS0 A_DM0 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREG7B(baseAddr,0x77);	// CS0 A_DM1 TX de-skew - CS0 A_DM1 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREG86(baseAddr,0x77);	// CS0 B_DM0 TX de-skew - CS0 B_DM0 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREG91(baseAddr,0x77);	// CS0 B_DM1 TX de-skew - CS0 B_DM1 RX de-skew
-													//где C?
-   ddr3phy_write_DDR3PHY_PHYREGC0(baseAddr,0x77);	// CS1 A_DM0 TX de-skew - CS1 A_DM0 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREGCB(baseAddr,0x77);	// CS1 A_DM1 TX de-skew - CS1 A_DM1 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREGD6(baseAddr,0x77);	// CS1 B_DM0 TX de-skew - CS1 B_DM0 RX de-skew
-   ddr3phy_write_DDR3PHY_PHYREGE1(baseAddr,0x77);	// CS1 B_DM1 TX de-skew - CS1 B_DM1 RX de-skew
-													//где C?
-												
-     */
-	 
-	reg = ddr3phy_read_DDR3PHY_PHYREG70(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREG70 = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREG7B(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREG7B = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREG86(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREG86 = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREG91(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREG91 = 0x%08x\n", reg);
-	
-	reg = ddr3phy_read_DDR3PHY_PHYREGC0(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREGC0 = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREGCB(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREGCB = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREGD6(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREGD6 = 0x%08x\n", reg);
-	reg = ddr3phy_read_DDR3PHY_PHYREGE1(baseAddr);
-    // rumboot_printf("	EM1 DDR3PHY_PHYREGE1 = 0x%08x\n", reg);
-	
-		
-   }
-
-
-   //#ev ручная подстройка задержек для скорости 1333
-   if (DDR_FREQ == DDR3_1333) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
-      
-   }
-   
-   //#ev ручная подстройка задержек для скорости 1600
-   if (DDR_FREQ == DDR3_1600) {
-   
-   ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
-   
-   ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
-   ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
-   
-   ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
-   
-   ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
-   ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
-   ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
-    
-   }
-   usleep(10);  //  in microseconds #ev 
-   
-  
-   
-   // email from INNO, did
-  // please configure the register 0x11b[7:4] to 0x07, this will decrease the skew of the clock
-  reg = MEM32(baseAddr + 0x11B);
-  reg &= ~0xf0;
-  MEM32(baseAddr + 0x11B) = reg | 0x70;
-  
-}
+// static void ddr3phy_calibrate_manual_EM1(const unsigned int baseAddr)	//#ev
+// {
+//     
+//    unsigned int reg;
+//    
+//     //#ev ручная подстройка задержек для скорости 1066
+//    if (DDR_FREQ == DDR3_1066) {
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA8); //  Write leveling bypass mode
+//     
+//    ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0x8);	// CMD AND ADDRESS DLL delay  (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x4);	// CK DLL delay (0-7)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0x8);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0x8);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0x8);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0x8);	// Write DQ DLL delay (8-f)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x2);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x2);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x2);  // Write DQS DLL delay (0-7)-старший байт (слева)
+//    /*
+//    ddr3phy_write_DDR3PHY_PHYREG70(baseAddr,0x77);	// CS0 A_DM0 TX de-skew - CS0 A_DM0 RX de-skew
+//    ddr3phy_write_DDR3PHY_PHYREG7B(baseAddr,0x77);	// CS0 A_DM1 TX de-skew - CS0 A_DM1 RX de-skew
+//    ddr3phy_write_DDR3PHY_PHYREG86(baseAddr,0x77);	// CS0 B_DM0 TX de-skew - CS0 B_DM0 RX de-skew
+//    ddr3phy_write_DDR3PHY_PHYREG91(baseAddr,0x77);	// CS0 B_DM1 TX de-skew - CS0 B_DM1 RX de-skew
+// 													//где C?
+//    ddr3phy_write_DDR3PHY_PHYREGC0(baseAddr,0x77);	// CS1 A_DM0 TX de-skew - CS1 A_DM0 RX de-skew
+//    ddr3phy_write_DDR3PHY_PHYREGCB(baseAddr,0x77);	// CS1 A_DM1 TX de-skew - CS1 A_DM1 RX de-skew
+//    ddr3phy_write_DDR3PHY_PHYREGD6(baseAddr,0x77);	// CS1 B_DM0 TX de-skew - CS1 B_DM0 RX de-skew
+//    ddr3phy_write_DDR3PHY_PHYREGE1(baseAddr,0x77);	// CS1 B_DM1 TX de-skew - CS1 B_DM1 RX de-skew
+// 													//где C?
+// 												
+//      */
+// 	 
+// 	reg = ddr3phy_read_DDR3PHY_PHYREG70(baseAddr);
+//     // rumboot_printf("	EM1 DDR3PHY_PHYREG70 = 0x%08x\n", reg);
+// 	reg = ddr3phy_read_DDR3PHY_PHYREG7B(baseAddr);
+//     // rumboot_printf("	EM1 DDR3PHY_PHYREG7B = 0x%08x\n", reg);
+// 	reg = ddr3phy_read_DDR3PHY_PHYREG86(baseAddr);
+//     // rumboot_printf("	EM1 DDR3PHY_PHYREG86 = 0x%08x\n", reg);
+// 	reg = ddr3phy_read_DDR3PHY_PHYREG91(baseAddr);
+//     // rumboot_printf("	EM1 DDR3PHY_PHYREG91 = 0x%08x\n", reg);
+// 	
+// 	reg = ddr3phy_read_DDR3PHY_PHYREGC0(baseAddr);
+//     // rumboot_printf("	EM1 DDR3PHY_PHYREGC0 = 0x%08x\n", reg);
+// 	reg = ddr3phy_read_DDR3PHY_PHYREGCB(baseAddr);
+//     // rumboot_printf("	EM1 DDR3PHY_PHYREGCB = 0x%08x\n", reg);
+// 	reg = ddr3phy_read_DDR3PHY_PHYREGD6(baseAddr);
+//     // rumboot_printf("	EM1 DDR3PHY_PHYREGD6 = 0x%08x\n", reg);
+// 	reg = ddr3phy_read_DDR3PHY_PHYREGE1(baseAddr);
+//     // rumboot_printf("	EM1 DDR3PHY_PHYREGE1 = 0x%08x\n", reg);
+// 	
+// 		
+//    }
+// 
+// 
+//    //#ev ручная подстройка задержек для скорости 1333
+//    if (DDR_FREQ == DDR3_1333) {
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
+//       
+//    }
+//    
+//    //#ev ручная подстройка задержек для скорости 1600
+//    if (DDR_FREQ == DDR3_1600) {
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG13(baseAddr,0xc);	// CMD AND ADDRESS DLL delay  (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG14(baseAddr,0x0);	// CK DLL delay (0-7)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG28(baseAddr,0x1);	// read DQS DLL delay (0-3)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG38(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG48(baseAddr,0x1);	// read DQS DLL delay (0-3)
+//    ddr3phy_write_DDR3PHY_PHYREG58(baseAddr,0x1);	// read DQS DLL delay (0-3)-старший байт (слева)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG26(baseAddr,0xe);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG36(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG46(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    ddr3phy_write_DDR3PHY_PHYREG56(baseAddr,0xc);	// Write DQ DLL delay (8-f)
+//    
+//    ddr3phy_write_DDR3PHY_PHYREG27(baseAddr,0x2);  // Write DQS DLL delay (0-7)-младший байт (справа)
+//    ddr3phy_write_DDR3PHY_PHYREG37(baseAddr,0x1);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG47(baseAddr,0x0);  // Write DQS DLL delay (0-7)
+//    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
+//     
+//    }
+//    usleep(10);  //  in microseconds #ev 
+//    
+//   
+//    
+//    // email from INNO, did
+//   // please configure the register 0x11b[7:4] to 0x07, this will decrease the skew of the clock
+//   reg = MEM32(baseAddr + 0x11B);
+//   reg &= ~0xf0;
+//   MEM32(baseAddr + 0x11B) = reg | 0x70;
+//   
+// }
 
 static void ddr_set_main_config (CrgDdrFreq FreqMode)	//#ev
 {   
@@ -2155,6 +2171,7 @@ void ddr_clear_ecc_error_status(const uint32_t baseAddr, const uint32_t portNum)
 void ddr_enter_self_refresh_mode(const uint32_t baseAddr)
 {
     uint32_t mcstat_reg = 0;
+    (void)mcstat_reg; // prevent a warning
 
     mcstat_reg = ddr34lmc_dcr_read_DDR34LMC_MCSTAT(baseAddr);
     TEST_ASSERT(!(mcstat_reg & reg_field(1, 0b1)), "DDR34LMC already in self-refresh mode");
@@ -2211,113 +2228,113 @@ void ddr_exit_self_refresh_mode(const uint32_t baseAddr)
 
 //-------------------------------------------------LOW POWER MODE FUNCTIONS-------------------------------------------------
 
-void ddr_enter_low_power_mode ()
-{
-    // rumboot_printf ("Enter LowPower mode....................\n");
+// void ddr_enter_low_power_mode ()
+// {
+//     // rumboot_printf ("Enter LowPower mode....................\n");
+// 
+//     uint32_t reg;
+//     crg_remove_writelock ();
+// 
+//     // rumboot_printf ("Enter self_refresh mode............\n");
+//     ddr_enter_self_refresh_mode(EM0_DDR3LMC_DCR);
+//     // rumboot_printf ("Enter self_refresh mode............done\n");
+// 
+//    //isolation cells on
+//     // rumboot_printf ("Isolation cells ON.................\n");
+//     reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
+//     reg |= (1<<0);
+//     pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //set ISO_ON_EM0 in PWR_EM0
+//     TEST_ASSERT((pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<0)) , "Error writing to PMU_PWR_EM0");
+//    //
+// 
+//    //stop clocks: I_DDR34LMC_CLKX1, I_DCR_CLOCK, I_PLB6_CLOCK
+//     // rumboot_printf ("Stop I_DDR34LMC_CLKX1..............\n");
+//     reg = crg_ddr_read_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE);
+//     reg &= ~((1<<0) | (1<<2));
+//     crg_ddr_write_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE, reg); //clear DDR3_EM0_PHY_CLKEN in CKEN_DDR3;
+// 
+//     // rumboot_printf ("Stop I_DCR_CLOCK...................\n");
+//     reg = crg_cpu_read_CRG_CPU_CKEN_DCR (CRG_CPU_BASE);
+//     reg &= ~(1<<0);
+//     crg_cpu_write_CRG_CPU_CKEN_DCR (CRG_CPU_BASE, reg); //clear DDR3_EM0_DCRCLKEN in CKEN_DCR
+// 
+//     // rumboot_printf ("Stop I_PLB6_CLOCK..................\n");
+//     reg = crg_cpu_read_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE);
+//     reg &= ~(1<<6);
+//     crg_cpu_write_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE, reg); //clear DDR3_EM0_DCRCLKEN in CKEN_PLB6
+// 
+//     crg_ddr_upd_cken ();
+//     crg_cpu_upd_cken ();
+//    //
+// 
+//     // rumboot_printf ("Set PWR_OFF_EM0....................\n");
+//     reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
+//     reg |= (1<<1);
+//     pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //set PWR_OFF_EM0 in PWR_EM0
+//     TEST_ASSERT((pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<1)) , "Error writing to PMU_PWR_EM0");
+// 
+//     crg_set_writelock();
+//     // rumboot_printf ("Enter LowPower mode....................done\n");
+// }
 
-    uint32_t reg;
-    crg_remove_writelock ();
-
-    // rumboot_printf ("Enter self_refresh mode............\n");
-    ddr_enter_self_refresh_mode(EM0_DDR3LMC_DCR);
-    // rumboot_printf ("Enter self_refresh mode............done\n");
-
-   //isolation cells on
-    // rumboot_printf ("Isolation cells ON.................\n");
-    reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
-    reg |= (1<<0);
-    pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //set ISO_ON_EM0 in PWR_EM0
-    TEST_ASSERT((pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<0)) , "Error writing to PMU_PWR_EM0");
-   //
-
-   //stop clocks: I_DDR34LMC_CLKX1, I_DCR_CLOCK, I_PLB6_CLOCK
-    // rumboot_printf ("Stop I_DDR34LMC_CLKX1..............\n");
-    reg = crg_ddr_read_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE);
-    reg &= ~((1<<0) | (1<<2));
-    crg_ddr_write_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE, reg); //clear DDR3_EM0_PHY_CLKEN in CKEN_DDR3;
-
-    // rumboot_printf ("Stop I_DCR_CLOCK...................\n");
-    reg = crg_cpu_read_CRG_CPU_CKEN_DCR (CRG_CPU_BASE);
-    reg &= ~(1<<0);
-    crg_cpu_write_CRG_CPU_CKEN_DCR (CRG_CPU_BASE, reg); //clear DDR3_EM0_DCRCLKEN in CKEN_DCR
-
-    // rumboot_printf ("Stop I_PLB6_CLOCK..................\n");
-    reg = crg_cpu_read_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE);
-    reg &= ~(1<<6);
-    crg_cpu_write_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE, reg); //clear DDR3_EM0_DCRCLKEN in CKEN_PLB6
-
-    crg_ddr_upd_cken ();
-    crg_cpu_upd_cken ();
-   //
-
-    // rumboot_printf ("Set PWR_OFF_EM0....................\n");
-    reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
-    reg |= (1<<1);
-    pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //set PWR_OFF_EM0 in PWR_EM0
-    TEST_ASSERT((pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<1)) , "Error writing to PMU_PWR_EM0");
-
-    crg_set_writelock();
-    // rumboot_printf ("Enter LowPower mode....................done\n");
-}
-
-void ddr_exit_low_power_mode ()
-{
-    // rumboot_printf ("Exit LowPower mode....................\n");
-
-    uint32_t reg;
-    crg_remove_writelock();
-
-    // rumboot_printf ("Clear PWR_OFF_EM0.................\n");
-    reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
-    reg &= ~(1<<1);
-    pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //clear PWR_OFF_EM0 in PWR_EM0
-    TEST_ASSERT((!(pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<1))), "Error writing to PMU_PWR_EM0");
-
-    //*****I_DDR34LMC_RESET, I_DDR34LMC_SELFREF_RESET, I_DCR_RESET, I_PLB6_RESET
-     // rumboot_printf ("Set RESET.........................\n");
-     reg = crg_ddr_read_CRG_DDR_RST_EN (CRG_DDR_BASE);
-     reg &= ~((1<<2) | (1<<4) | (1<<15) | (1<<16));
-     crg_ddr_write_CRG_DDR_RST_EN (CRG_DDR_BASE, reg);
-
-    //******
-
-   //start clocks: I_DDR34LMC_CLKX1, I_DCR_CLOCK, I_PLB6_CLOCK
-    // rumboot_printf ("Start I_DDR34LMC_CLKX1............\n");
-    reg = crg_ddr_read_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE);
-    reg |= (1<<0) | (1<<2);
-    crg_ddr_write_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE, reg); //set DDR3_EM0_PHY_CLKEN in CKEN_DDR3
-
-    // rumboot_printf ("Start I_DCR_CLOCK.................\n");
-    reg = crg_cpu_read_CRG_CPU_CKEN_DCR (CRG_CPU_BASE);
-    reg |= (1<<0);
-    crg_cpu_write_CRG_CPU_CKEN_DCR (CRG_CPU_BASE, reg); //set DDR3_EM0_DCRCLKEN in CKEN_DCR
-
-    // rumboot_printf ("Start I_PLB6_CLOCK................\n");
-    reg = crg_cpu_read_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE);
-    reg |= (1<<6);
-    crg_cpu_write_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE, reg); //set DDR3_EM0_DCRCLKEN in CKEN_PLB6
-
-    crg_ddr_upd_cken ();
-    crg_cpu_upd_cken ();
-    usleep(4); //workaround
-
-   //
-    // rumboot_printf ("Clear RESET.......................\n");
-    reg = crg_ddr_read_CRG_DDR_RST_EN (CRG_DDR_BASE);
-    reg |= (1<<2) | (1<<4) | (1<<15) | (1<<16);
-    crg_ddr_write_CRG_DDR_RST_EN (CRG_DDR_BASE, reg);
-
-   //isolation cells off
-    // rumboot_printf ("Clear ISO_ON_EM0..................\n");
-    reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
-    reg &= ~(1<<0);
-    pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //clear ISO_ON_EM0 in PWR_EM0
-    TEST_ASSERT((!(pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<0))) , "Error writing to PMU_PWR_EM0");
-   //
-
-    crg_set_writelock();
-    // rumboot_printf ("Exit LowPower mode....................done\n");
-}
+// void ddr_exit_low_power_mode ()
+// {
+//     // rumboot_printf ("Exit LowPower mode....................\n");
+// 
+//     uint32_t reg;
+//     crg_remove_writelock();
+// 
+//     // rumboot_printf ("Clear PWR_OFF_EM0.................\n");
+//     reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
+//     reg &= ~(1<<1);
+//     pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //clear PWR_OFF_EM0 in PWR_EM0
+//     TEST_ASSERT((!(pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<1))), "Error writing to PMU_PWR_EM0");
+// 
+//     //*****I_DDR34LMC_RESET, I_DDR34LMC_SELFREF_RESET, I_DCR_RESET, I_PLB6_RESET
+//      // rumboot_printf ("Set RESET.........................\n");
+//      reg = crg_ddr_read_CRG_DDR_RST_EN (CRG_DDR_BASE);
+//      reg &= ~((1<<2) | (1<<4) | (1<<15) | (1<<16));
+//      crg_ddr_write_CRG_DDR_RST_EN (CRG_DDR_BASE, reg);
+// 
+//     //******
+// 
+//    //start clocks: I_DDR34LMC_CLKX1, I_DCR_CLOCK, I_PLB6_CLOCK
+//     // rumboot_printf ("Start I_DDR34LMC_CLKX1............\n");
+//     reg = crg_ddr_read_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE);
+//     reg |= (1<<0) | (1<<2);
+//     crg_ddr_write_CRG_DDR_CKEN_DDR3_REFCLK (CRG_DDR_BASE, reg); //set DDR3_EM0_PHY_CLKEN in CKEN_DDR3
+// 
+//     // rumboot_printf ("Start I_DCR_CLOCK.................\n");
+//     reg = crg_cpu_read_CRG_CPU_CKEN_DCR (CRG_CPU_BASE);
+//     reg |= (1<<0);
+//     crg_cpu_write_CRG_CPU_CKEN_DCR (CRG_CPU_BASE, reg); //set DDR3_EM0_DCRCLKEN in CKEN_DCR
+// 
+//     // rumboot_printf ("Start I_PLB6_CLOCK................\n");
+//     reg = crg_cpu_read_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE);
+//     reg |= (1<<6);
+//     crg_cpu_write_CRG_CPU_CKEN_L2C_PLB6 (CRG_CPU_BASE, reg); //set DDR3_EM0_DCRCLKEN in CKEN_PLB6
+// 
+//     crg_ddr_upd_cken ();
+//     crg_cpu_upd_cken ();
+//     usleep(4); //workaround
+// 
+//    //
+//     // rumboot_printf ("Clear RESET.......................\n");
+//     reg = crg_ddr_read_CRG_DDR_RST_EN (CRG_DDR_BASE);
+//     reg |= (1<<2) | (1<<4) | (1<<15) | (1<<16);
+//     crg_ddr_write_CRG_DDR_RST_EN (CRG_DDR_BASE, reg);
+// 
+//    //isolation cells off
+//     // rumboot_printf ("Clear ISO_ON_EM0..................\n");
+//     reg = pmu_read_PMU_PWR_EM0 (PMU_BASE);
+//     reg &= ~(1<<0);
+//     pmu_write_PMU_PWR_EM0 (PMU_BASE, reg); //clear ISO_ON_EM0 in PWR_EM0
+//     TEST_ASSERT((!(pmu_read_PMU_PWR_EM0 (PMU_BASE) & (1<<0))) , "Error writing to PMU_PWR_EM0");
+//    //
+// 
+//     crg_set_writelock();
+//     // rumboot_printf ("Exit LowPower mode....................done\n");
+// }
 
 //-------------------------------------------------DRAM CLK FUNCTIONS-------------------------------------------------
 
@@ -2355,10 +2372,10 @@ void ddr_disable_dram_clk(DdrHlbId hlbId)
 
 
 
-void crg_ddr_config_freq (uint32_t phy_base_addr, DdrBurstLength burstLength)
+static void crg_ddr_config_freq(uint32_t phy_base_addr, DdrBurstLength burstLength)
 {
-    uint32_t reg;
-    uint32_t i = 0, timeout = 1000;
+    // uint32_t reg;
+    // uint32_t i = 0, timeout = 1000;
 
     crg_remove_writelock();
 
@@ -2433,31 +2450,31 @@ void crg_ddr_config_freq (uint32_t phy_base_addr, DdrBurstLength burstLength)
 
 }
 
-void crg_cpu_upd_cken ()
-{
-    uint32_t reg;
-    reg = crg_cpu_read_CRG_CPU_UPD_CK (CRG_CPU_BASE);
-    reg |= (1<<4);
-    crg_cpu_write_CRG_CPU_UPD_CK (CRG_CPU_BASE, reg);
-}
+// static void crg_cpu_upd_cken(void)
+// {
+//     uint32_t reg;
+//     reg = crg_cpu_read_CRG_CPU_UPD_CK (CRG_CPU_BASE);
+//     reg |= (1<<4);
+//     crg_cpu_write_CRG_CPU_UPD_CK (CRG_CPU_BASE, reg);
+// }
 
-void crg_ddr_upd_cken ()
-{
-    uint32_t reg;
-    reg = crg_ddr_read_CRG_DDR_UPD_CK (CRG_DDR_BASE);
-    reg |= (1<<4);
-    crg_ddr_write_CRG_DDR_UPD_CK (CRG_DDR_BASE, reg);
-}
+// static void crg_ddr_upd_cken (void)
+// {
+//     uint32_t reg;
+//     reg = crg_ddr_read_CRG_DDR_UPD_CK (CRG_DDR_BASE);
+//     reg |= (1<<4);
+//     crg_ddr_write_CRG_DDR_UPD_CK (CRG_DDR_BASE, reg);
+// }
 
-void crg_cpu_upd_ckdiv ()
-{
-    uint32_t reg;
-    reg = crg_cpu_read_CRG_CPU_UPD_CK (CRG_CPU_BASE);
-    reg |= (1<<0);
-    crg_cpu_write_CRG_CPU_UPD_CK (CRG_CPU_BASE, reg);
-}
+// static void crg_cpu_upd_ckdiv(void)
+// {
+//     uint32_t reg;
+//     reg = crg_cpu_read_CRG_CPU_UPD_CK (CRG_CPU_BASE);
+//     reg |= (1<<0);
+//     crg_cpu_write_CRG_CPU_UPD_CK (CRG_CPU_BASE, reg);
+// }
 
-void crg_ddr_upd_ckdiv ()
+static void crg_ddr_upd_ckdiv(void)
 {
     uint32_t reg;
     reg = crg_ddr_read_CRG_DDR_UPD_CK (CRG_DDR_BASE);
@@ -2491,7 +2508,7 @@ void crg_remove_writelock ()
    //
 }
 
-void crg_set_writelock ()
+static void crg_set_writelock(void)
 {
     //set write lock back
     const bool crg_cpu_write_access = (0 == crg_ddr_read_CRG_DDR_WR_LOCK(CRG_DDR_BASE));
