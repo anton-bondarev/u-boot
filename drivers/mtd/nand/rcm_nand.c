@@ -1539,7 +1539,7 @@ void board_nand_init( void ) {
 #endif // __UBOOT__
 
 MODULE_LICENSE("GPL"); 
-MODULE_AUTHOR("Alexey Spirkov <alexeis@astrosoft.ru>");
+MODULE_AUTHOR("Vladimir Shalyt <Vladimir.Shalyt@astrosoft.ru>");
 MODULE_DESCRIPTION("RCM SoC NAND controller driver");
 
 #else // CONFIG_SPL_BUILD

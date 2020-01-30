@@ -154,8 +154,6 @@
 #define SRAM_NOR_D9             PINMUX_HW_PIN(LSIF0, mGPIO1, 1)
 #define SRAM_NOR_D10            PINMUX_HW_PIN(LSIF0, mGPIO1, 2)
 #define SRAM_NOR_D11            PINMUX_HW_PIN(LSIF0, mGPIO1, 3)
-/*#define SRAM_NOR_D12*/
-/*#define SRAM_NOR_D13*/
 #define SRAM_NOR_D14            PINMUX_HW_PIN(LSIF0, mGPIO1, 4)
 #define SRAM_NOR_D15            PINMUX_HW_PIN(LSIF0, mGPIO1, 5)
 #define SRAM_NOR_D16            PINMUX_HW_PIN(LSIF0, mGPIO1, 6)
@@ -168,8 +166,6 @@
 #define SRAM_NOR_D23            PINMUX_HW_PIN(LSIF0, mGPIO2, 5)
 #define SRAM_NOR_D24            PINMUX_HW_PIN(LSIF0, mGPIO2, 6)
 #define SRAM_NOR_D25            PINMUX_HW_PIN(LSIF0, mGPIO2, 7)
-/*#define SRAM_NOR_D26*/
-/*#define SRAM_NOR_D27*/
 #define SRAM_NOR_D28            PINMUX_HW_PIN(LSIF0, mGPIO3, 0)
 #define SRAM_NOR_D29            PINMUX_HW_PIN(LSIF0, mGPIO3, 1)
 #define SRAM_NOR_D30            PINMUX_HW_PIN(LSIF0, mGPIO3, 2)
@@ -192,7 +188,6 @@
 #define SRAM_NOR_A7             PINMUX_HW_PIN(LSIF0, mGPIO5, 3)
 #define SRAM_NOR_A8             PINMUX_HW_PIN(LSIF0, mGPIO5, 4)
 #define SRAM_NOR_A9             PINMUX_HW_PIN(LSIF0, mGPIO5, 5)
-/*#define SRAM_NOR_A10*/
 #define SRAM_NOR_A11            PINMUX_HW_PIN(LSIF0, mGPIO5, 6)
 #define SRAM_NOR_A12            PINMUX_HW_PIN(LSIF0, mGPIO5, 7)
 #define SRAM_NOR_A13            PINMUX_HW_PIN(LSIF0, mGPIO6, 0)
@@ -205,7 +200,6 @@
 #define SRAM_NOR_A20            PINMUX_HW_PIN(LSIF0, mGPIO6, 7)
 #define SRAM_NOR_A21            PINMUX_HW_PIN(LSIF0, mGPIO7, 0)
 #define SRAM_NOR_A22            PINMUX_HW_PIN(LSIF0, mGPIO7, 1)
-/*#define SRAM_NOR_A23*/
 #define SRAM_NOR_A24            PINMUX_HW_PIN(LSIF0, mGPIO7, 2)
 #define SRAM_NOR_A25            PINMUX_HW_PIN(LSIF0, mGPIO7, 3)
 #define SRAM_NOR_CE0            PINMUX_HW_PIN(LSIF0, mGPIO7, 4)

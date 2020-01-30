@@ -166,13 +166,14 @@ void dcr_reg_writel(void *base, u32 offset, u32 val)
 
 #ifdef __UBOOT__
 
-static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, unsigned int flash_num ) {
-        static char flash_node_name[7] = "flashx";
+static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, bool dcr_reg, unsigned int flash_num ) {
+        char flash_node_name_pat[2][10] = { "mcif_nor*", "lsif_nor*" },
+            *flash_node_name = flash_node_name_pat[ dcr_reg ? 0 : 1 ];
         struct rcm_mtd *rcm_mtd = pdev->priv;
         u32 ranges[4], bus_addr, size;
         u64 parent_bus_addr;
 
-        flash_node_name[5] = 0x30+flash_num;
+        flash_node_name[8] = '0'+flash_num;
         ofnode flash_node = ofnode_find_subnode( pdev->node, flash_node_name );
         if( !ofnode_valid( flash_node ) ) {
                 dev_err( &pdev->dev, "failed to get resource for %s\n", flash_node_name );
@@ -378,15 +379,16 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
 #ifdef __UBOOT__
         int i, err;
         for( i = 0; i < CONFIG_SYS_MAX_FLASH_BANKS; i++ ) {
-                if( ( err = set_high_addr_and_map_tlb( pdev, i ) ) != 0 )
-                        return err;
+                err = set_high_addr_and_map_tlb( pdev, dcr_reg, i );
+                if( err && ( i == 0 ) )
+                        return err; // first flash must be
         }
+#endif
 
         if (rcm_controller_setup(pdev)) {
                 dev_err(&pdev->dev, "hw setup failed\n");
                 return -ENXIO;
         }
-#endif
 
         dev_info(&pdev->dev, "registered\n");
         return 0;
@@ -422,7 +424,7 @@ module_platform_driver(rcm_mtd_driver);
 static u32 base_addr_list[CONFIG_SYS_MAX_FLASH_BANKS] = CONFIG_SYS_FLASH_BANKS_LIST; // default values from 1888tx018.h
 
 static void cfi_flash_bank_addr_update( int i, u32 addr ) {
-        if( i < sizeof( base_addr_list ) ) {
+        if( i < ( sizeof( base_addr_list ) / sizeof( u32 ) ) ) {
                 base_addr_list[i] = addr;
         }
 }
@@ -458,6 +460,6 @@ void rcm_sram_nor_init( void ) {
 #endif
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Alexey Spirkov <alexeis@astrosoft.ru>");
+MODULE_AUTHOR("Alexey Spirkov <alexeis@astrosoft.ru>,Vladimir Shalyt <Vladimir.Shalyt@astrosoft.ru>");
 MODULE_DESCRIPTION("RCM SoC SRAM/NOR controller driver");
 

@@ -5,7 +5,9 @@
 #ifndef _ASM_PPC_ATOMIC_H_
 #define _ASM_PPC_ATOMIC_H_
 
+#ifdef CONFIG_1888TX018
 #include "configs/1888tx018.h"
+#endif
 
 #ifdef CONFIG_SMP
 typedef struct { volatile int counter; } atomic_t;

@@ -19,6 +19,9 @@ DECLARE_GLOBAL_DATA_PTR;
 void ddr_init (int slowdown);
 int testdramfromto(uint *pstart, uint *pend);
 
+void rcm_mtd_arbiter_init(void);
+void rcm_sram_nor_init(void);
+
 volatile unsigned int* _test_addr;
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
@@ -68,25 +71,6 @@ bool is_ddr_ok(void)
 
 void usleep(uint32_t usec);
 
-void rcm_sram_nor_init( void )
-{
-	*((u32*)0x3C040420) = 0x000000FF; // MGPIOx_GPIOAFSEL
-	*((u32*)0x3C041420) = 0x000000FF;
-	*((u32*)0x3C042420) = 0x000000FF;
-	*((u32*)0x3C043420) = 0x000000FF;
-	*((u32*)0x3C044420) = 0x000000FF;
-	*((u32*)0x3C045420) = 0x000000FF;
-	*((u32*)0x3C046420) = 0x000000FF;
-	*((u32*)0x3C047420) = 0x000000FF;
-	*((u32*)0x3C048420) = 0x000000FF;
-	*((u32*)0x3800001C) = 0x00000000; // page 922 - mcif-mux-sram
-	*((u32*)0x3C03F004) = 0x00000006; // page 911 - lsif controller
-	*((u32*)0x3C03F030) = 0x00000000;
-	*((u32*)0x3C030008) = 0x001A0110; // page 971 - sram-nor controller
-	*((u32*)0x3C03000C) = 0x1f1f0808;
-	tlb47x_map( 0x1020000000ull, 0x20000000, TLBSID_256M, TLB_MODE_RWX );
-}
-
 void spl_board_init(void)
 {
 	/* init dram */
@@ -112,7 +96,10 @@ void spl_board_init(void)
 	else
 		puts("Unknown boot device\n");
 
-	rcm_sram_nor_init();						// GPIOAFSEL+TLB for NOR controller
+#ifdef CONFIG_MTD_RCM_NOR
+	rcm_mtd_arbiter_init();
+	rcm_sram_nor_init();
+#endif
 }
 
 

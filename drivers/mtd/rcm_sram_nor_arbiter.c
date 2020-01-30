@@ -293,5 +293,5 @@ void rcm_mtd_arbiter_init( void ) {
 #endif
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Alexey Spirkov <alexeis@astrosoft.ru>");
+MODULE_AUTHOR("Alexey Spirkov <alexeis@astrosoft.ru>,Vladimir Shalyt <Vladimir.Shalyt@astrosoft.ru>");
 MODULE_DESCRIPTION("RCM SoC SRAM/NOR controller arbiter driver");
