@@ -91,14 +91,14 @@ phys_size_t get_physical_mem_size(void)
 
 	if (!dimm0_params_invalid)
 	{
-		ddr_em0_size = dpar0.capacity;
-		result += dpar0.capacity;
+		ddr_em0_size = dpar0.capacity * 32 / dpar0.primary_sdram_width;
+		result += ddr_em0_size;
 	}
 
 	if (!dimm1_params_invalid)
 	{
-		result += dpar1.capacity;
-		ddr_em1_size = dpar1.capacity;
+		ddr_em1_size = dpar1.capacity * 32 / dpar0.primary_sdram_width;
+		result += ddr_em1_size;
 	}
 
 #else

@@ -72,11 +72,11 @@ void ddr_exit_self_refresh_mode(const uint32_t baseAddr);
 void ddr_enable_dram_clk(DdrHlbId hlbId);
 void ddr_disable_dram_clk(DdrHlbId hlbId);
 
-void crg_ddr_config_freq (DdrHlbId hlbId, const DdrBurstLength burstLen);
-void crg_set_writelock (void);
-void crg_remove_writelock (void);
+// void crg_ddr_config_freq (DdrHlbId hlbId, const DdrBurstLength burstLen);
+// void crg_set_writelock(void);
+// void crg_remove_writelock (void);
 
-void ddr_exit_low_power_mode (void);
-void ddr_enter_low_power_mode (void);
+// void ddr_exit_low_power_mode (void);
+// void ddr_enter_low_power_mode (void);
 
 #endif // __DDR_H__
