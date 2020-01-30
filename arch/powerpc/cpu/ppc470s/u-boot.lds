@@ -39,6 +39,7 @@ SECTIONS
         PROVIDE(__bss_start = .);
         *(.bss*)
         *(.sbss*)
+        *(COMMON)
          PROVIDE(__bss_end = .);
     } > data
 

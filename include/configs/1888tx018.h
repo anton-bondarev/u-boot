@@ -25,6 +25,7 @@
 #define CONFIG_SPL_TEXT_BASE	0x40000
 #define CONFIG_SYS_UBOOT_BASE	CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_UBOOT_START  CONFIG_SYS_TEXT_BASE
+
 #define RCM_1888TX018_IM0_START           CONFIG_SPL_TEXT_BASE
 #define RCM_1888TX018_IM0_SIZE            (0x40000)
 
@@ -65,7 +66,7 @@
 
 /* #define CONFIG_SPL_FRAMEWORK */
 
-#define CONFIG_SYS_MALLOC_LEN   (2*1024*1024)
+#define CONFIG_SYS_MALLOC_LEN   (2*2*1024*1024)
 
 #define CONFIG_VERY_BIG_RAM
 #define CONFIG_MAX_MEM_MAPPED   ((phys_size_t)256 << 20)
@@ -77,9 +78,10 @@
 #define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
 /*#define CONFIG_SYS_DRAM_TEST*/
-                     
 
-#define CONFIG_SYS_MAX_FLASH_BANKS      0
+#define CONFIG_SYS_MAX_FLASH_BANKS      2       // if NOR via LSIF need 1!!! (little window)+correct mtdpart
+#define CONFIG_SYS_MAX_FLASH_SECT       1024
+
 #define CONFIG_CHIP_SELECTS_PER_CTRL    2
 #define CONFIG_DIMM_SLOTS_PER_CTLR      2
 
@@ -87,6 +89,7 @@
 #define CONFIG_SPL_SPI_LOAD
 #define CONFIG_SPL_EDCL_LOAD
 
+#define BOOT_DEVICE_NAND 10
 #define BOOT_DEVICE_SPI 11
 #define BOOT_DEVICE_EDCL 12
 
@@ -95,11 +98,6 @@
 
 #define CONFIG_SYS_SPI_U_BOOT_OFFS      0x40000
 #define CONFIG_SYS_SPI_CLK 100000000
-
-
-#define CONFIG_ENV_OFFSET               0x140000
-#define CONFIG_ENV_SIZE                 0x4000
-#define CONFIG_ENV_SECT_SIZE            0x10000
 
 #define CONFIG_BOOTCOMMAND "run kernelsd"
 #define CONFIG_USE_BOOTARGS
@@ -146,4 +144,93 @@
 
 #define CONFIG_SPD_EEPROM
 
+#define CONFIG_MTD_PARTITIONS
+#define CONFIG_SYS_MAX_NAND_DEVICE 8
+#define CONFIG_SYS_NAND_MAX_CHIPS 8
+
+#define CONFIG_CMD_UBIFS
+
+#ifndef CONFIG_NAND
+#define CONFIG_NAND 
+#endif
+/*
+#ifndef CONFIG_CMD_NAND
+#define CONFIG_CMD_NAND
+#endif
+*/
+#ifndef CONFIG_CMD_UBI
+#define CONFIG_CMD_UBI
+#endif
+
+#ifndef CONFIG_RBTREE
+#define CONFIG_RBTREE
+#endif
+
+#define CONFIG_MTD_DEVICE
+#define CONFIG_MTD_PARTITIONS
+
+#ifndef CONFIG_CMD_MTDPARTS
+#define CONFIG_CMD_MTDPARTS
+#endif
+
+#ifndef CONFIG_LZO
+#define CONFIG_LZO
+#endif
+
+#define CONFIG_MTD_UBI_WL_THRESHOLD 4096
+#define CONFIG_MTD_UBI_BEB_LIMIT 20
+
+#define CONFIG_SYS_NAND_SELF_INIT
+
+#ifdef CONFIG_ENV_IS_IN_NAND
+    #define CONFIG_ENV_OFFSET               0x40000
+    #define CONFIG_ENV_SIZE                 0x4000
+    #define CONFIG_ENV_SECT_SIZE            0x20000
+#elif defined CONFIG_ENV_IS_IN_FLASH
+    /*CONFIG_ENV_ADDR*/
+    #define CONFIG_ENV_OFFSET               0x1040000
+    #define CONFIG_ENV_SIZE                 0x4000
+    #define CONFIG_ENV_SECT_SIZE            0x40000
+    #define CONFIG_SPL_ENV_SUPPORT
+    #define CONFIG_TPL_ENV_SUPPORT
+#else
+    #define CONFIG_ENV_OFFSET               0x140000
+    #define CONFIG_ENV_SIZE                 0x4000
+    #define CONFIG_ENV_SECT_SIZE            0x10000
+#endif
+
+#ifdef CONFIG_SPL_NAND_SUPPORT
+    /*#define CONFIG_SPL_NAND_RAW_ONLY*/
+    #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x880000
+    #define CONFIG_SYS_NAND_U_BOOT_SIZE     0x160000
+#endif
+
+#ifdef CONFIG_MTD_RCM_NOR
+    /* #define CONFIG_CFI_FLASH */
+    #define CONFIG_FLASH_CFI_DRIVER
+    #define CONFIG_FLASH_CFI_MTD
+    #define CONFIG_SYS_FLASH_CFI
+    #define CONFIG_SYS_FLASH_CFI_WIDTH      FLASH_CFI_16BIT
+    #define CONFIG_SYS_FLASH_EMPTY_INFO     /* flinfo show E and/or RO */
+    #define CONFIG_FLASH_SHOW_PROGRESS      100
+    #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
+    #define CONFIG_SYS_WRITE_SWAPPED_DATA
+    #ifndef CONFIG_PPC_DCR
+        #define CONFIG_PPC_DCR
+    #endif
+
+    #define CONFIG_SYS_FLASH_BASE0          0x20000000      /* base address 0 for work via MCIF and LSIF */
+    #define CONFIG_SYS_FLASH_BASE1          0x10000000      /* base address 1 for work via MCIF only */
+    #define CONFIG_SYS_FLASH_BANKS_LIST     {CONFIG_SYS_FLASH_BASE0,CONFIG_SYS_FLASH_BASE1}
+    #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
+    #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE
+
+    #ifdef CONFIG_SYS_UBOOT_BASE
+        #undef CONFIG_SYS_UBOOT_BASE
+    	#define CONFIG_SYS_UBOOT_BASE       0x20040000 
+    #endif
+
+#endif
+#define LWARX_1888TX018
 #endif /* __1888TX018_H */
+

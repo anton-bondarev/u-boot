@@ -23,7 +23,7 @@ _start:
 // setup stack
 #ifdef CONFIG_SPL_BUILD
 #ifdef CONFIG_SPL_STACK
-    load_const_link sp, CONFIG_SPL_STACK
+    load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
 #endif
 #else
     load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
@@ -152,7 +152,7 @@ rte_nf:
 .section ".text.start_secondary","ax",@progbits
 .global _start_secondary
 _start_secondary:
-    load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
+    load_const_link sp, CONFIG_SPL_STACK
 	bl	process_spintable    
 
 #endif

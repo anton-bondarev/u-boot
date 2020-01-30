@@ -12,11 +12,15 @@
 #include <spi.h>
 #include <spi_flash.h>
 #include <asm/io.h>
+#include <asm/tlb47x.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
 void ddr_init (int slowdown);
 int testdramfromto(uint *pstart, uint *pend);
+
+void rcm_mtd_arbiter_init(void);
+void rcm_sram_nor_init(void);
 
 volatile unsigned int* _test_addr;
 
@@ -91,6 +95,11 @@ void spl_board_init(void)
 		puts("Enter HOST mode for EDCL boot\n");
 	else
 		puts("Unknown boot device\n");
+
+#ifdef CONFIG_MTD_RCM_NOR
+	rcm_mtd_arbiter_init();
+	rcm_sram_nor_init();
+#endif
 }
 
 
@@ -108,11 +117,15 @@ void board_boot_order(u32 *spl_boot_list)
 	switch (spl_boot_list[0]) {
 	case BOOT_DEVICE_SPI:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;
-		spl_boot_list[2] = BOOT_DEVICE_EDCL;
+		spl_boot_list[2] = BOOT_DEVICE_NOR;		// NOR before NAND, becose now GPIOAFSEL is initialized for NOR earlier(see spl_board_init)
+		spl_boot_list[3] = BOOT_DEVICE_NAND;	// and function for initialization NOR is absent,but for NAND this function exist as self (nand_init)
+		spl_boot_list[4] = BOOT_DEVICE_EDCL;	// for adding new elements increase array size
 		break;
 	case BOOT_DEVICE_MMC1:
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
-		spl_boot_list[2] = BOOT_DEVICE_EDCL;
+		spl_boot_list[2] = BOOT_DEVICE_NOR;
+		spl_boot_list[3] = BOOT_DEVICE_NAND;
+		spl_boot_list[4] = BOOT_DEVICE_EDCL;
 		break;
 	}
 }
