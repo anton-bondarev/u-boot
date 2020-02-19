@@ -235,10 +235,12 @@
  * into a header file plus about 3 separate .c files, to handle the details
  * of the Gadget, USB Mass Storage, and SCSI protocols.
  */
+
 /* #define VERBOSE_DEBUG */
 /* #define DUMP_MSGS */
 
 #include <config.h>
+#include <hexdump.h>
 #include <malloc.h>
 #include <common.h>
 #include <console.h>
@@ -250,10 +252,11 @@
 #include <usb_mass_storage.h>
 
 #include <asm/unaligned.h>
+#include <linux/bitops.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/composite.h>
-#include <usb/lin_gadget_compat.h>
+#include <linux/bitmap.h>
 #include <g_dnl.h>
 
 /*------------------------------------------------------------------------*/
@@ -281,41 +284,6 @@ static const char fsg_string_interface[] = "Mass Storage";
 struct kref {int x; };
 struct completion {int x; };
 
-#ifndef __INLINE_BITOPS
-inline void set_bit(int nr, volatile void *addr)
-{
-	int	mask;
-	unsigned int *a = (unsigned int *) addr;
-
-	a += nr >> 5;
-	mask = 1 << (nr & 0x1f);
-	*a |= mask;
-}
-
-inline void clear_bit(int nr, volatile void *addr)
-{
-	int	mask;
-	unsigned int *a = (unsigned int *) addr;
-
-	a += nr >> 5;
-	mask = 1 << (nr & 0x1f);
-	*a &= ~mask;
-}
-
-inline int test_and_clear_bit(int nr, volatile void *addr)
-{
-	int	mask;
-	int result;
-	unsigned int *a = (unsigned int *) addr;
-
-	a += nr >> 5;
-	mask = 1 << (nr & 0x1f);
-	result = *a &= mask;
-	*a &= ~mask;	
-	return result;
-}
-
-#endif
 struct fsg_dev;
 struct fsg_common;
 
@@ -422,7 +390,11 @@ static inline int __fsg_is_set(struct fsg_common *common,
 	if (common->fsg)
 		return 1;
 	ERROR(common, "common->fsg is NULL in %s at %u\n", func, line);
+#ifdef __UBOOT__
+	assert_noisy(false);
+#else
 	WARN_ON(1);
+#endif
 	return 0;
 }
 
@@ -582,7 +554,6 @@ static int fsg_setup(struct usb_function *f,
 		/* Raise an exception to stop the current operation
 		 * and reinitialize our state. */
 		DBG(fsg, "bulk reset request\n");
-		debug("bulk reset request\n");
 		raise_exception(fsg->common, FSG_STATE_RESET);
 		return DELAYED_STATUS;
 
@@ -2100,7 +2071,7 @@ static int received_cbw(struct fsg_dev *fsg, struct fsg_buffhd *bh)
 		 * we can simply accept and discard any data received
 		 * until the next reset. */
 		wedge_bulk_in_endpoint(fsg);
-		set_bit(IGNORE_BULK_OUT, &fsg->atomic_bitflags);
+		generic_set_bit(IGNORE_BULK_OUT, &fsg->atomic_bitflags);
 		return -EINVAL;
 	}
 
@@ -2263,8 +2234,8 @@ reset:
 		goto reset;
 	fsg->bulk_out_enabled = 1;
 	common->bulk_out_maxpacket =
-				 le16_to_cpu(get_unaligned(&d->wMaxPacketSize));			
-	clear_bit(IGNORE_BULK_OUT, &fsg->atomic_bitflags);
+				le16_to_cpu(get_unaligned(&d->wMaxPacketSize));
+	generic_clear_bit(IGNORE_BULK_OUT, &fsg->atomic_bitflags);
 
 	/* Allocate the requests */
 	for (i = 0; i < FSG_NUM_BUFFERS; ++i) {

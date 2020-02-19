@@ -15,11 +15,6 @@
 #include <asm/unaligned.h>
 #include "gadget_chips.h"
 
-#ifdef CONFIG_1888TX018
-#include <asm/io.h>
-#endif
-
-
 #define isdigit(c)      ('0' <= (c) && (c) <= '9')
 
 /* we must assign addresses for configurable endpoints (like net2280) */
@@ -286,6 +281,9 @@ struct usb_ep *usb_ep_autoconfig(
 		if (ep && ep_matches(gadget, ep, desc))
 			return ep;
 	}
+
+	if (gadget->ops->match_ep)
+		ep = gadget->ops->match_ep(gadget, desc, NULL);
 
 	/* Second, look at endpoints until an unclaimed one looks usable */
 	list_for_each_entry(ep, &gadget->ep_list, ep_list) {

@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <linux/types.h>
 #include "timer.h"
 
 void usleep(uint32_t usec)

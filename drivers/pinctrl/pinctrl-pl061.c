@@ -106,7 +106,7 @@ static int pl061_pinctrl_probe(struct udevice *dev)
 	if (addr_base == FDT_ADDR_T_NONE)
 		return -EINVAL;
 
-	plat->regs = (struct pl061_regs *)addr_base;
+	plat->regs = (struct pl061_regs *)(uintptr_t)addr_base;
 
 	struct pl061_regs *const regs = plat->regs;
 	if( (readb(&regs->pid0) == 0x61) && 

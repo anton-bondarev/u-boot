@@ -10,6 +10,8 @@
  */
 
 #include <common.h>
+#include <cpu_func.h>
+#include <hang.h>
 #include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
@@ -47,16 +49,6 @@ void reset_cpu(ulong ignored)
 	/* Endless loop, reset will exit from here */
 	for (;;)
 		;
-}
-
-void enable_caches(void)
-{
-#ifndef CONFIG_SYS_ICACHE_OFF
-	icache_enable();
-#endif
-#ifndef CONFIG_SYS_DCACHE_OFF
-	dcache_enable();
-#endif
 }
 
 /*
@@ -108,13 +100,16 @@ int arch_cpu_init(void)
 	/*
 	 * Enable NAND clock
 	 */
-	/* Clear bypass bit */
+	/* Set bypass bit */
 	writel(CLKCTRL_CLKSEQ_BYPASS_GPMI,
 		&clkctrl_regs->hw_clkctrl_clkseq_set);
 
-	/* Set GPMI clock to ref_gpmi / 12 */
+	/* Set GPMI clock to ref_xtal / 1 */
+	clrbits_le32(&clkctrl_regs->hw_clkctrl_gpmi, CLKCTRL_GPMI_CLKGATE);
+	while (readl(&clkctrl_regs->hw_clkctrl_gpmi) & CLKCTRL_GPMI_CLKGATE)
+		;
 	clrsetbits_le32(&clkctrl_regs->hw_clkctrl_gpmi,
-		CLKCTRL_GPMI_CLKGATE | CLKCTRL_GPMI_DIV_MASK, 1);
+		CLKCTRL_GPMI_DIV_MASK, 1);
 
 	udelay(1000);
 

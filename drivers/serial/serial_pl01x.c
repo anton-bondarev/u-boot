@@ -80,7 +80,7 @@ static int pl01x_generic_serial_init(struct pl01x_regs *regs,
 	case TYPE_PL011:
 		/* disable everything */
 		writel(0, &regs->pl011_cr);
-#ifdef CONFIG_1888TX018
+#ifdef CONFIG_TARGET_1888TX018
 		readl(&regs->dr);	// fix HW bug? 0 at initialization in data reg - skip it
 #endif		
 		break;

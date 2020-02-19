@@ -11,7 +11,4 @@
 #define BOOT_DEVICE_MMC2    3
 #define BOOT_DEVICE_MMC2_2  4
 
-/* Linker symbols */
-extern char __bss_start[], __bss_end[];
-
 #endif

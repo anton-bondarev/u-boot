@@ -15,7 +15,6 @@ CONFIG_SHA1_CHECK_UB_IMG = y
 CONFIG_ARCH_SUNXI = y
 endif
 
-subdir-$(HOST_TOOLS_ALL) += easylogo
 subdir-$(HOST_TOOLS_ALL) += gdb
 
 # Merge all the different vars for envcrc into one
@@ -54,12 +53,13 @@ hostprogs-y += mkenvimage
 mkenvimage-objs := mkenvimage.o os_support.o lib/crc32.o
 
 hostprogs-y += dumpimage mkimage
-
 hostprogs-$(CONFIG_FIT_SIGNATURE) += fit_info fit_check_sign
 
 hostprogs-$(CONFIG_CMD_BOOTEFI_SELFTEST) += file2include
 
+FIT_OBJS-$(CONFIG_FIT) := fit_common.o fit_image.o image-host.o common/image-fit.o
 FIT_SIG_OBJS-$(CONFIG_FIT_SIGNATURE) := common/image-sig.o
+FIT_CIPHER_OBJS-$(CONFIG_FIT_CIPHER) := common/image-cipher.o
 
 # The following files are synced with upstream DTC.
 # Use synced versions from scripts/dtc/libfdt/.
@@ -76,24 +76,27 @@ RSA_OBJS-$(CONFIG_FIT_SIGNATURE) := $(addprefix lib/rsa/, \
 					rsa-sign.o rsa-verify.o rsa-checksum.o \
 					rsa-mod-exp.o)
 
+AES_OBJS-$(CONFIG_FIT_CIPHER) := $(addprefix lib/aes/, \
+					aes-encrypt.o aes-decrypt.o)
+
 ROCKCHIP_OBS = lib/rc4.o rkcommon.o rkimage.o rksd.o rkspi.o
 
 # common objs for dumpimage and mkimage
 dumpimage-mkimage-objs := aisimage.o \
 			atmelimage.o \
+			$(FIT_OBJS-y) \
 			$(FIT_SIG_OBJS-y) \
+			$(FIT_CIPHER_OBJS-y) \
 			common/bootm.o \
 			lib/crc32.o \
 			default_image.o \
 			lib/fdtdec_common.o \
 			lib/fdtdec.o \
-			fit_common.o \
-			fit_image.o \
-			common/image-fit.o \
-			image-host.o \
 			common/image.o \
 			imagetool.o \
 			imximage.o \
+			imx8image.o \
+			imx8mimage.o \
 			kwbimage.o \
 			lib/md5.o \
 			lpc32xximage.o \
@@ -106,16 +109,20 @@ dumpimage-mkimage-objs := aisimage.o \
 			stm32image.o \
 			$(ROCKCHIP_OBS) \
 			socfpgaimage.o \
+			lib/crc16.o \
 			lib/sha1.o \
 			lib/sha256.o \
 			common/hash.o \
 			ublimage.o \
 			zynqimage.o \
 			zynqmpimage.o \
+			zynqmpbif.o \
 			$(LIBFDT_OBJS) \
 			gpimage.o \
 			gpimage-common.o \
-			$(RSA_OBJS-y)
+			mtk_image.o \
+			$(RSA_OBJS-y) \
+			$(AES_OBJS-y)
 
 dumpimage-objs := $(dumpimage-mkimage-objs) dumpimage.o
 mkimage-objs   := $(dumpimage-mkimage-objs) mkimage.o
@@ -123,7 +130,7 @@ fit_info-objs   := $(dumpimage-mkimage-objs) fit_info.o
 fit_check_sign-objs   := $(dumpimage-mkimage-objs) fit_check_sign.o
 file2include-objs := file2include.o
 
-ifneq ($(CONFIG_MX23)$(CONFIG_MX28),)
+ifneq ($(CONFIG_MX23)$(CONFIG_MX28)$(CONFIG_FIT_SIGNATURE),)
 # Add CONFIG_MXS into host CFLAGS, so we can check whether or not register
 # the mxsimage support within tools/mxsimage.c .
 HOSTCFLAGS_mxsimage.o += -DCONFIG_MXS
@@ -133,6 +140,13 @@ ifdef CONFIG_FIT_SIGNATURE
 # This affects include/image.h, but including the board config file
 # is tricky, so manually define this options here.
 HOST_EXTRACFLAGS	+= -DCONFIG_FIT_SIGNATURE
+HOST_EXTRACFLAGS	+= -DCONFIG_FIT_SIGNATURE_MAX_SIZE=$(CONFIG_FIT_SIGNATURE_MAX_SIZE)
+endif
+
+ifdef CONFIG_FIT_CIPHER
+# This affects include/image.h, but including the board config file
+# is tricky, so manually define this options here.
+HOST_EXTRACFLAGS	+= -DCONFIG_FIT_CIPHER
 endif
 
 ifdef CONFIG_SYS_U_BOOT_OFFS
@@ -145,6 +159,8 @@ endif
 
 # MXSImage needs LibSSL
 ifneq ($(CONFIG_MX23)$(CONFIG_MX28)$(CONFIG_ARMADA_38X)$(CONFIG_ARMADA_39X)$(CONFIG_FIT_SIGNATURE),)
+HOSTCFLAGS_kwbimage.o += \
+	$(shell pkg-config --cflags libssl libcrypto 2> /dev/null || echo "")
 HOSTLOADLIBES_mkimage += \
 	$(shell pkg-config --libs libssl libcrypto 2> /dev/null || echo "-lssl -lcrypto")
 
@@ -170,6 +186,9 @@ HOSTCFLAGS_mkexynosspl.o := -pedantic
 ifdtool-objs := $(LIBFDT_OBJS) ifdtool.o
 hostprogs-$(CONFIG_X86) += ifdtool
 
+ifwitool-objs := ifwitool.o
+hostprogs-$(CONFIG_X86)$(CONFIG_SANDBOX) += ifwitool
+
 hostprogs-$(CONFIG_MX23) += mxsboot
 hostprogs-$(CONFIG_MX28) += mxsboot
 HOSTCFLAGS_mxsboot.o := -pedantic
@@ -194,7 +213,14 @@ hostprogs-$(CONFIG_RISCV) += prelink-riscv
 hostprogs-y += fdtgrep
 fdtgrep-objs += $(LIBFDT_OBJS) fdtgrep.o
 
+ifneq ($(TOOLS_ONLY),y)
+hostprogs-y += spl_size_limit
+endif
+
 hostprogs-$(CONFIG_MIPS) += mips-relocs
+
+hostprogs-$(CONFIG_ASN1_COMPILER)	+= asn1_compiler
+HOSTCFLAGS_asn1_compiler.o = -idirafter $(srctree)/include
 
 # We build some files with extra pedantic flags to try to minimize things
 # that won't build on some weird host compiler -- though there are lots of
@@ -249,21 +275,29 @@ HOST_EXTRACFLAGS += -include $(srctree)/include/compiler.h \
 		-I$(srctree)/tools \
 		-DUSE_HOSTCC \
 		-D__KERNEL_STRICT_NAMES \
-		-D_GNU_SOURCE
+		-D_GNU_SOURCE \
+		-std=gnu99
 
 __build:	$(LOGO-y)
 
 $(LOGO_H):	$(obj)/bmp_logo $(LOGO_BMP)
 	$(obj)/bmp_logo --gen-info $(LOGO_BMP) > $@
 
+ifeq ($(CONFIG_DM_VIDEO),y)
+$(LOGO_DATA_H):	$(obj)/bmp_logo $(LOGO_BMP)
+	$(obj)/bmp_logo --gen-bmp $(LOGO_BMP) > $@
+else
 $(LOGO_DATA_H):	$(obj)/bmp_logo $(LOGO_BMP)
 	$(obj)/bmp_logo --gen-data $(LOGO_BMP) > $@
+#endif
+endif
 
 # Let clean descend into subdirs
 subdir- += env
 
 ifneq ($(CROSS_BUILD_TOOLS),)
 override HOSTCC = $(CC)
+override HOSTCFLAGS = $(CFLAGS)
 
 quiet_cmd_crosstools_strip = STRIP   $^
       cmd_crosstools_strip = $(STRIP) $^; touch $@

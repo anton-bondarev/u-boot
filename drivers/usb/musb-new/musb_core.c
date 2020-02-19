@@ -1015,6 +1015,7 @@ void musb_stop(struct musb *musb)
 	 *  - ...
 	 */
 	musb_platform_try_idle(musb, 0);
+	musb_platform_exit(musb);
 }
 
 #ifndef __UBOOT__
@@ -1866,7 +1867,11 @@ allocate_instance(struct device *dev,
 	musb->ctrl_base = mbase;
 	musb->nIrq = -ENODEV;
 	musb->config = config;
+#ifdef __UBOOT__
+	assert_noisy(musb->config->num_eps <= MUSB_C_NUM_EPS);
+#else
 	BUG_ON(musb->config->num_eps > MUSB_C_NUM_EPS);
+#endif
 	for (epnum = 0, ep = musb->endpoints;
 			epnum < musb->config->num_eps;
 			epnum++, ep++) {

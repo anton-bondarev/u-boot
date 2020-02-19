@@ -6,6 +6,7 @@
  */
 
 #include <common.h>
+#include <serial.h>
 #include <spl.h>
 
 #include <asm/io.h>
@@ -43,9 +44,13 @@ int board_fit_config_name_match(const char *name)
                 return 0;
         else if (is_mx6dq() && !strcmp(name, "imx6q-icore-rqs"))
                 return 0;
+        else if (is_mx6dq() && !strcmp(name, "imx6q-icore-mipi"))
+                return 0;
         else if ((is_mx6dl() || is_mx6solo()) && !strcmp(name, "imx6dl-icore"))
                 return 0;
         else if ((is_mx6dl() || is_mx6solo()) && !strcmp(name, "imx6dl-icore-rqs"))
+                return 0;
+        else if ((is_mx6dl() || is_mx6solo()) && !strcmp(name, "imx6dl-icore-mipi"))
                 return 0;
         else
                 return -1;
@@ -410,7 +415,8 @@ void board_init_f(ulong dummy)
 	/* setup AIPS and disable watchdog */
 	arch_cpu_init();
 
-	gpr_init();
+	if (!(is_mx6ul()))
+		gpr_init();
 
 	/* iomux */
 	SETUP_IOMUX_PADS(uart_pads);

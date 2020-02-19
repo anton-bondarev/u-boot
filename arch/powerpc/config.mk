@@ -31,7 +31,6 @@ ifeq ($(CROSS_COMPILE),powerpc-openbsd-)
 PLATFORM_CPPFLAGS+= -D__PPC__
 endif
 
-
 # Only test once
 ifneq ($(CONFIG_SPL_BUILD),y)
 archprepare: checkgcc4

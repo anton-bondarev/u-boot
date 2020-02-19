@@ -19,10 +19,8 @@
  *
  */
 
-#define CONFIG_1888TX018
-
 /* need to define CONFIG_SPL_TEXT_BASE first because of u-boot scripts */
-#define CONFIG_SPL_TEXT_BASE	0x40000
+/* now is in Kconfig for board #define CONFIG_SPL_TEXT_BASE	0x40000 */
 #define CONFIG_SYS_UBOOT_BASE	CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_UBOOT_START  CONFIG_SYS_TEXT_BASE
 
@@ -69,7 +67,9 @@
 #define CONFIG_SYS_MALLOC_LEN   (2*2*1024*1024)
 
 #define CONFIG_VERY_BIG_RAM
+#ifndef CONFIG_MAX_MEM_MAPPED
 #define CONFIG_MAX_MEM_MAPPED   ((phys_size_t)256 << 20)
+#endif
 #define CONFIG_SYS_DDR_BASE     0x40000000
 #define CONFIG_SYS_SDRAM_BASE   CONFIG_SYS_DDR_BASE
 #define CONFIG_SYS_DDR_SIZE     SZ_2G
@@ -137,22 +137,28 @@
 
 #define CONFIG_USB_MUSB_PIO_ONLY
 
+#ifndef CONFIG_TFTP_BLOCKSIZE
 #define CONFIG_TFTP_BLOCKSIZE		1466
+#endif
 #define CONFIG_TFTP_TSIZE
 
 #define CONFIG_SYS_BOOTM_LEN 0x1000000
 
 #define CONFIG_SPD_EEPROM
 
+#ifndef CONFIG_MTD_PARTITIONS
 #define CONFIG_MTD_PARTITIONS
+#endif
+
 #define CONFIG_SYS_MAX_NAND_DEVICE 8
 #define CONFIG_SYS_NAND_MAX_CHIPS 8
 
 #define CONFIG_CMD_UBIFS
-
+/*
 #ifndef CONFIG_NAND
 #define CONFIG_NAND 
 #endif
+*/
 /*
 #ifndef CONFIG_CMD_NAND
 #define CONFIG_CMD_NAND
@@ -166,8 +172,9 @@
 #define CONFIG_RBTREE
 #endif
 
-#define CONFIG_MTD_DEVICE
-#define CONFIG_MTD_PARTITIONS
+/*#ifndef CONFIG_MTD_DEVICE*/
+/*#define CONFIG_MTD_DEVICE*/
+/*#endif*/
 
 #ifndef CONFIG_CMD_MTDPARTS
 #define CONFIG_CMD_MTDPARTS
@@ -180,14 +187,14 @@
 #define CONFIG_MTD_UBI_WL_THRESHOLD 4096
 #define CONFIG_MTD_UBI_BEB_LIMIT 20
 
-#define CONFIG_SYS_NAND_SELF_INIT
+#define CONFIG_SYS_MMC_ENV_DEV 0
 
-#ifdef CONFIG_ENV_IS_IN_NAND
+/* in board/rcm/mb115-01/Kconfig now
+#ifdef CONFIG_ENV_IS_IN_NAND 
     #define CONFIG_ENV_OFFSET               0x40000
     #define CONFIG_ENV_SIZE                 0x4000
-    #define CONFIG_ENV_SECT_SIZE            0x20000
+    #define CONFIG_ENV_SECT_SIZE            0x20000 
 #elif defined CONFIG_ENV_IS_IN_FLASH
-    /*CONFIG_ENV_ADDR*/
     #define CONFIG_ENV_OFFSET               0x1040000
     #define CONFIG_ENV_SIZE                 0x4000
     #define CONFIG_ENV_SECT_SIZE            0x40000
@@ -198,12 +205,13 @@
     #define CONFIG_ENV_SIZE                 0x4000
     #define CONFIG_ENV_SECT_SIZE            0x10000
 #endif
-
+*/
 #ifdef CONFIG_SPL_NAND_SUPPORT
-    /*#define CONFIG_SPL_NAND_RAW_ONLY*/
     #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x880000
     #define CONFIG_SYS_NAND_U_BOOT_SIZE     0x160000
 #endif
+
+#define CONFIG_SYS_NAND_BASE_LIST           {1}; /*v2020.01: it's dummy!!!but need...*/
 
 #ifdef CONFIG_MTD_RCM_NOR
     /* #define CONFIG_CFI_FLASH */
@@ -223,7 +231,7 @@
     #define CONFIG_SYS_FLASH_BASE1          0x10000000      /* base address 1 for work via MCIF only */
     #define CONFIG_SYS_FLASH_BANKS_LIST     {CONFIG_SYS_FLASH_BASE0,CONFIG_SYS_FLASH_BASE1}
     #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
-    #define CONFIG_SYS_MONITOR_BASE         CONFIG_SYS_FLASH_BASE
+    #define CONFIG_SYS_MONITOR_BASE         0x40000000      /* CONFIG_SYS_FLASH_BASE */
 
     #ifdef CONFIG_SYS_UBOOT_BASE
         #undef CONFIG_SYS_UBOOT_BASE
@@ -231,6 +239,6 @@
     #endif
 
 #endif
-#define LWARX_1888TX018
+
 #endif /* __1888TX018_H */
 

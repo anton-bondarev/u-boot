@@ -15,7 +15,6 @@
 #define CONFIG_SYS_PL310_BASE	L2_PL310_BASE
 #endif
 
-#define CONFIG_MP
 #endif
 #define CONFIG_BOARD_POSTCLK_INIT
 #define CONFIG_MXC_GPT_HCLK
@@ -51,25 +50,14 @@
 /* allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_OVERWRITE
 
-/* Filesystems and image support */
-
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_CBSIZE	512
 #define CONFIG_SYS_MAXARGS	32
 
 /* MMC */
-#define CONFIG_BOUNCE_BUFFER
-#define CONFIG_FSL_USDHC
 
-/* Fuses */
-#define CONFIG_MXC_OCOTP
-
-/* Secure boot (HAB) support */
-#ifdef CONFIG_SECURE_BOOT
-#define CONFIG_CSF_SIZE			0x2000
 #ifdef CONFIG_SPL_BUILD
 #define CONFIG_SPL_DRIVERS_MISC_SUPPORT
-#endif
 #endif
 
 #endif

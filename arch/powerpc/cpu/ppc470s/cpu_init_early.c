@@ -3,7 +3,7 @@
 
 
 
-static enum err_code {
+enum err_code {
   OK       = 0,
   NOT_WAIT_TX = -1,
   NOT_WAIT_RX = -2,
@@ -53,13 +53,14 @@ static enum err_code {
 #define UART0__                 0x3C05D000
 #define TRACE_UART  UART0__
 
+uint32_t ucurrent(void);
 
 static uint32_t ioread32(uint32_t const base_addr)
 {
     return *((volatile uint32_t*)(base_addr));
 }
 
-static iowrite32(uint32_t const value, uint32_t const base_addr)
+static void iowrite32(uint32_t const value, uint32_t const base_addr)
 {
     *((volatile uint32_t*)(base_addr)) = value;
 }

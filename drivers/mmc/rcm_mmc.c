@@ -7,7 +7,7 @@
 #include <malloc.h>
 #include <part.h>
 #include <mmc.h>
-#include <crc.h>
+#include <u-boot/crc.h>
 #include <linux/crc7.h>
 #include <asm/byteorder.h>
 #include <clk.h>
@@ -22,7 +22,7 @@
 #include "rcm_sysreg.h"
 
 // !!! Checking possible DMA problem with memory 
-#define DMA_PAD  (4 * 1024)
+// #define DMA_PAD  (4 * 1024)
 
 #define BUS_CLOCK  100000000
 #define CLKDIV_MAX 255
@@ -413,24 +413,36 @@ static bool sd_write_block(const struct mmc * mmc, uint32_t dst_adr, u8 * src_pt
 
 typedef bool (* sd_data_oper)(const struct mmc * mmc, uint32_t sdc_adr, u8 * mem_ptr, uint len);
 
+static bool sd_read_block(const struct mmc*, uint32_t, u8*, uint);
+static bool sd_write_block(const struct mmc*, uint32_t, u8*, uint);
+
 static bool sd_trans_data(const struct mmc * mmc, sd_data_oper oper, uint32_t sdc_adr, u8 * mem_ptr, uint blk_qty, uint blk_len)
 {
+	u8* blk_buf = (u8*)memalign( 64, blk_len );
+	if( ! blk_buf )
+		return false;
 	//BUG_ON(! mmc->high_capacity && (sdc_adr % blk_len) != 0);
 	while ( blk_qty -- ) {
-			if ( ! (* oper)(mmc, sdc_adr, mem_ptr, blk_len) ) {
+			if( oper == sd_write_block )
+				memcpy( blk_buf, mem_ptr, blk_len );
+			if ( ! (* oper)(mmc, sdc_adr, blk_buf, blk_len) ) {
 				Debug("sd_trans_data ERROR\n");
+				free( blk_buf );
 				return false;
 			}
+			if( oper == sd_read_block )
+				memcpy( mem_ptr, blk_buf, blk_len );
 #ifdef DEBUG_BUF
 			Debug(">>%d:", blk_qty);
 			print_buf(mem_ptr, blk_len);
 #endif					
 			mem_ptr += blk_len;
-			sdc_adr += (mmc->high_capacity ? 1 : blk_len);			
+			sdc_adr += (mmc->high_capacity ? 1 : blk_len);
 	}
 #ifdef DEBUG_BUF
 	Debug("\n");
-#endif					
+#endif
+	free( blk_buf );
 	return true;
 }
 

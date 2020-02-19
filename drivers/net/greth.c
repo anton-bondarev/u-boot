@@ -39,7 +39,7 @@
 #endif
 
 /* ByPass Cache when reading regs */
-inline u32 GRETH_REGLOAD(volatile void* addr)	{
+static inline u32 GRETH_REGLOAD(volatile void* addr)	{
 #ifdef CONFIG_PPC	
 	asm volatile("dcbi 0,%0" : : "r" (addr) : "memory");
 #else
@@ -462,7 +462,7 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	timeout = GRETH_SEND_TIMEOUT_MS;
 
 	/* Wait for data to be sent */
-	while ((status = GRETH_REGLOAD(&txbd->stat)) & GRETH_BD_EN) {
+	while ((status = txbd->stat) & GRETH_BD_EN) {
 		if (get_timer(start) > timeout) {
 			debug("greth_send: hangs on status wait, Stat: %x\n", GRETH_REGLOAD(&regs->status));
 			return -2;	/* Fail */
@@ -506,7 +506,7 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 	int len;
 
 	rxbd = greth->rxbd_curr;
-	status = GRETH_REGLOAD(&rxbd->stat);
+	status = rxbd->stat;
 	if (status & GRETH_BD_EN)
 		return -1; // no more packets
 
@@ -580,9 +580,9 @@ int greth_set_hwaddr(struct udevice *dev)
 	struct eth_pdata *pdata = dev_get_platdata(dev);
 	uchar *mac = pdata->enetaddr;
 
-	greth->regs->esa_msb = (mac[0] << 8) | mac[1];
+	greth->regs->esa_msb = (mac[1] << 24) | (mac[0] << 16);
 	greth->regs->esa_lsb =
-	    (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5];
+	    (mac[5] << 24) | (mac[4] << 16) | (mac[3] << 8) | mac[2];
 
 	debug("GRETH: New MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 	       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);

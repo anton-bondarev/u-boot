@@ -4,6 +4,7 @@
  */
 #include <common.h>
 #include <debug_uart.h>
+#include <hang.h>
 #include <spl.h>
 
 #include <asm/io.h>
@@ -17,17 +18,21 @@ void board_init_f(ulong dummy)
 	ps7_init();
 
 	arch_cpu_init();
-	/*
-	 * The debug UART can be used from this point:
-	 * debug_uart_init();
-	 * printch('x');
-	 */
+
+#ifdef CONFIG_DEBUG_UART
+	/* Uart debug for sure */
+	debug_uart_init();
+	puts("Debug uart enabled\n"); /* or printch() */
+#endif
 }
 
 #ifdef CONFIG_SPL_BOARD_INIT
 void spl_board_init(void)
 {
 	preloader_console_init();
+#if defined(CONFIG_ARCH_EARLY_INIT_R) && defined(CONFIG_SPL_FPGA_SUPPORT)
+	arch_early_init_r();
+#endif
 	board_init();
 }
 #endif

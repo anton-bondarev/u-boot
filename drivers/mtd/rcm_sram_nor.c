@@ -79,16 +79,11 @@
 #ifndef __UBOOT__
         typedef struct platform_device rcm_sram_nor_device;
 
-        #define WSWAP(B) (B)
-        #define RSWAP(B) (B)
         #define DCR_READ(...) dcr_read( __VA_ARGS__ )
         #define DCR_WRITE(...) dcr_write( __VA_ARGS__ )
 
 #else // is defined __UBOOT__
         typedef struct udevice rcm_sram_nor_device;
-
-        #define WSWAP(B) cpu_to_le32(B)
-        #define RSWAP(B) le32_to_cpu(B)
 
         #define of_property_read_bool(DEVNODE,NAME) \
                 ofnode_read_bool(np_to_ofnode(DEVNODE),NAME)
@@ -142,13 +137,13 @@ struct rcm_mtd {
 u32 lsif_reg_readl(void *base, u32 offset)
 {
     struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
-    return RSWAP(readl(rcm_mtd->regs + offset));
+    return readl(rcm_mtd->regs + offset);
 }
 
 void lsif_reg_writel(void *base, u32 offset, u32 val)
 {
     struct rcm_mtd *rcm_mtd = (struct rcm_mtd *)base;
-    writel(WSWAP(val), rcm_mtd->regs + offset);
+    writel(val, rcm_mtd->regs + offset);
 }
 
 #ifdef CONFIG_PPC_DCR
@@ -441,7 +436,7 @@ static const struct udevice_id rcm_sram_nor_ids[] = {
 
 U_BOOT_DRIVER(rcm_sram_nor) = {
         .name = "rcm-sram-nor",
-        .id = UCLASS_MTD,
+        .id = UCLASS_MISC,
         .of_match = rcm_sram_nor_ids,
         .probe = rcm_mtd_probe
 };
@@ -450,7 +445,7 @@ void rcm_sram_nor_init( void ) {
         struct udevice *dev;
         int ret;
 
-        ret = uclass_get_device_by_driver( UCLASS_MTD,
+        ret = uclass_get_device_by_driver( UCLASS_MISC,
                                            DM_GET_DRIVER(rcm_sram_nor),
                                            &dev );
         if( ret && ret != -ENODEV ) {

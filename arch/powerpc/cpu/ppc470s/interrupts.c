@@ -9,9 +9,10 @@
 
 #include <common.h>
 #include <command.h>
-#include <asm/arch-ppc4xx/ppc470s_itrpt.h>  
-#include <asm/arch-ppc4xx/ppc470s_itrpt_fields.h>
-#include <asm/arch-ppc4xx/ppc470s_reg_access.h>
+#include <irq_func.h>
+#include <asm/arch/ppc470s_itrpt.h>  
+#include <asm/arch/ppc470s_itrpt_fields.h>
+#include <asm/arch/ppc470s_reg_access.h>
 #include <asm/tlb47x.h>
 
 DECLARE_GLOBAL_DATA_PTR;

@@ -5,10 +5,6 @@
 #ifndef _ASM_PPC_ATOMIC_H_
 #define _ASM_PPC_ATOMIC_H_
 
-#ifdef CONFIG_1888TX018
-#include "configs/1888tx018.h"
-#endif
-
 #ifdef CONFIG_SMP
 typedef struct { volatile int counter; } atomic_t;
 #else
@@ -23,7 +19,7 @@ typedef struct { int counter; } atomic_t;
 extern void atomic_clear_mask(unsigned long mask, unsigned long *addr);
 extern void atomic_set_mask(unsigned long mask, unsigned long *addr);
 
-#ifndef CONFIG_1888TX018
+#ifndef CONFIG_TARGET_1888TX018
 
 static __inline__ int atomic_add_return(int a, atomic_t *v)
 {

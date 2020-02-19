@@ -5,7 +5,7 @@
 #include "ddr_spd.h"
 #include "rcm_dimm_params.h"
 #include <fdt_support.h>
-#include <environment.h>
+#include <env.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -228,6 +228,67 @@ int power_init_board(void)
 	rcm_mtd_arbiter_init();
 	rcm_sram_nor_init();
 	gd->env_valid = ENV_VALID;
+#endif
+	return 0;
+}
+
+int dram_init_banksize(void)		// clon of weak procedure from file common/board_f.c
+{									// now is same,but may be rewrite
+#if defined(CONFIG_NR_DRAM_BANKS) && defined(CONFIG_SYS_SDRAM_BASE)
+	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
+	gd->bd->bi_dram[0].size = get_effective_memsize();
+#endif
+	return 0;
+}
+
+void bi_dram_print_info( void ) {
+#if defined(CONFIG_NR_DRAM_BANKS)
+	unsigned int i;
+	printf( "Dram regions: \n");
+	for( i=0; i<CONFIG_NR_DRAM_BANKS; i++ ) {
+		printf( "%u: %016llx-%016llx  (%s)\n", i, gd->bd->bi_dram[i].start, gd->bd->bi_dram[i].size, gd->bd->bi_dram[i].size ? "u" :"f" );
+	}
+#endif
+}
+
+int bi_dram_add_region(uint32_t start, uint32_t size)
+{
+#if defined(CONFIG_NR_DRAM_BANKS)
+	unsigned int i;
+	for( i=1; i<CONFIG_NR_DRAM_BANKS; i++ ) {
+		if( gd->bd->bi_dram[i].size == 0 ) {
+			gd->bd->bi_dram[i].start = start;
+			gd->bd->bi_dram[i].size = size;
+			break;
+		}
+	}
+#endif
+	return 0;
+}
+
+int bi_dram_drop_region(uint32_t start, uint32_t size)
+{
+#if defined(CONFIG_NR_DRAM_BANKS)
+	unsigned int i;
+	for( i=1; i<CONFIG_NR_DRAM_BANKS; i++ ) {
+		if( gd->bd->bi_dram[i].start == start && gd->bd->bi_dram[i].size == size ) {
+			gd->bd->bi_dram[i].start = 0;
+			gd->bd->bi_dram[i].size = 0;
+			break;
+		}
+	}
+#endif
+	return 0;
+}
+
+int bi_dram_drop_all(void)
+{
+#if defined(CONFIG_NR_DRAM_BANKS)
+	unsigned int i;
+	for( i=1; i<CONFIG_NR_DRAM_BANKS; i++ ) {
+		gd->bd->bi_dram[i].start = 0;
+		gd->bd->bi_dram[i].size = 0;
+	}
 #endif
 	return 0;
 }

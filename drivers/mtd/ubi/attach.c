@@ -74,6 +74,7 @@
 #include <linux/slab.h>
 #include <linux/crc32.h>
 #include <linux/random.h>
+#include <u-boot/crc.h>
 #else
 #include <div64.h>
 #include <linux/err.h>
@@ -789,7 +790,7 @@ static int check_corruption(struct ubi_device *ubi, struct ubi_vid_hdr *vid_hdr,
 	ubi_dump_vid_hdr(vid_hdr);
 	pr_err("hexdump of PEB %d offset %d, length %d",
 	       pnum, ubi->leb_start, ubi->leb_size);
-	ubi_dbg_print_hex_dump(KERN_DEBUG, "", DUMP_PREFIX_OFFSET, 32, 1,
+	ubi_dbg_print_hex_dump("", DUMP_PREFIX_OFFSET, 32, 1,
 			       ubi->peb_buf, ubi->leb_size, 1);
 	err = 1;
 

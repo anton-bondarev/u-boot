@@ -6,10 +6,11 @@
  * This file consolidates all the different hang() functions implemented in
  * u-boot.
  */
-#define DEBUG_1888TX018 1
 
 #include <common.h>
 #include <bootstage.h>
+#include <hang.h>
+#include <os.h>
 
 /**
  * hang - stop processing by staying in an endless loop
@@ -21,16 +22,14 @@
  */
 void hang(void)
 {
-#if !defined(CONFIG_SPL_BUILD) || (defined(CONFIG_SPL_LIBCOMMON_SUPPORT) && \
-		defined(CONFIG_SPL_SERIAL_SUPPORT))
+#if !defined(CONFIG_SPL_BUILD) || \
+		(CONFIG_IS_ENABLED(LIBCOMMON_SUPPORT) && \
+		 CONFIG_IS_ENABLED(SERIAL_SUPPORT))
 	puts("### ERROR ### Please RESET the board ###\n");
 #endif
 	bootstage_error(BOOTSTAGE_ID_NEED_RESET);
-#ifdef DEBUG_1888TX018
-	/* go to host mode */
-	void (*bootrom_enter_host_mode)(void) = (void (*)(void)) 0xfffc0178;
-	bootrom_enter_host_mode();
-#endif
+	if (IS_ENABLED(CONFIG_SANDBOX))
+		os_exit(1);
 	for (;;)
 		;
 }
