@@ -17,6 +17,7 @@ mtd-$(CONFIG_ST_SMI) += st_smi.o
 mtd-$(CONFIG_STM32_FLASH) += stm32_flash.o
 mtd-$(CONFIG_RENESAS_RPC_HF) += renesas_rpc_hf.o
 mtd-$(CONFIG_HBMC_AM654) += hbmc-am654.o
+mtd-$(CONFIG_MTD_RCM_NOR) += rcm_sram_nor_arbiter.o rcm_sram_nor.o
 
 # U-Boot build
 ifeq ($(CONFIG_SPL_BUILD)$(CONFIG_TPL_BUILD),)

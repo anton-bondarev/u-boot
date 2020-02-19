@@ -101,6 +101,12 @@ config HBMC_AM654
 	 This is the driver for HyperBus controller on TI's AM65x and
 	 other SoCs
 
+config MTD_RCM_NOR
+	bool "RC-Module SoC NOR support"
+	depends on TARGET_1888TX018
+	help
+	    Support for NOR flash boot attached to the 1888TX018 SoC's
+
 source "drivers/mtd/nand/Kconfig"
 
 source "drivers/mtd/spi/Kconfig"
