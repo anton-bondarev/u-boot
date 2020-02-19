@@ -25,6 +25,7 @@ _start:
 #ifdef CONFIG_SPL_STACK
     load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
 #endif
+    bl _fix_fpu
 #else
     load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
 #endif
@@ -63,11 +64,8 @@ clear_bss:
     bl board_init_f_init_reserve
 
 	bl	cpu_init_f	/* return boot_flag for calling board_init_f */
-//#ifdef CONFIG_SPL_BUILD
 	bl	board_init_f
-//#else
 	bl	board_init_r    
-//#endif
     isync
 
 # ASTRO TODO
@@ -149,10 +147,60 @@ rte_nf:
 
 #ifdef CONFIG_SPL_BUILD
 
+_fix_fpu:
+    mfmsr r0
+    ori r0, r0, 0x2000
+    mtmsr r0
+    isync
+    load_const_link  r0,__doublezero
+    lfs f0,0(r0)
+    lfs f1,0(r0)
+    lfs f2,0(r0)
+    lfs f3,0(r0)
+    lfs f4,0(r0)
+    lfs f5,0(r0)
+    lfs f6,0(r0)
+    lfs f7,0(r0)
+    lfs f8,0(r0)
+    lfs f9,0(r0)
+    lfs f10,0(r0)
+    lfs f11,0(r0)
+    lfs f12,0(r0)
+    lfs f13,0(r0)
+    lfs f14,0(r0)
+    lfs f15,0(r0)
+    lfs f16,0(r0)
+    lfs f17,0(r0)
+    lfs f18,0(r0)
+    lfs f19,0(r0)
+    lfs f20,0(r0)
+    lfs f21,0(r0)
+    lfs f22,0(r0)
+    lfs f23,0(r0)
+    lfs f24,0(r0)
+    lfs f25,0(r0)
+    lfs f26,0(r0)
+    lfs f27,0(r0)
+    lfs f28,0(r0)
+    lfs f29,0(r0)
+    lfs f30,0(r0)
+    lfs f31,0(r0)
+ 
+    load_const_link r3, ~0x2000
+    mfmsr r0
+    and r0, r0, r3
+    mtmsr r0
+ 
+    blr
+ 
+__doublezero:
+    .double 0.0
+
 .section ".text.start_secondary","ax",@progbits
 .global _start_secondary
 _start_secondary:
     load_const_link sp, CONFIG_SPL_STACK
+    bl _fix_fpu
 	bl	process_spintable    
 
 #endif
