@@ -67,6 +67,7 @@ obj-$(CONFIG_NAND_PLAT) += nand_plat.o
 obj-$(CONFIG_NAND_SUNXI) += sunxi_nand.o
 obj-$(CONFIG_NAND_ZYNQ) += zynq_nand.o
 obj-$(CONFIG_NAND_STM32_FMC2) += stm32_fmc2_nand.o
+obj-$(CONFIG_MTD_RCM_NAND) += rcm_nand.o
 
 else  # minimal SPL drivers
 
@@ -75,5 +76,6 @@ obj-$(CONFIG_NAND_FSL_IFC) += fsl_ifc_spl.o
 obj-$(CONFIG_NAND_MXC) += mxc_nand_spl.o
 obj-$(CONFIG_NAND_MXS) += mxs_nand_spl.o mxs_nand.o
 obj-$(CONFIG_NAND_SUNXI) += sunxi_nand_spl.o
+obj-$(CONFIG_MTD_RCM_NAND) += nand_ids.o rcm_nand.o # spl driver is minimal,but its code included in rcm_nand.c, can separated its
 
 endif # drivers

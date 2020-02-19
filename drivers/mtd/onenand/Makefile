@@ -7,5 +7,7 @@ ifndef	CONFIG_SPL_BUILD
 obj-$(CONFIG_CMD_ONENAND)	:= onenand_uboot.o onenand_base.o onenand_bbt.o
 obj-$(CONFIG_SAMSUNG_ONENAND)	+= samsung.o
 else
+ifndef CONFIG_TARGET_1888TX018
 obj-y				:= onenand_spl.o
+endif
 endif

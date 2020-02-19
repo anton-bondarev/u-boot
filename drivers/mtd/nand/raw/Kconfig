@@ -311,6 +311,13 @@ config NAND_STM32_FMC2
 	  The controller supports a maximum 8k page size and supports
 	  a maximum 8-bit correction error per sector of 512 bytes.
 
+config MTD_RCM_NAND
+	bool "RC-Module SoC NAND support"
+	select SYS_NAND_SELF_INIT
+	depends on TARGET_1888TX018
+	help
+	    Support for NAND flash boot attached to the 1888TX018 SoC's
+
 comment "Generic NAND options"
 
 config SYS_NAND_BLOCK_SIZE

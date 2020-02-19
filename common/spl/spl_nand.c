@@ -53,6 +53,10 @@ static int spl_nand_load_element(struct spl_image_info *spl_image,
 {
 	int err;
 
+#ifdef CONFIG_MTD_RCM_NAND						// this flag was set,when spl tried load image from nor flash(spl_nor.c)
+	spl_image->flags &= ~SPL_COPY_PAYLOAD_ONLY;	// if loading from nor is off,this fragment can delete,
+#endif											// but dont't forgeten about that!!!!!
+
 	err = nand_spl_load_image(offset, sizeof(*header), (void *)header);
 	if (err)
 		return err;
