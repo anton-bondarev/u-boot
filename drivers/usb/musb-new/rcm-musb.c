@@ -214,7 +214,7 @@ static int rcm_musb_init(struct musb *musb)
 /*
 static int fix_endian (int data_in){
 
-#ifdef CONFIG_1888TX018
+#ifdef CONFIG_TARGET_1888TX018
     int data_out = 0;
     
     data_out = data_in << 24 & 0xff000000;

@@ -45,6 +45,7 @@ struct driver_info;
 /* Device name is allocated and should be freed on unbind() */
 #define DM_FLAG_NAME_ALLOCED		(1 << 7)
 
+/* Device has platform data provided by of-platdata */
 #define DM_FLAG_OF_PLATDATA		(1 << 8)
 
 /*
@@ -60,6 +61,12 @@ struct driver_info;
  * U-Boot exits and the OS is started
  */
 #define DM_FLAG_OS_PREPARE		(1 << 10)
+
+/* DM does not enable/disable the power domains corresponding to this device */
+#define DM_FLAG_DEFAULT_PD_CTRL_OFF	(1 << 11)
+
+/* Driver platdata has been read. Cleared when the device is removed */
+#define DM_FLAG_PLATDATA_VALID		(1 << 12)
 
 /*
  * One or multiple of these flags are passed to device_remove() so that
@@ -270,7 +277,7 @@ struct driver {
  * @dev		Device to check
  * @return platform data, or NULL if none
  */
-void *dev_get_platdata(struct udevice *dev);
+void *dev_get_platdata(const struct udevice *dev);
 
 /**
  * dev_get_parent_platdata() - Get the parent platform data for a device
@@ -280,7 +287,7 @@ void *dev_get_platdata(struct udevice *dev);
  * @dev		Device to check
  * @return parent's platform data, or NULL if none
  */
-void *dev_get_parent_platdata(struct udevice *dev);
+void *dev_get_parent_platdata(const struct udevice *dev);
 
 /**
  * dev_get_uclass_platdata() - Get the uclass platform data for a device
@@ -290,7 +297,7 @@ void *dev_get_parent_platdata(struct udevice *dev);
  * @dev		Device to check
  * @return uclass's platform data, or NULL if none
  */
-void *dev_get_uclass_platdata(struct udevice *dev);
+void *dev_get_uclass_platdata(const struct udevice *dev);
 
 /**
  * dev_get_priv() - Get the private data for a device
@@ -300,7 +307,7 @@ void *dev_get_uclass_platdata(struct udevice *dev);
  * @dev		Device to check
  * @return private data, or NULL if none
  */
-void *dev_get_priv(struct udevice *dev);
+void *dev_get_priv(const struct udevice *dev);
 
 /**
  * dev_get_parent_priv() - Get the parent private data for a device
@@ -314,7 +321,7 @@ void *dev_get_priv(struct udevice *dev);
  * @dev		Device to check
  * @return parent data, or NULL if none
  */
-void *dev_get_parent_priv(struct udevice *dev);
+void *dev_get_parent_priv(const struct udevice *dev);
 
 /**
  * dev_get_uclass_priv() - Get the private uclass data for a device
@@ -324,7 +331,7 @@ void *dev_get_parent_priv(struct udevice *dev);
  * @dev		Device to check
  * @return private uclass data for this device, or NULL if none
  */
-void *dev_get_uclass_priv(struct udevice *dev);
+void *dev_get_uclass_priv(const struct udevice *dev);
 
 /**
  * struct dev_get_parent() - Get the parent of a device
@@ -332,7 +339,7 @@ void *dev_get_uclass_priv(struct udevice *dev);
  * @child:	Child to check
  * @return parent of child, or NULL if this is the root device
  */
-struct udevice *dev_get_parent(struct udevice *child);
+struct udevice *dev_get_parent(const struct udevice *child);
 
 /**
  * dev_get_driver_data() - get the driver data used to bind a device
@@ -359,7 +366,7 @@ struct udevice *dev_get_parent(struct udevice *child);
  * @dev:	Device to check
  * @return driver data (0 if none is provided)
  */
-ulong dev_get_driver_data(struct udevice *dev);
+ulong dev_get_driver_data(const struct udevice *dev);
 
 /**
  * dev_get_driver_ops() - get the device's driver's operations
@@ -370,7 +377,7 @@ ulong dev_get_driver_data(struct udevice *dev);
  * @dev:	Device to check
  * @return void pointer to driver's operations or NULL for NULL-dev or NULL-ops
  */
-const void *dev_get_driver_ops(struct udevice *dev);
+const void *dev_get_driver_ops(const struct udevice *dev);
 
 /**
  * device_get_uclass_id() - return the uclass ID of a device
@@ -378,7 +385,7 @@ const void *dev_get_driver_ops(struct udevice *dev);
  * @dev:	Device to check
  * @return uclass ID for the device
  */
-enum uclass_id device_get_uclass_id(struct udevice *dev);
+enum uclass_id device_get_uclass_id(const struct udevice *dev);
 
 /**
  * dev_get_uclass_name() - return the uclass name of a device
@@ -388,7 +395,7 @@ enum uclass_id device_get_uclass_id(struct udevice *dev);
  * @dev:	Device to check
  * @return  pointer to the uclass name for the device
  */
-const char *dev_get_uclass_name(struct udevice *dev);
+const char *dev_get_uclass_name(const struct udevice *dev);
 
 /**
  * device_get_child() - Get the child of a device by index
@@ -403,6 +410,15 @@ const char *dev_get_uclass_name(struct udevice *dev);
  *	   to probe
  */
 int device_get_child(struct udevice *parent, int index, struct udevice **devp);
+
+/**
+ * device_get_child_count() - Get the available child count of a device
+ *
+ * Returns the number of children to a device.
+ *
+ * @parent:	Parent device to check
+ */
+int device_get_child_count(struct udevice *parent);
 
 /**
  * device_find_child_by_seq() - Find a child device based on a sequence
@@ -473,18 +489,33 @@ int device_get_child_by_of_offset(struct udevice *parent, int of_offset,
 				  struct udevice **devp);
 
 /**
- * device_get_global_by_of_offset() - Get a device based on FDT offset
+ * device_find_global_by_ofnode() - Get a device based on ofnode
  *
- * Locates a device by its device tree offset, searching globally throughout
+ * Locates a device by its device tree ofnode, searching globally throughout
+ * the all driver model devices.
+ *
+ * The device is NOT probed
+ *
+ * @node: Device tree ofnode to find
+ * @devp: Returns pointer to device if found, otherwise this is set to NULL
+ * @return 0 if OK, -ve on error
+ */
+
+int device_find_global_by_ofnode(ofnode node, struct udevice **devp);
+
+/**
+ * device_get_global_by_ofnode() - Get a device based on ofnode
+ *
+ * Locates a device by its device tree ofnode, searching globally throughout
  * the all driver model devices.
  *
  * The device is probed to activate it ready for use.
  *
- * @of_offset: Device tree offset to find
+ * @node: Device tree ofnode to find
  * @devp: Returns pointer to device if found, otherwise this is set to NULL
  * @return 0 if OK, -ve on error
  */
-int device_get_global_by_of_offset(int of_offset, struct udevice **devp);
+int device_get_global_by_ofnode(ofnode node, struct udevice **devp);
 
 /**
  * device_find_first_child() - Find the first child of a device
@@ -505,12 +536,52 @@ int device_find_first_child(struct udevice *parent, struct udevice **devp);
 int device_find_next_child(struct udevice **devp);
 
 /**
+ * device_find_first_inactive_child() - Find the first inactive child
+ *
+ * This is used to locate an existing child of a device which is of a given
+ * uclass.
+ *
+ * The device is NOT probed
+ *
+ * @parent:	Parent device to search
+ * @uclass_id:	Uclass to look for
+ * @devp:	Returns device found, if any
+ * @return 0 if found, else -ENODEV
+ */
+int device_find_first_inactive_child(struct udevice *parent,
+				     enum uclass_id uclass_id,
+				     struct udevice **devp);
+
+/**
+ * device_find_first_child_by_uclass() - Find the first child of a device in uc
+ *
+ * @parent: Parent device to search
+ * @uclass_id:	Uclass to look for
+ * @devp: Returns first child device in that uclass, if any
+ * @return 0 if found, else -ENODEV
+ */
+int device_find_first_child_by_uclass(struct udevice *parent,
+				      enum uclass_id uclass_id,
+				      struct udevice **devp);
+
+/**
+ * device_find_child_by_name() - Find a child by device name
+ *
+ * @parent:	Parent device to search
+ * @name:	Name to look for
+ * @devp:	Returns device found, if any
+ * @return 0 if found, else -ENODEV
+ */
+int device_find_child_by_name(struct udevice *parent, const char *name,
+			      struct udevice **devp);
+
+/**
  * device_has_children() - check if a device has any children
  *
  * @dev:	Device to check
  * @return true if the device has one or more children
  */
-bool device_has_children(struct udevice *dev);
+bool device_has_children(const struct udevice *dev);
 
 /**
  * device_has_active_children() - check if a device has any active children
@@ -586,6 +657,22 @@ bool device_is_compatible(struct udevice *dev, const char *compat);
 bool of_machine_is_compatible(const char *compat);
 
 /**
+ * dev_disable_by_path() - Disable a device given its device tree path
+ *
+ * @path:	The device tree path identifying the device to be disabled
+ * @return 0 on success, -ve on error
+ */
+int dev_disable_by_path(const char *path);
+
+/**
+ * dev_enable_by_path() - Enable a device given its device tree path
+ *
+ * @path:	The device tree path identifying the device to be enabled
+ * @return 0 on success, -ve on error
+ */
+int dev_enable_by_path(const char *path);
+
+/**
  * device_is_on_pci_bus - Test if a device is on a PCI bus
  *
  * @dev:	device to test
@@ -609,6 +696,15 @@ static inline bool device_is_on_pci_bus(struct udevice *dev)
 	list_for_each_entry_safe(pos, next, &parent->child_head, sibling_node)
 
 /**
+ * device_foreach_child() - iterate through child devices
+ *
+ * @pos: struct udevice * for the current device
+ * @parent: parent device to scan
+ */
+#define device_foreach_child(pos, parent)	\
+	list_for_each_entry(pos, &parent->child_head, sibling_node)
+
+/**
  * dm_scan_fdt_dev() - Bind child device in a the device tree
  *
  * This handles device which have sub-nodes in the device tree. It scans all
@@ -624,260 +720,7 @@ static inline bool device_is_on_pci_bus(struct udevice *dev)
  */
 int dm_scan_fdt_dev(struct udevice *dev);
 
-/* device resource management */
-typedef void (*dr_release_t)(struct udevice *dev, void *res);
-typedef int (*dr_match_t)(struct udevice *dev, void *res, void *match_data);
-
-#ifdef CONFIG_DEVRES
-
-#ifdef CONFIG_DEBUG_DEVRES
-void *__devres_alloc(dr_release_t release, size_t size, gfp_t gfp,
-		     const char *name);
-#define _devres_alloc(release, size, gfp) \
-	__devres_alloc(release, size, gfp, #release)
-#else
-void *_devres_alloc(dr_release_t release, size_t size, gfp_t gfp);
-#endif
-
-/**
- * devres_alloc() - Allocate device resource data
- * @release: Release function devres will be associated with
- * @size: Allocation size
- * @gfp: Allocation flags
- *
- * Allocate devres of @size bytes.  The allocated area is associated
- * with @release.  The returned pointer can be passed to
- * other devres_*() functions.
- *
- * RETURNS:
- * Pointer to allocated devres on success, NULL on failure.
- */
-#define devres_alloc(release, size, gfp) \
-	_devres_alloc(release, size, gfp | __GFP_ZERO)
-
-/**
- * devres_free() - Free device resource data
- * @res: Pointer to devres data to free
- *
- * Free devres created with devres_alloc().
- */
-void devres_free(void *res);
-
-/**
- * devres_add() - Register device resource
- * @dev: Device to add resource to
- * @res: Resource to register
- *
- * Register devres @res to @dev.  @res should have been allocated
- * using devres_alloc().  On driver detach, the associated release
- * function will be invoked and devres will be freed automatically.
- */
-void devres_add(struct udevice *dev, void *res);
-
-/**
- * devres_find() - Find device resource
- * @dev: Device to lookup resource from
- * @release: Look for resources associated with this release function
- * @match: Match function (optional)
- * @match_data: Data for the match function
- *
- * Find the latest devres of @dev which is associated with @release
- * and for which @match returns 1.  If @match is NULL, it's considered
- * to match all.
- *
- * @return pointer to found devres, NULL if not found.
- */
-void *devres_find(struct udevice *dev, dr_release_t release,
-		  dr_match_t match, void *match_data);
-
-/**
- * devres_get() - Find devres, if non-existent, add one atomically
- * @dev: Device to lookup or add devres for
- * @new_res: Pointer to new initialized devres to add if not found
- * @match: Match function (optional)
- * @match_data: Data for the match function
- *
- * Find the latest devres of @dev which has the same release function
- * as @new_res and for which @match return 1.  If found, @new_res is
- * freed; otherwise, @new_res is added atomically.
- *
- * @return ointer to found or added devres.
- */
-void *devres_get(struct udevice *dev, void *new_res,
-		 dr_match_t match, void *match_data);
-
-/**
- * devres_remove() - Find a device resource and remove it
- * @dev: Device to find resource from
- * @release: Look for resources associated with this release function
- * @match: Match function (optional)
- * @match_data: Data for the match function
- *
- * Find the latest devres of @dev associated with @release and for
- * which @match returns 1.  If @match is NULL, it's considered to
- * match all.  If found, the resource is removed atomically and
- * returned.
- *
- * @return ointer to removed devres on success, NULL if not found.
- */
-void *devres_remove(struct udevice *dev, dr_release_t release,
-		    dr_match_t match, void *match_data);
-
-/**
- * devres_destroy() - Find a device resource and destroy it
- * @dev: Device to find resource from
- * @release: Look for resources associated with this release function
- * @match: Match function (optional)
- * @match_data: Data for the match function
- *
- * Find the latest devres of @dev associated with @release and for
- * which @match returns 1.  If @match is NULL, it's considered to
- * match all.  If found, the resource is removed atomically and freed.
- *
- * Note that the release function for the resource will not be called,
- * only the devres-allocated data will be freed.  The caller becomes
- * responsible for freeing any other data.
- *
- * @return 0 if devres is found and freed, -ENOENT if not found.
- */
-int devres_destroy(struct udevice *dev, dr_release_t release,
-		   dr_match_t match, void *match_data);
-
-/**
- * devres_release() - Find a device resource and destroy it, calling release
- * @dev: Device to find resource from
- * @release: Look for resources associated with this release function
- * @match: Match function (optional)
- * @match_data: Data for the match function
- *
- * Find the latest devres of @dev associated with @release and for
- * which @match returns 1.  If @match is NULL, it's considered to
- * match all.  If found, the resource is removed atomically, the
- * release function called and the resource freed.
- *
- * @return 0 if devres is found and freed, -ENOENT if not found.
- */
-int devres_release(struct udevice *dev, dr_release_t release,
-		   dr_match_t match, void *match_data);
-
-/* managed devm_k.alloc/kfree for device drivers */
-/**
- * devm_kmalloc() - Resource-managed kmalloc
- * @dev: Device to allocate memory for
- * @size: Allocation size
- * @gfp: Allocation gfp flags
- *
- * Managed kmalloc.  Memory allocated with this function is
- * automatically freed on driver detach.  Like all other devres
- * resources, guaranteed alignment is unsigned long long.
- *
- * @return pointer to allocated memory on success, NULL on failure.
- */
-void *devm_kmalloc(struct udevice *dev, size_t size, gfp_t gfp);
-static inline void *devm_kzalloc(struct udevice *dev, size_t size, gfp_t gfp)
-{
-	return devm_kmalloc(dev, size, gfp | __GFP_ZERO);
-}
-static inline void *devm_kmalloc_array(struct udevice *dev,
-				       size_t n, size_t size, gfp_t flags)
-{
-	if (size != 0 && n > SIZE_MAX / size)
-		return NULL;
-	return devm_kmalloc(dev, n * size, flags);
-}
-static inline void *devm_kcalloc(struct udevice *dev,
-				 size_t n, size_t size, gfp_t flags)
-{
-	return devm_kmalloc_array(dev, n, size, flags | __GFP_ZERO);
-}
-
-/**
- * devm_kfree() - Resource-managed kfree
- * @dev: Device this memory belongs to
- * @ptr: Memory to free
- *
- * Free memory allocated with devm_kmalloc().
- */
-void devm_kfree(struct udevice *dev, void *ptr);
-
-#else /* ! CONFIG_DEVRES */
-
-static inline void *devres_alloc(dr_release_t release, size_t size, gfp_t gfp)
-{
-	return kzalloc(size, gfp);
-}
-
-static inline void devres_free(void *res)
-{
-	kfree(res);
-}
-
-static inline void devres_add(struct udevice *dev, void *res)
-{
-}
-
-static inline void *devres_find(struct udevice *dev, dr_release_t release,
-				dr_match_t match, void *match_data)
-{
-	return NULL;
-}
-
-static inline void *devres_get(struct udevice *dev, void *new_res,
-			       dr_match_t match, void *match_data)
-{
-	return NULL;
-}
-
-static inline void *devres_remove(struct udevice *dev, dr_release_t release,
-				  dr_match_t match, void *match_data)
-{
-	return NULL;
-}
-
-static inline int devres_destroy(struct udevice *dev, dr_release_t release,
-				 dr_match_t match, void *match_data)
-{
-	return 0;
-}
-
-static inline int devres_release(struct udevice *dev, dr_release_t release,
-				 dr_match_t match, void *match_data)
-{
-	return 0;
-}
-
-static inline void *devm_kmalloc(struct udevice *dev, size_t size, gfp_t gfp)
-{
-	return kmalloc(size, gfp);
-}
-
-static inline void *devm_kzalloc(struct udevice *dev, size_t size, gfp_t gfp)
-{
-	return kzalloc(size, gfp);
-}
-
-static inline void *devm_kmaloc_array(struct udevice *dev,
-				      size_t n, size_t size, gfp_t flags)
-{
-	/* TODO: add kmalloc_array() to linux/compat.h */
-	if (size != 0 && n > SIZE_MAX / size)
-		return NULL;
-	return kmalloc(n * size, flags);
-}
-
-static inline void *devm_kcalloc(struct udevice *dev,
-				 size_t n, size_t size, gfp_t flags)
-{
-	/* TODO: add kcalloc() to linux/compat.h */
-	return kmalloc(n * size, flags | __GFP_ZERO);
-}
-
-static inline void devm_kfree(struct udevice *dev, void *ptr)
-{
-	kfree(ptr);
-}
-
-#endif /* ! CONFIG_DEVRES */
+#include <dm/devres.h>
 
 /*
  * REVISIT:

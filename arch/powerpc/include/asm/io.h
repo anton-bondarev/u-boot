@@ -22,7 +22,7 @@
 
 #define readb(addr) in_8((volatile u8 *)(addr))
 #define writeb(b,addr) out_8((volatile u8 *)(addr), (b))
-#if !defined(__BIG_ENDIAN) || defined(CONFIG_1888TX018)
+#if !defined(__BIG_ENDIAN)
 #define readw(addr) (*(volatile u16 *) (addr))
 #define readl(addr) (*(volatile u32 *) (addr))
 #define writew(b,addr) ((*(volatile u16 *) (addr)) = (b))
@@ -68,68 +68,18 @@
 #define inl_p(port)     in_le32((u32 *)((port)+_IO_BASE))
 #define outl_p(val, port)   out_le32((u32 *)((port)+_IO_BASE), (val))
 
-#ifndef CONFIG_1888TX018
 extern void _insb(volatile u8 *port, void *buf, int ns);
 extern void _outsb(volatile u8 *port, const void *buf, int ns);
+extern void _insw(volatile u16 *port, void *buf, int ns);
+extern void _outsw(volatile u16 *port, const void *buf, int ns);
+extern void _insl(volatile u32 *port, void *buf, int nl);
+extern void _outsl(volatile u32 *port, const void *buf, int nl);
 extern void _insw_ns(volatile u16 *port, void *buf, int ns);
 extern void _outsw_ns(volatile u16 *port, const void *buf, int ns);
 extern void _insl_ns(volatile u32 *port, void *buf, int nl);
 extern void _outsl_ns(volatile u32 *port, const void *buf, int nl);
-#else
-
-static inline void _insb(volatile u8 * port, void *buf, int ns)
-{
-	u8 *data = (u8 *) buf;
-	while (ns--)
-		*data++ = *port;
-}
-
-static inline void _outsb(volatile u8 * port, const void *buf, int ns)
-{
-	u8 *data = (u8 *) buf;
-	while (ns--)
-		*port = *data++;
-}
-
-static inline void _insw_ns(volatile u16 * port, void *buf, int ns)
-{
-	u16 *data = (u16 *) buf;
-	while (ns--)
-		*data++ = *port;
-}
-
-static inline void _outsw_ns(volatile u16 * port, const void *buf, int ns)
-{
-	u16 *data = (u16 *) buf;
-	while (ns--) {
-		*port = *data++;
-	}
-}
-
-static inline void _insl_ns(volatile u32 * port, void *buf, int nl)
-{
-	u32 *data = (u32 *) buf;
-	while (nl--)
-		*data++ = *port;
-}
-
-static inline void _outsl_ns(volatile u32 * port, const void *buf, int nl)
-{
-	u32 *data = (u32 *) buf;
-	while (nl--) {
-		*port = *data;
-		data++;
-	}
-}
 
 #define ___constant_swab16(x) ((__u16)(   (((__u16)(x) & (__u16)0x00ffU) << 8) |   (((__u16)(x) & (__u16)0xff00U) >> 8)))
-
-
-#endif
-extern void _insl(volatile u32 *port, void *buf, int nl);
-extern void _outsl(volatile u32 *port, const void *buf, int nl);
-extern void _insw(volatile u16 *port, void *buf, int ns);
-extern void _outsw(volatile u16 *port, const void *buf, int ns);
 
 /*
  * The *_ns versions below don't do byte-swapping.
@@ -237,6 +187,7 @@ static inline void out_8(volatile unsigned char __iomem *addr, u8 val)
 static inline u16 in_le16(const volatile unsigned short __iomem *addr)
 {
 	u16 ret;
+
 	__asm__ __volatile__("sync; lhbrx %0,0,%1;\n"
 			     "twi 0,%0,0;\n"
 			     "isync" : "=r" (ret) :
@@ -332,6 +283,24 @@ static inline void out_be32(volatile unsigned __iomem *addr, u32 val)
 #define clrbits_8(addr, clear) clrbits(8, addr, clear)
 #define setbits_8(addr, set) setbits(8, addr, set)
 #define clrsetbits_8(addr, clear, set) clrsetbits(8, addr, clear, set)
+
+#define readb_be(addr)							\
+	__raw_readb((__force unsigned *)(addr))
+#define readw_be(addr)							\
+	be16_to_cpu(__raw_readw((__force unsigned *)(addr)))
+#define readl_be(addr)							\
+	be32_to_cpu(__raw_readl((__force unsigned *)(addr)))
+#define readq_be(addr)							\
+	be64_to_cpu(__raw_readq((__force unsigned *)(addr)))
+
+#define writeb_be(val, addr)						\
+	__raw_writeb((val), (__force unsigned *)(addr))
+#define writew_be(val, addr)						\
+	__raw_writew(cpu_to_be16((val)), (__force unsigned *)(addr))
+#define writel_be(val, addr)						\
+	__raw_writel(cpu_to_be32((val)), (__force unsigned *)(addr))
+#define writeq_be(val, addr)						\
+	__raw_writeq(cpu_to_be64((val)), (__force unsigned *)(addr))
 
 static inline void *phys_to_virt(phys_addr_t paddr)
 {

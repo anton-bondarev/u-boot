@@ -33,6 +33,11 @@ static const tlb_sid_name tlb_sid_names[] =
 	{ TLBSID_ERR,  ""     }
 };	
 
+int bi_dram_add_region(uint32_t start, uint32_t size);
+int bi_dram_drop_region(uint32_t start, uint32_t size);
+int bi_dram_drop_all(void);
+void bi_dram_print_info(void);
+
 static tlb_size_id get_tlb_sid_by_name(const char * name)
 {
 	uint i;
@@ -164,7 +169,7 @@ static void mem_map_init(void)
 	s_maps_ready = true;
 }
 		
-static int mem_map_list(void)
+static int mem_map_list(bool ddr_rgns)
 {
 	printf("Maps: \n");
 	uint map_ind;
@@ -173,6 +178,8 @@ static int mem_map_list(void)
 			continue;
 		printf("  Phys=%08x, Cpu=%08x, Size=%s\n", s_maps[map_ind].phys_adr, s_maps[map_ind].cpu_adr, get_tlb_sid_name(s_maps[map_ind].sid));
 	}
+	if(ddr_rgns)
+		bi_dram_print_info();
 	return 0;
 }
 
@@ -211,10 +218,11 @@ static int mem_map_drop(uint32_t cpu_adr, tlb_size_id tlb_sid)
 	}
 	
 	tlb47x_inval(cpu_adr, tlb_sid);
-	
+	bi_dram_drop_region(cpu_adr, get_tlb_sid_size(tlb_sid));
+
 	if ( map_ind != -1 ) 
 		s_maps[map_ind].sid = TLBSID_ERR;
-	
+
 	return 0;
 }
 
@@ -226,9 +234,10 @@ static int mem_map_drop_all(void)
 			continue;		
 
 		tlb47x_inval(s_maps[map_ind].cpu_adr, s_maps[map_ind].sid);
-		
+
 		s_maps[map_ind].sid = TLBSID_ERR;
 	}
+	bi_dram_drop_all();
 	return 0;
 }
 
@@ -249,11 +258,12 @@ static int mem_map_set(uint32_t phys_adr, uint32_t cpu_adr, tlb_size_id tlb_sid)
 	}
 
 	tlb47x_map(phys_adr, cpu_adr, tlb_sid, TLB_MODE_RWX);
-	
+	bi_dram_add_region(cpu_adr, get_tlb_sid_size(tlb_sid));
+
 	s_maps[map_ind].phys_adr = phys_adr;
 	s_maps[map_ind].cpu_adr = cpu_adr;
 	s_maps[map_ind].sid = tlb_sid;
-	
+
 	return 0;
 }
 
@@ -323,7 +333,7 @@ static int do_mem_map_set(int argc, char * const argv[])
 			if ( retcode != 0 ) 
 				return retcode;
 		}
-		return mem_map_list();
+		return mem_map_list(false);
 	}
 
 	if ( argc == 3 ) {
@@ -379,7 +389,12 @@ static int do_mem_map_drop(int argc, char * const argv[])
 
 static int do_mem_map_list(int argc, char * const argv[])
 {
-	return (argc == 0 ? mem_map_list() : CMD_RET_USAGE);
+	if (argc == 0 ) 
+		return mem_map_list(false);
+	else if(argc == 1 && !strcmp(argv[0], "dram"))
+		return mem_map_list(true);
+	else
+		return CMD_RET_USAGE;
 }
 
 static int do_mem_map_tlbs(int argc, char * const argv[])
@@ -411,8 +426,8 @@ static int do_mem_map_help(int argc, char * const argv[])
 	}
 	if ( argc != 1 || strcmp(argv[0], "drop") == 0 ) 
 		printf("mmap drop { cpu_adr [size_id] | all }\n");
-	if ( argc != 1 || strcmp(argv[0], "list") == 0 ) 
-		printf("mmap list\n");
+	if ( argc != 1 || strcmp(argv[0], "list") == 0 )
+		printf("mmap list [dram]\n");
 	if ( argc != 1 || strcmp(argv[0], "tlb") == 0 ) 
 		printf("mmap tlb\n");
 		

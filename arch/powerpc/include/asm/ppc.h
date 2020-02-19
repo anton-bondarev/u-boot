@@ -57,7 +57,7 @@ static inline uint get_svr(void)
 #if defined(CONFIG_MPC85xx)	|| \
 	defined(CONFIG_MPC86xx)	|| \
 	defined(CONFIG_MPC83xx) || \
-	defined(CONFIG_1888TX018)
+	defined(CONFIG_TARGET_1888TX018)
 unsigned char	in8(unsigned int);
 void		out8(unsigned int, unsigned char);
 unsigned short	in16(unsigned int);
@@ -122,6 +122,7 @@ void print_reginfo(void);
 void interrupt_init_cpu(unsigned *);
 void timer_interrupt_cpu(struct pt_regs *);
 unsigned long search_exception_table(unsigned long addr);
+void upmconfig(uint upm, uint *table, uint size);
 
 #endif /* !__ASSEMBLY__ */
 

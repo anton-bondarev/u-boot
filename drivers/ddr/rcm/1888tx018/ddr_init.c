@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <linux/string.h>
+#include <compiler.h>
 #include "ddr_impl_h/ddr.h"
 #include "ddr_impl_h/ddr_impl.h"
 #include "ddr_impl_h/ddr_regs.h"
@@ -63,12 +64,12 @@ static void crg_set_writelock(void);
 
 static volatile uint32_t ioread32(uint32_t const base_addr)
 {
-    return *((volatile uint32_t*)(base_addr));
+    return RCM_DDR_LE32_TO_CPU(*((volatile uint32_t*)(base_addr)));
 }
 
 static void iowrite32(uint32_t const value, uint32_t const base_addr)
 {
-    *((volatile uint32_t*)(base_addr)) = value;
+    *((volatile uint32_t*)(base_addr)) = RCM_DDR_CPU_TO_LE32(value);
 }
 
 void plb6mcif2_simple_init( uint32_t base_addr, const uint32_t puaba )

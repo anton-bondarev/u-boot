@@ -39,7 +39,7 @@
 #define EM3_PLB6MCIF2_DCR_BASE  0x80180000
 #define LSIF0_ID                0x3046494c
 
-// #define RCM_ARB_DBG
+//#define RCM_ARB_DBG
 
 #ifdef RCM_ARB_DBG
         #define DBG_PRINT(...) printf( "[RCM_ARB] " __VA_ARGS__ );
@@ -91,19 +91,28 @@ static void plb6mcif_test_read( void ) {
         #define REGMAP_WRITE(MAP,REG,VAL) regmap_write(MAP,REG,VAL)
         #define REGMAP_READ(MAP,REG,VAL) regmap_read(MAP,REG,VAL)
 #else
+        //#define SWAP_BYTES /* dependency of version!!! u-boot */
+        #ifdef SWAP_BYTES
+                #define SWAPW(VAL) cpu_to_le32(VAL)
+                #define SWAPR(VAL) le32_to_cpu(VAL)
+        #else
+                #define SWAPW(VAL) VAL
+                #define SWAPR(VAL) VAL
+        #endif
+
         typedef struct udevice rcm_mtd_arbiter_device;
 
         static int REGMAP_WRITE( struct regmap* map, unsigned int reg, unsigned int val ) {
-                DBG_PRINT( "REGMAP_WRITE: %08x,%08x\n", (uint32_t)(map->base)+reg, val )
-                return regmap_write( map, reg, cpu_to_le32( val ) );
+                DBG_PRINT( "REGMAP_WRITE: %08x,%08x\n", (uint32_t)(/*map->base*/map->ranges[0].start)+reg, val )
+                return regmap_write( map, reg, SWAPW( val ) );
         }
 
         static int REGMAP_READ( struct regmap* map, unsigned int reg, unsigned int* val ) {
                 unsigned int retval;
                 int ret = regmap_read( map, reg, &retval );
                 if( ret == 0 )
-                        *val = le32_to_cpu( retval );
-                DBG_PRINT( "REGMAP_READ: %08x,%08x\n", (uint32_t)(map->base)+reg, *val )
+                        *val = SWAPR( retval );
+                DBG_PRINT( "REGMAP_READ: %08x,%08x\n", (uint32_t)(/*map->base*/map->ranges[0].start)+reg, *val )
                 return ret;
         }
 
@@ -113,28 +122,17 @@ static void plb6mcif_test_read( void ) {
         #define of_property_read_u32_array(DEVNODE,NAME,PARR,PSIZE) \
                 ofnode_read_u32_array(np_to_ofnode(DEVNODE),NAME,PARR,PSIZE)
 
-        static struct device_node* of_property_read_regmap( struct device_node* of_node, const char* name, struct regmap* regmap ) {
-                u32 reg[2];
-                int ret = of_property_read_u32_array(of_node, name, reg, 2 );
-                if( ret == 0 ) {
-                        regmap->base = (phys_addr_t)reg[0];
-                        regmap->range_count = 1;
-                        regmap->range = &regmap->base_range;
-                        regmap->base_range.start = reg[0];
-                        regmap->base_range.size = reg[1];
-                        return of_node;
-                }
+        static struct device_node* of_property_read_regmap( struct device_node* node, const char* name, struct regmap** regmap ) {
+                ofnode nd = ofnode_find_subnode( np_to_ofnode( node ), name );
+                if( ofnode_valid( nd ) && ( regmap_init_mem(  nd, regmap ) == 0 ) )
+                        return node;
                 return NULL;
         }
 #endif
 
 static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev) {
-#ifdef __UBOOT__
-        struct regmap _control;
-        struct regmap _sctl;
-#endif
-        struct regmap *control;
-        struct regmap *sctl;
+        struct regmap *control = NULL;  // TODO: memory release by error
+        struct regmap *sctl = NULL;
         struct device_node *of_node;
         struct device_node *tmp;
         u32 sram_nor_mux = 0;
@@ -164,7 +162,7 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev) {
 #ifndef __UBOOT__
         tmp = of_parse_phandle( of_node, "sctl", 0 );
 #else
-        tmp = of_property_read_regmap( of_node, "sctl-reg", sctl = &_sctl );
+        tmp = of_property_read_regmap( of_node, "sctl-reg", &sctl );
 #endif
         if (!tmp) {
                 dev_err( &pdev->dev, "failed to find sctl register reference\n" );
@@ -192,7 +190,7 @@ static int rcm_mtd_arbiter_probe(rcm_mtd_arbiter_device *pdev) {
 #ifndef __UBOOT__
                 tmp = of_parse_phandle( of_node, "control", 0 );
 #else
-                tmp = of_property_read_regmap( of_node, "lsif-reg", control = &_control );
+                tmp = of_property_read_regmap( of_node, "lsif-reg", &control );
 #endif
                 if (!tmp) {
                         dev_err( &pdev->dev, "failed to find control register reference\n" );

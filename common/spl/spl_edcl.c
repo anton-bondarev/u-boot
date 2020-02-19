@@ -13,7 +13,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifdef CONFIG_1888TX018
+#ifdef CONFIG_TARGET_1888TX018
 
 
 static void (*bootrom_enter_host_mode)(void) = (void (*)(void)) BOOT_ROM_HOST_MODE;
@@ -22,7 +22,7 @@ static void (*bootrom_enter_host_mode)(void) = (void (*)(void)) BOOT_ROM_HOST_MO
 static int spl_edcl_load_image(struct spl_image_info *spl_image,
 			      struct spl_boot_device *bootdev)
 {
-#ifdef CONFIG_1888TX018
+#ifdef CONFIG_TARGET_1888TX018
 	debug("Enter HOST mode for EDCL loading\n");
 	bootrom_enter_host_mode();
 #else

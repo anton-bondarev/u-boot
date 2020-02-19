@@ -7,7 +7,7 @@
 #define SPR_DEC         22
 
 #define REG_READ_SPR(REG)		                    \
-inline static uint32_t REG##_read(void)					\
+inline static uint32_t REG##_read(void)				\
 {													\
     uint32_t rval=0;                                \
     asm volatile   (                                \
@@ -20,7 +20,7 @@ inline static uint32_t REG##_read(void)					\
 }													\
 
 #define REG_WRITE_SPR(REG)                      	\
-inline static void REG##_write(uint32_t const value)\
+inline static void REG##_write(uint32_t value)      \
 {													\
     asm volatile   (                                \
         "mtspr %1, %0 \n\t"                         \

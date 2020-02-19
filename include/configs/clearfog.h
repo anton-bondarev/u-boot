@@ -21,16 +21,6 @@
  * Commands configuration
  */
 
-/* I2C */
-#define CONFIG_SYS_I2C
-#define CONFIG_SYS_I2C_MVTWSI
-#define CONFIG_I2C_MVTWSI_BASE0		MVEBU_TWSI_BASE
-#define CONFIG_SYS_I2C_SLAVE		0x0
-#define CONFIG_SYS_I2C_SPEED		100000
-
-/* SPI NOR flash default params, used by sf commands */
-#define CONFIG_SF_DEFAULT_BUS		1
-
 /*
  * SDIO/MMC Card Configuration
  */
@@ -43,24 +33,27 @@
 
 /* Environment in MMC */
 #define CONFIG_SYS_MMC_ENV_DEV		0
-#define CONFIG_ENV_SECT_SIZE		0x200
-#define CONFIG_ENV_SIZE			0x10000
 /*
  * For SD - reserve 1 LBA for MBR + 1M for u-boot image. The MMC/eMMC
  * boot image starts @ LBA-0.
  * As result in MMC/eMMC case it will be a 1 sector gap between u-boot
  * image and environment
  */
-#define CONFIG_ENV_OFFSET		0xf0000
-#define CONFIG_ENV_ADDR			CONFIG_ENV_OFFSET
 
-#define CONFIG_PHY_MARVELL		/* there is a marvell phy */
 #define PHY_ANEG_TIMEOUT	8000	/* PHY needs a longer aneg time */
 
 /* PCIe support */
 #ifndef CONFIG_SPL_BUILD
-#define CONFIG_PCI_MVEBU
 #define CONFIG_PCI_SCAN_SHOW
+#endif
+
+/* SATA support */
+#ifdef CONFIG_SCSI
+#define CONFIG_SCSI_AHCI_PLAT
+#define CONFIG_SYS_SCSI_MAX_SCSI_ID	1
+#define CONFIG_SYS_SCSI_MAX_LUN		1
+#define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * \
+					CONFIG_SYS_SCSI_MAX_LUN)
 #endif
 
 /* Keep device tree and initrd in lower memory so the kernel can access them */
@@ -69,20 +62,9 @@
 	"initrd_high=0x10000000\0"
 
 /* SPL */
-/*
- * Select the boot device here
- *
- * Currently supported are:
- * SPL_BOOT_SPI_NOR_FLASH	- Booting via SPI NOR flash
- * SPL_BOOT_SDIO_MMC_CARD	- Booting via SDIO/MMC card (partition 1)
- */
-#define SPL_BOOT_SPI_NOR_FLASH		1
-#define SPL_BOOT_SDIO_MMC_CARD		2
-#define CONFIG_SPL_BOOT_DEVICE		SPL_BOOT_SDIO_MMC_CARD
 
 /* Defines for SPL */
 #define CONFIG_SPL_SIZE			(140 << 10)
-#define CONFIG_SPL_TEXT_BASE		0x40000030
 #define CONFIG_SPL_MAX_SIZE		(CONFIG_SPL_SIZE - 0x0030)
 
 #define CONFIG_SPL_BSS_START_ADDR	(0x40000000 + CONFIG_SPL_SIZE)
@@ -95,13 +77,10 @@
 #define CONFIG_SPL_STACK		(0x40000000 + ((192 - 16) << 10))
 #define CONFIG_SPL_BOOTROM_SAVE		(CONFIG_SPL_STACK + 4)
 
-#if CONFIG_SPL_BOOT_DEVICE == SPL_BOOT_SPI_NOR_FLASH
+#if defined(CONFIG_MVEBU_SPL_BOOT_DEVICE_SPI)
 /* SPL related SPI defines */
-#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
 #define CONFIG_SYS_U_BOOT_OFFS		CONFIG_SYS_SPI_U_BOOT_OFFS
-#endif
-
-#if CONFIG_SPL_BOOT_DEVICE == SPL_BOOT_SDIO_MMC_CARD
+#elif defined(CONFIG_MVEBU_SPL_BOOT_DEVICE_MMC) || defined(CONFIG_MVEBU_SPL_BOOT_DEVICE_SATA)
 /* SPL related MMC defines */
 #define CONFIG_SYS_MMC_U_BOOT_OFFS		(160 << 10)
 #define CONFIG_SYS_U_BOOT_OFFS			CONFIG_SYS_MMC_U_BOOT_OFFS

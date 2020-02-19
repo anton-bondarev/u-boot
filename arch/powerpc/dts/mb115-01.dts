@@ -8,6 +8,19 @@
 	#address-cells = <1>;
 	#size-cells = <1>;
 
+	lsif0clock: lsif0clock@100M {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+	};
+
+	lsif1clock: lsif1clock@100M {
+		u-boot,dm-pre-reloc;
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+	};
+
     config {
            u-boot,spl-payload-offset = <0x40000>; 
     };
@@ -40,14 +53,22 @@
 			<&lsif0_mgpio6_sram_nor>,
 			<&lsif0_mgpio7_sram_nor>,
 			<&lsif0_mgpio8_sram_nor>;
-		sctl-reg = <0x38000000 0x1000>;		/* <&sctl> */
-		lsif-reg = <0x3C03F000 0x1000>;		/* <&lsif0> */
 		sram-nor-mux = <1>;					/* 0 to route extmem wires to LSIF0, 1 - to MCIF, */
 		/* in case of LSIF0 following lines will be needed */
-		ext-mem-mux-mode = <0>;				/* page 913 0-SRAM_NOR; 1-NAND,GBIT_GRETH0,GBIT_GRETH1; 2-GRETH0,GRETH1,NAND*/
+		ext-mem-mux-mode = <2>;				/* page 913 0-SRAM_NOR(used for NOR)); 1-NAND,GBIT_GRETH0,GBIT_GRETH1; 2-GRETH0,GRETH1,NAND(used for NAND)*/
 		ce-manage = <2>;					/* MCIF(page 913 + confluence): cs0..3=>1 controller,cs4,5=>2 controller,cs-mode=0,chip-num=0x3F */
 		//ce-manage = <0>;					/* LSIF: all cs=>1 controller,cs-mode=1,chip-num=0x10 */
 		status = "okay";					/* dont forget also right set "okay" for sram_plb_nor1 or sram_nor0 */
+		#address-cells = <1>;
+		#size-cells = <1>;
+		sctl-reg {							/* <&sctl> */
+			u-boot,dm-pre-reloc;
+			reg = <0x38000000 0x1000>;
+		};
+		lsif-reg {							/* <&lsif0> */
+			u-boot,dm-pre-reloc;
+			reg = <0x3C03F000 0x1000>;
+		};
 	};
 
 	sram_plb_nor1: sram_plb_nor1@0x80190000 {
@@ -304,9 +325,8 @@
 			clock-frequency = <100000000>;
 			config-reg = <0x3C03F000 0x1000>;
 			pinctrl-names = "default";
-			// pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;
-			// status = "okay";
-			status = "disabled";
+			/*pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;*/
+			status = "okay";
 			timings = < 200		/* tADL_min (ONFI_2_0_Gold.pdf,page 47)*/
 						20		/* tALH_min */
 						50		/* tALS_min */
@@ -495,17 +515,18 @@
 		    compatible = "rcm,pl022-spi";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_spi0_default>;
-			
+			clocks = <&lsif1clock>;
 		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    reg = <0x3C061000 0x1000>;
+		    #size-cells = <1>;
+		    reg = <0 0x3C061000 0 0x1000>;
 		    cs-gpios = <&gpio1 2 0>, <0>, <0>, <0>;
-		    spi-max-frequency = <12500000>;			
+		    spi-max-frequency = <12500000>;
+		    spi-mode = <0x07>;
 		    u-boot,dm-pre-reloc;
 
 		    spi_flash@0 {
 			    compatible = "st,m25p32", "spi-flash";
-			    reg = <0>;
+			    /*reg = <0>;*/
 			    u-boot,dm-pre-reloc;
 								
 		    };
@@ -560,8 +581,7 @@
 		    reg = <0x3C062000 0x1000>;
 		    cs-gpios = <&gpio1 4 0>;
 		    spi-max-frequency = <400000>;
-			u-boot,dm-pre-reloc;
-			status = "disabled";
+			/*u-boot,dm-pre-reloc;*/
 	    };	
 	};
 };

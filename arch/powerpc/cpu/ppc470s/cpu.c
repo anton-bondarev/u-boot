@@ -85,5 +85,5 @@ int add_code_guard(void)
 
 ulong board_get_usable_ram_top(ulong total_size)
 {
-    return CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE;
+    return CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - CONFIG_SYS_MALLOC_F_LEN - sizeof( gd_t );
 }

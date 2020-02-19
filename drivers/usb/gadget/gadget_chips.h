@@ -14,6 +14,10 @@
  * Ported to U-Boot by: Thomas Smits <ts.smits@gmail.com> and
  *                      Remy Bohmer <linux@bohmer.net>
  */
+#ifdef CONFIG_TARGET_1888TX018
+#include <asm/io.h>
+#endif
+
 #ifdef CONFIG_USB_GADGET_NET2280
 #define	gadget_is_net2280(g)	(!strcmp("net2280", (g)->name))
 #else
@@ -149,13 +153,11 @@
 #define gadget_is_dwc3(g)        0
 #endif
 
-
-
-/*
- * CONFIG_USB_GADGET_SX2
- * CONFIG_USB_GADGET_AU1X00
- * ...
- */
+#ifdef CONFIG_USB_CDNS3_GADGET
+#define gadget_is_cdns3(g)        (!strcmp("cdns3-gadget", (g)->name))
+#else
+#define gadget_is_cdns3(g)        0
+#endif
 
 /**
  * usb_gadget_controller_number - support bcdDevice id convention
@@ -214,5 +216,9 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
 		return 0x21;
 	else if (gadget_is_fotg210(gadget))
 		return 0x22;
+	else if (gadget_is_dwc3(gadget))
+		return 0x23;
+	else if (gadget_is_cdns3(gadget))
+		return 0x24;
 	return -ENOENT;
 }
