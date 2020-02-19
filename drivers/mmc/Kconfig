@@ -259,6 +259,12 @@ config MMC_MESON_GX
 	help
 	 Support for EMMC host controller on Meson GX ARM SoCs platform (S905)
 
+config MMC_1888TX018
+	bool "1888TX018 MMC controller support (SDIO mode)"
+	depends on DM_MMC && BLK
+	help
+	  Support for MMC on RCM 1888TX018 platform
+
 config MMC_MXC
 	bool "Freescale i.MX21/27/31 or MPC512x Multimedia Card support"
 	help
