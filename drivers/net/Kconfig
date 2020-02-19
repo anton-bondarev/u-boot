@@ -247,6 +247,12 @@ config FMAN_ENET
 	help
 	  This driver support the Freescale FMan Ethernet controller
 
+config GRETH_ETH
+	bool "Gaisler Ethernet controller"
+	help
+	  This driver supports the 10/100/1000 Fast Ethernet controller for
+	  1888TX018 RCM processors.
+
 config FTMAC100
 	bool "Ftmac100 Ethernet Support"
 	help

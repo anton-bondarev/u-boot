@@ -563,7 +563,9 @@ static void tftp_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 		 *	the remote for the next one.
 		 */
 		tftp_send();
-
+#ifdef CONFIG_TARGET_1888TX018
+		tftp_send(); // double send for packet loss correction
+#endif // CONFIG_TARGET_1888TX018
 		if (len < tftp_block_size)
 			tftp_complete();
 		break;
