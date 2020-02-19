@@ -150,7 +150,6 @@ config SYS_I2C_MESON
 	  internal buffer holding up to 8 bytes for transfers and supports
 	  both 7-bit and 10-bit addresses.
 
-
 config SYS_I2C_MXC
 	bool "NXP MXC I2C driver"
 	help

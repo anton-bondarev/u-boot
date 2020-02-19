@@ -15,11 +15,6 @@
 #include <asm/unaligned.h>
 #include "gadget_chips.h"
 
-#ifdef CONFIG_1888TX018
-#include <asm/io.h>
-#endif
-
-
 #define isdigit(c)      ('0' <= (c) && (c) <= '9')
 
 /* we must assign addresses for configurable endpoints (like net2280) */
