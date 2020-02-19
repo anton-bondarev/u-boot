@@ -79,6 +79,8 @@ extern void _outsw_ns(volatile u16 *port, const void *buf, int ns);
 extern void _insl_ns(volatile u32 *port, void *buf, int nl);
 extern void _outsl_ns(volatile u32 *port, const void *buf, int nl);
 
+#define ___constant_swab16(x) ((__u16)(   (((__u16)(x) & (__u16)0x00ffU) << 8) |   (((__u16)(x) & (__u16)0xff00U) >> 8)))
+
 /*
  * The *_ns versions below don't do byte-swapping.
  * Neither do the standard versions now, these are just here

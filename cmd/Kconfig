@@ -370,6 +370,13 @@ config CMD_BOOTEFI_HELLO
 	  for testing that EFI is working at a basic level, and for bringing
 	  up EFI support on a new architecture.
 
+config CMD_BOOTEDCL
+	bool "Support boot via EDCL"
+	depends on TARGET_1888TX018
+	default y
+	help
+	  Boot with EDCL tool.
+
 source lib/efi_selftest/Kconfig
 
 config CMD_BOOTMENU
@@ -726,6 +733,10 @@ config SYS_ALT_MEMTEST
 	  Use a more complete alternative memory test.
 
 endif
+config CMD_MEMMAP
+	bool "memmap"
+	help
+	  Phys memory mapping.
 
 config CMD_MX_CYCLIC
 	bool "mdc, mwc"

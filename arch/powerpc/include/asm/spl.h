@@ -7,5 +7,8 @@
 #define	_ASM_SPL_H_
 
 #define BOOT_DEVICE_NOR		1
+#define BOOT_DEVICE_MMC1	2
+#define BOOT_DEVICE_MMC2    3
+#define BOOT_DEVICE_MMC2_2  4
 
 #endif

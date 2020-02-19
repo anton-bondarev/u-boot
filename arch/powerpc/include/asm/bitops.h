@@ -21,7 +21,53 @@
 #define SMP_MB
 #endif /* CONFIG_SMP */
 
+#ifndef CONFIG_TARGET_1888TX018
 #define __INLINE_BITOPS	1
+#else
+static __inline__ int test_and_set_bit(int nr, volatile void * addr)
+{
+	int	mask, retval;
+	volatile unsigned int *a = addr;
+	a += nr >> 5;
+	mask = 1 << (nr & 0x1f);
+	retval = (mask & *a) != 0;
+	*a |= mask;
+	return retval;
+}
+
+static __inline__ void set_bit(int nr, volatile void *addr)
+{
+	int	mask;
+	unsigned int *a = (unsigned int *) addr;
+
+	a += nr >> 5;
+	mask = 1 << (nr & 0x1f);
+	*a |= mask;
+}
+
+static __inline__ void clear_bit(int nr, volatile void *addr)
+{
+	int	mask;
+	unsigned int *a = (unsigned int *) addr;
+
+	a += nr >> 5;
+	mask = 1 << (nr & 0x1f);
+	*a &= ~mask;
+}
+
+static __inline__ int test_and_clear_bit(int nr, volatile void *addr)
+{
+	int	mask;
+	int retval;
+	unsigned int *a = (unsigned int *) addr;
+
+	a += nr >> 5;
+	mask = 1 << (nr & 0x1f);
+	retval = *a &= mask;
+	*a &= ~mask;	
+	return retval;
+}
+#endif
 
 #if __INLINE_BITOPS
 /*

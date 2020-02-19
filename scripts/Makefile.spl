@@ -246,6 +246,8 @@ ALL-$(CONFIG_ARCH_ZYNQMP)	+= $(obj)/boot.bin
 
 ALL-$(CONFIG_ARCH_MEDIATEK)	+= $(obj)/u-boot-spl-mtk.bin
 
+ALL-$(CONFIG_TARGET_1888TX018)		+= $(obj)/$(SPL_BIN)-dtb.rbi
+
 all:	$(ALL-y)
 
 quiet_cmd_cat = CAT     $@
@@ -289,6 +291,14 @@ else
 $(obj)/$(SPL_BIN).bin: $(obj)/$(SPL_BIN)-nodtb.bin FORCE
 	$(call if_changed,copy)
 endif
+
+# cmd to create romboot image
+quiet_cmd_packimage = PACK    $@
+cmd_packimage = cp $< $@; rumboot-packimage -c -f $@
+
+# create rumboot image
+$(obj)/$(SPL_BIN)-dtb.rbi: $(obj)/$(SPL_BIN)-dtb.bin $(obj)/$(SPL_BIN)
+	$(call if_changed,packimage)
 
 # Create a file that pads from the end of u-boot-spl-nodtb.bin to bss_end
 $(obj)/$(SPL_BIN)-pad.bin: $(obj)/$(SPL_BIN)

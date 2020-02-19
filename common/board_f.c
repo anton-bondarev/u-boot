@@ -274,7 +274,7 @@ static int setup_mon_len(void)
 	gd->mon_len = (ulong)&__bss_end - (ulong)_start;
 #elif defined(CONFIG_SANDBOX) || defined(CONFIG_EFI_APP)
 	gd->mon_len = (ulong)&_end - (ulong)_init;
-#elif defined(CONFIG_NIOS2) || defined(CONFIG_XTENSA)
+#elif defined(CONFIG_NIOS2) || defined(CONFIG_XTENSA) || defined(CONFIG_TARGET_1888TX018)
 	gd->mon_len = CONFIG_SYS_MONITOR_LEN;
 #elif defined(CONFIG_NDS32) || defined(CONFIG_SH) || defined(CONFIG_RISCV)
 	gd->mon_len = (ulong)(&__bss_end) - (ulong)(&_start);
@@ -1021,7 +1021,7 @@ void board_init_f(ulong boot_flags)
 
 #if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX) && \
 		!defined(CONFIG_EFI_APP) && !CONFIG_IS_ENABLED(X86_64) && \
-		!defined(CONFIG_ARC)
+		!defined(CONFIG_ARC) && !defined(CONFIG_PPC470S)
 	/* NOTREACHED - jump_to_copy() does not return */
 	hang();
 #endif

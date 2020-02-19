@@ -4,3 +4,5 @@
  */
 
 /* This is empty for now as we don't support the generic GPIO interface */
+
+#include <asm-generic/gpio.h>

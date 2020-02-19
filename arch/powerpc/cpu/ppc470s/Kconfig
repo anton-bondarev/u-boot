@@ -1,0 +1,20 @@
+menu "ppc470s CPU"
+	depends on PPC470S
+
+config SYS_CPU
+	default "ppc470s"
+
+choice
+	prompt "Target select"
+	optional
+
+config TARGET_1888TX018
+	bool "Support 1888TX018"
+	select SUPPORT_SPL
+	select CREATE_ARCH_SYMLINK
+
+endchoice
+
+source "board/rcm/mb115-01/Kconfig"
+
+endmenu

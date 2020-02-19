@@ -37,6 +37,9 @@ config MPC8xx
 	imply CMD_REGINFO
 	imply WDT_MPC8xx
 
+config PPC470S
+	bool "PPC470S"
+
 endchoice
 
 config HIGH_BATS
@@ -49,5 +52,6 @@ source "arch/powerpc/cpu/mpc83xx/Kconfig"
 source "arch/powerpc/cpu/mpc85xx/Kconfig"
 source "arch/powerpc/cpu/mpc86xx/Kconfig"
 source "arch/powerpc/cpu/mpc8xx/Kconfig"
+source "arch/powerpc/cpu/ppc470s/Kconfig"
 
 endmenu
