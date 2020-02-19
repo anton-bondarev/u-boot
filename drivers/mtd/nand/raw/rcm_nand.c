@@ -200,7 +200,7 @@
 #define NAND_DBG_READ_CHECK                             // two read operation,compare buffers
 //#define NAND_DBG_WRITE_CHECK                          // write with check
 #define READ_RETRY_CNT                  5               // maximum iteration count for read
-#define NAND_DBG_PRINT                                  // debug information
+#undef NAND_DBG_PRINT                                  // debug information
 
 #ifndef __UBOOT__
         #define DBG_PRINT_PROC printk
@@ -874,7 +874,9 @@ static int rcm_nand_reset( struct rcm_nand_chip* chip ) {
 static int rcm_nand_read_id( struct rcm_nand_chip* chip, int cs ) { 
         struct nand_flash_dev* type = 0; 
         int i; 
+#ifdef NAND_DBG_PRINT
         char* vendor = "Unknown";
+#endif
 #ifndef __UBOOT__
         const struct nand_manufacturer* nand_manufacturer = { 0 };
  #endif
@@ -890,6 +892,8 @@ static int rcm_nand_read_id( struct rcm_nand_chip* chip, int cs ) {
                 return -ENODEV;
         } 
 
+#ifdef NAND_DBG_PRINT
+
 #ifndef __UBOOT__
         if( ( nand_manufacturer = nand_get_manufacturer(((uint8_t*)chip->dma_area)[0]) ) != NULL ) {
                 vendor =  nand_manufacturer->name;
@@ -903,6 +907,7 @@ static int rcm_nand_read_id( struct rcm_nand_chip* chip, int cs ) {
         }
 #endif
         NAND_DBG_PRINT_INF( "rcm_nand_read_id: vendor %s\n", vendor );
+#endif
  
         for (i = 0; nand_flash_ids[i].name != NULL; i++) {     // Lookup the flash id
                 if (((uint8_t*)chip->dma_area)[1] == nand_flash_ids[i].dev_id && 
@@ -1542,7 +1547,11 @@ MODULE_DESCRIPTION("RCM SoC NAND controller driver");
 
 #else // CONFIG_SPL_BUILD
 
+#ifdef NAND_DBG_PRINT
 #define SPL_DBG_PRINT(...) printf( __VA_ARGS__ );
+#else
+#define SPL_DBG_PRINT(...)
+#endif
 
 #define WRLSIF0(D,R) iowrite32(D,(void*)(LSIF0_CTRL_BASE+R))
 #define WRNAND(D,R) iowrite32(D,(void*)(NAND_CTRL_BASE+R))

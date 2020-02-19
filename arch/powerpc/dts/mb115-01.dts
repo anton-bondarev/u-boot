@@ -33,7 +33,7 @@
 
 	aliases {
 		spi0 = &spi0;
-		//mmc0 = &mmc0;
+		mmc0 = &mmc0;
 		uart0 = &uart0;
 		spd0 = &spd0;
 		spd1 = &spd1;
@@ -326,7 +326,7 @@
 			config-reg = <0x3C03F000 0x1000>;
 			pinctrl-names = "default";
 			/*pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;*/
-			status = "okay";
+			status = "disabled";
 			timings = < 200		/* tADL_min (ONFI_2_0_Gold.pdf,page 47)*/
 						20		/* tALH_min */
 						50		/* tALS_min */
@@ -556,7 +556,7 @@
 			compatible = "rcm,mmc-0.2";
 			reg = <0x3C064000 0x1000>;
 			carddetect-gpio = <&gpio1 1 0>;
-			/*u-boot,dm-pre-reloc;*/
+			u-boot,dm-pre-reloc;
 			status = "okay";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_sdio_default>;

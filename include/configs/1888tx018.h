@@ -99,6 +99,8 @@
 #define CONFIG_SYS_SPI_U_BOOT_OFFS      0x40000
 #define CONFIG_SYS_SPI_CLK 100000000
 
+#define CONFIG_SYS_FLASH_QUIET_TEST 1
+
 #define CONFIG_BOOTCOMMAND "run kernelsd"
 #define CONFIG_USE_BOOTARGS
 #define CONFIG_BOOTARGS "console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
