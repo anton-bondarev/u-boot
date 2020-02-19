@@ -381,11 +381,11 @@ struct ddr4_spd_eeprom_s {
 			/* 135 Register Revision Number */
 			uint8_t reg_rev;
 			/* 136 Address mapping from register to DRAM */
-			u8 reg_map;
-			u8 ca_stren;
-			u8 clk_stren;
+			uint8_t reg_map;
+			uint8_t ca_stren;
+			uint8_t clk_stren;
 			/* 139~253 Reserved */
-			u8 res_137[254 - 139];
+			uint8_t res_137[254 - 139];
 			/* 254~255 CRC */
 			uint8_t crc[2];
 		} registered;
