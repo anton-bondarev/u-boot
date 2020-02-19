@@ -368,6 +368,13 @@ config ZYNQMP_GQSPI
 	  This option is used to enable ZynqMP QSPI controller driver which
 	  is used to communicate with qspi flash devices.
 
+config PL022_SPI
+	bool "PL022 SPI driver"
+	help
+	  Enable the PL022 SPI driver. This driver can be used to
+	  access the SPI flash and SPI Data flash on rc-module's PL022
+		platform.
+
 endif # if DM_SPI
 
 config SOFT_SPI

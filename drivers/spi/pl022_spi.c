@@ -6,6 +6,12 @@
  * (C) Copyright 2018
  * Quentin Schulz, Bootlin, quentin.schulz@bootlin.com
  *
+ * (C) Copyright 2019
+ * Alexey Spirkov, Astrosoft, alexeis@astrosoft.ru
+ *
+ * (C) Copyright 2020
+ * Vladimir Shalyt, Astrosoft, Vladimir.Shalyt@astrosoft.ru
+ *
  * Driver for ARM PL022 SPI Controller.
  */
 
@@ -65,9 +71,40 @@
 #define SSP_SR_MASK_RFF		(0x1 << 3) /* Receive FIFO full */
 #define SSP_SR_MASK_BSY		(0x1 << 4) /* Busy Flag */
 
+#ifdef CONFIG_TARGET_1888TX018
+#include <asm-generic/gpio.h>
+
+#define SSP_CR0_8BIT_MODE	(0x07)
+#define MAX_CS_COUNT		4
+#define SSP_SPI_IRQ_MASK	0x0d8
+/* SSP Interrupt mask register */
+#define SSP_IMSC_TXIM_n		3
+#define SSP_IMSC_RXIM_n		2
+#define SSP_IMSC_RTIM_n		1
+#define SSP_IMSC_RORIM_n	0
+
+/* SSP interrupt reset register */
+#define SSP_ICR_RTIC_n		1
+#define SSP_ICR_RORIC_n		0
+
+/* SSP DMA control register */
+#define SSP_DMACR_TXDMAE_n	1
+#define SSP_DMACR_RXDMAE_n	0
+
+/* SSP CR1 control register */
+#define SSP_CR1_SOD_n		3
+#define SSP_CR1_MS_n		2
+#define SSP_CR1_SSE_n		1
+#define SSP_CR1_LBM_n		0
+#endif // CONFIG_TARGET_1888TX018
 struct pl022_spi_slave {
 	void *base;
 	unsigned int freq;
+#ifdef CONFIG_TARGET_1888TX018
+	unsigned int mode;
+	unsigned int speed;
+	struct gpio_desc cs_gpios[MAX_CS_COUNT];
+#endif // CONFIG_TARGET_1888TX018
 };
 
 /*
@@ -87,6 +124,104 @@ static int pl022_is_supported(struct pl022_spi_slave *ps)
 	return 0;
 }
 
+#ifdef CONFIG_TARGET_1888TX018
+static void pl022_setup_speed_and_mode(struct udevice *bus)
+{
+	struct pl022_spi_slave *ps = dev_get_priv(bus);
+	const void *fdt = gd->fdt_blob;
+	int node = dev_of_offset(bus);
+	ps->speed = fdtdec_get_int(fdt, node, "spi-max-frequency", 0);
+	ps->mode = fdtdec_get_int(fdt, node, "spi-mode", 0);
+	debug("Spi setup: speed %u,mode %08x\n", ps->speed, ps->mode);
+}
+
+static int pl022_setup_gpio(struct udevice *bus)
+{
+	int i;
+	struct pl022_spi_slave *ps = dev_get_priv(bus);
+	int ret = gpio_request_list_by_name(bus, "cs-gpios", ps->cs_gpios,
+										ARRAY_SIZE(ps->cs_gpios), 0);
+	if (ret < 0) {
+			pr_err("Can't get %s gpios! Error: %d\n", bus->name, ret);
+			return ret;
+	}
+
+	for(i = 0; i < ARRAY_SIZE(ps->cs_gpios); i++) {
+			if (!dm_gpio_is_valid(&ps->cs_gpios[i]))
+					continue;
+
+			dm_gpio_set_dir_flags(&ps->cs_gpios[i],
+									GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
+
+			// and disable
+			dm_gpio_set_value(&ps->cs_gpios[i], 1);
+	}
+	debug("Priv regs: %08x\n", (int) ps->base);
+	debug("SPI ver: %02x %02x %02x %02x\n", readb(ps->base + SSP_PID0), readb(ps->base + SSP_PID1), readb(ps->base + SSP_PID2), readb(ps->base + SSP_PID3));
+
+	return 0;
+}
+
+static void pl022_setup_dma(void* base)
+{
+	debug("SPI ver is correct, setup of DMA\n");
+
+	// disable interrupts
+	u16 imsc = (0b0 << SSP_IMSC_TXIM_n)
+            | (0b0 << SSP_IMSC_RXIM_n)
+            | (0b0 << SSP_IMSC_RTIM_n)
+            | (0b0 << SSP_IMSC_RORIM_n);
+
+	writew(imsc, base + SSP_IMSC);
+
+	// reset interrupts state
+	u16 icr = (0b1 << SSP_ICR_RTIC_n)
+            | (0b1 << SSP_ICR_RORIC_n);
+
+	writew(icr, base + SSP_ICR);
+
+	// disable DMA
+	u16 dmacr = (0b0 << SSP_DMACR_TXDMAE_n)
+            | (0b0 << SSP_DMACR_RXDMAE_n);
+
+	writew(dmacr, base + SSP_DMACR);
+
+	// enable SSP
+	u16 cr1 = (0b1 << SSP_CR1_SOD_n)
+            | (0b0 << SSP_CR1_MS_n)
+            | (0b1 << SSP_CR1_SSE_n)
+            | (0b0 << SSP_CR1_LBM_n);
+
+	writew(cr1, base + SSP_CR1);
+
+	// disable GSPI DMA
+	//writel(0, ps->base + SSP_SPI_IRQ_MASK);
+}
+
+static void spi_cs_activate(struct udevice *dev, uint cs)
+{
+	struct udevice *bus = dev_get_parent(dev);
+	struct pl022_spi_slave *priv = dev_get_priv(bus);
+
+	if (!dm_gpio_is_valid(&priv->cs_gpios[cs]))
+			return;
+
+	dm_gpio_set_value(&priv->cs_gpios[cs], 0);
+
+}
+
+static void spi_cs_deactivate(struct udevice *dev, uint cs)
+{
+	struct udevice *bus = dev_get_parent(dev);
+	struct pl022_spi_slave *priv = dev_get_priv(bus);
+
+	if (!dm_gpio_is_valid(&priv->cs_gpios[cs]))
+			return;
+
+	dm_gpio_set_value(&priv->cs_gpios[cs], 1);
+}
+
+#endif // CONFIG_TARGET_1888TX018
 static int pl022_spi_probe(struct udevice *bus)
 {
 	struct pl022_spi_pdata *plat = dev_get_platdata(bus);
@@ -95,6 +230,12 @@ static int pl022_spi_probe(struct udevice *bus)
 	ps->base = ioremap(plat->addr, plat->size);
 	ps->freq = plat->freq;
 
+#ifdef CONFIG_TARGET_1888TX018
+	int ret = pl022_setup_gpio(bus);
+	if (ret)
+		return ret;
+	pl022_setup_speed_and_mode(bus);
+#endif // CONFIG_TARGET_1888TX018
 	/* Check the PL022 version */
 	if (!pl022_is_supported(ps))
 		return -ENOTSUPP;
@@ -103,6 +244,9 @@ static int pl022_spi_probe(struct udevice *bus)
 	writew(SSP_CR0_BIT_MODE(8), ps->base + SSP_CR0);
 	writew(DFLT_PRESCALE, ps->base + SSP_CPSR);
 
+#ifdef CONFIG_TARGET_1888TX018
+	pl022_setup_dma(ps->base);
+#endif // CONFIG_TARGET_1888TX018
 	return 0;
 }
 
@@ -155,6 +299,10 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	u32		ret = 0;
 	const u8	*txp = dout;
 	u8		*rxp = din, value;
+#ifdef CONFIG_TARGET_1888TX018
+	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);
+	debug("pl022_spi_xfer %d, %d, 0x%x, 0x%x, 0x%x\n", bitlen, (int)flags, (int)dout, (int)ps->base, (int)slave_plat);
+#endif // CONFIG_TARGET_1888TX018
 
 	if (bitlen == 0)
 		/* Finish any previously submitted transfers */
@@ -176,6 +324,11 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 	len = bitlen / 8;
 
+#ifdef CONFIG_TARGET_1888TX018
+	if (flags & SPI_XFER_BEGIN)
+		spi_cs_activate(dev, 0);//slave_plat->cs);
+	debug("alive. len_tx = %d, len = %d\n", len_tx, len);
+#endif // CONFIG_TARGET_1888TX018
 	while (len_tx < len) {
 		if (readw(ps->base + SSP_SR) & SSP_SR_MASK_TNF) {
 			value = txp ? *txp++ : 0;
@@ -200,6 +353,10 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		}
 	}
 
+#ifdef CONFIG_TARGET_1888TX018
+	if (flags & SPI_XFER_END)
+		spi_cs_deactivate(dev, 0);//slave_plat->cs);
+#endif // CONFIG_TARGET_1888TX018
 	return ret;
 }
 
@@ -220,6 +377,9 @@ static int pl022_spi_set_speed(struct udevice *bus, uint speed)
 	max = spi_rate(rate, SSP_CPSR_MIN, SSP_SCR_MIN);
 	min = spi_rate(rate, SSP_CPSR_MAX, SSP_SCR_MAX);
 
+#ifdef CONFIG_TARGET_1888TX018
+	speed = ps->speed;
+#endif // CONFIG_TARGET_1888TX018;
 	if (speed > max || speed < min) {
 		pr_err("Tried to set speed to %dHz but min=%d and max=%d\n",
 		       speed, min, max);
@@ -259,6 +419,9 @@ static int pl022_spi_set_mode(struct udevice *bus, uint mode)
 	struct pl022_spi_slave *ps = dev_get_priv(bus);
 	u16 reg;
 
+#ifdef CONFIG_TARGET_1888TX018
+	mode = ps->mode;
+#endif // CONFIG_TARGET_1888TX018;
 	reg = readw(ps->base + SSP_CR0);
 	reg &= ~(SSP_CR0_SPH | SSP_CR0_SPO);
 	if (mode & SPI_CPHA)
@@ -307,6 +470,9 @@ static int pl022_spi_ofdata_to_platdata(struct udevice *bus)
 
 static const struct udevice_id pl022_spi_ids[] = {
 	{ .compatible = "arm,pl022-spi" },
+#ifdef CONFIG_TARGET_1888TX018
+	{ .compatible = "rcm,pl022-spi" },
+#endif // CONFIG_TARGET_1888TX018
 	{ }
 };
 #endif
