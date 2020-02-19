@@ -14,6 +14,10 @@
  * Ported to U-Boot by: Thomas Smits <ts.smits@gmail.com> and
  *                      Remy Bohmer <linux@bohmer.net>
  */
+#ifdef CONFIG_TARGET_1888TX018
+#include <asm/io.h>
+#endif
+
 #ifdef CONFIG_USB_GADGET_NET2280
 #define	gadget_is_net2280(g)	(!strcmp("net2280", (g)->name))
 #else
