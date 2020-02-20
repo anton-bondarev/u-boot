@@ -232,6 +232,11 @@ int power_init_board(void)
 	return 0;
 }
 
+phys_size_t get_effective_memsize(void)	// clon of weak procedure from file common/memsize.c
+{
+	return gd->ram_size;
+}
+
 int dram_init_banksize(void)		// clon of weak procedure from file common/board_f.c
 {									// now is same,but may be rewrite
 #if defined(CONFIG_NR_DRAM_BANKS) && defined(CONFIG_SYS_SDRAM_BASE)
