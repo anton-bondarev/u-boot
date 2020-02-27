@@ -568,6 +568,7 @@
                 reg = <0x3C06C000 0x1000>,
 					  <0x3C06D000 0x1000>,
 					  <0x38000008 0x4>;
+				status = "okay";
                 reg-names = "phy", "mc", "control";
         };
 

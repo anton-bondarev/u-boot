@@ -21,6 +21,53 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+void _insb(volatile u8 * port, void *buf, int ns)
+{
+	u8 *data = (u8 *) buf;
+	while (ns--)
+		*data++ = *port;
+}
+
+void _outsb(volatile u8 * port, const void *buf, int ns)
+{
+	u8 *data = (u8 *) buf;
+	while (ns--)
+		*port = *data++;
+}
+
+void _insw_ns(volatile u16 * port, void *buf, int ns)
+{
+	u16 *data = (u16 *) buf;
+	while (ns--)
+		*data++ = *port;
+}
+
+void _outsw_ns(volatile u16 * port, const void *buf, int ns)
+{
+	u16 *data = (u16 *) buf;
+	while (ns--) {
+		*port = *data++;
+	}
+}
+
+void _insl_ns(volatile u32 * port, void *buf, int nl)
+{
+	u32 *data = (u32 *) buf;
+	while (nl--)
+		*data++ = *port;
+}
+
+void _outsl_ns(volatile u32 * port, const void *buf, int nl)
+{
+	u32 *data = (u32 *) buf;
+	while (nl--) {
+		*port = *data;
+		data++;
+	}
+}
+
+#define readsb(addr,buf,len) insb(addr,buf,len);
+#define writesb(addr,buf,len) outsb((unsigned long)addr, buf, len);
 
 /* RCM controller data */
 struct rcm_musb_data {
@@ -310,14 +357,12 @@ void musb_read_fifo(struct musb_hw_ep *hw_ep, u16 len, u8 *dst)
 
 }
 
-
 const struct musb_platform_ops rcm_musb_ops = {
 	.init		= rcm_musb_init,
 //	.set_mode	= rcm_musb_set_mode,
 //	.disable	= rcm_musb_disable,
 //	.enable		= rcm_musb_enable,
 };
-
 
 static struct musb_hdrc_config rcm_musb_config = {
 	.multipoint     = 1,
@@ -411,7 +456,7 @@ static int musb_usb_remove(struct udevice *dev)
 }
 
 static const struct udevice_id rcm_musb_ids[] = {
-	{ .compatible = "rc-rcm,musb" },
+	{ .compatible = "rcm,musb" },
 	{ }
 };
 
