@@ -338,10 +338,15 @@ config ZYNQ_GPIO
 	help
 	  Supports GPIO access on Zynq SoC.
 
+config PL060_GPIO
+	bool "PL060 GPIO driver"
+	depends on DM_GPIO
+	help
+	  Supports RC-Module PL060 GPIO with mods access.
+
 config PL061_GPIO
 	bool "PL061 GPIO driver"
 	depends on DM_GPIO
-	default y
 	help
 	  Supports PL061 GPIO access.
 
