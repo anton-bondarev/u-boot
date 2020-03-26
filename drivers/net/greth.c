@@ -12,7 +12,6 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-
 #include <common.h>
 #include <dm.h>
 #include <malloc.h>
@@ -42,7 +41,7 @@
 static inline u32 GRETH_REGLOAD(volatile void* addr)	{
 #ifdef CONFIG_PPC	
 	asm volatile("dcbi 0,%0" : : "r" (addr) : "memory");
-#else
+#elif !defined(CONFIG_ARM)
 	#error "Invalidate cache instruction should be defined here"
 #endif
 	return readl(addr);
@@ -189,13 +188,13 @@ int greth_init(struct udevice *dev)
 
 	/* initate rx decriptors */
 	for (i = 0; i < GRETH_RXBD_CNT; i++) {
-		greth->rxbd_base[i].addr = (unsigned int)
-		    greth->rxbuf_base + (GRETH_RXBUF_EFF_SIZE * i);
+		greth->rxbd_base[i].addr = 
+			cpu_to_be32((unsigned int)(greth->rxbuf_base + (GRETH_RXBUF_EFF_SIZE * i)));
 		/* enable desciptor & set wrap bit if last descriptor */
 		if (i >= (GRETH_RXBD_CNT - 1)) {
-			greth->rxbd_base[i].stat = GRETH_BD_EN | GRETH_BD_WR;
+			greth->rxbd_base[i].stat = cpu_to_be32(GRETH_BD_EN | GRETH_BD_WR);
 		} else {
-			greth->rxbd_base[i].stat = GRETH_BD_EN;
+			greth->rxbd_base[i].stat = cpu_to_be32(GRETH_BD_EN);
 		}
 	}
 
@@ -213,7 +212,7 @@ int greth_init(struct udevice *dev)
 		greth->txbd_base[i].addr = 0;
 		/* enable desciptor & set wrap bit if last descriptor */
 		if (i >= (GRETH_TXBD_CNT - 1)) {
-			greth->txbd_base[i].stat = GRETH_BD_WR;
+			greth->txbd_base[i].stat = cpu_to_be32(GRETH_BD_WR);
 		} else {
 			greth->txbd_base[i].stat = 0;
 		}
@@ -313,6 +312,7 @@ static int greth_init_phy(greth_priv * dev)
 				dev->sp = !((tmp >> 6) & 1)
 				    && ((tmp >> 13) & 1);
 				dev->fd = (tmp >> 8) & 1;
+    				tmp = read_mii(phyaddr, 1, regs);
 				goto auto_neg_done;
 			}
 		}
@@ -402,14 +402,14 @@ void greth_halt(struct udevice *dev)
 	if (greth->rxbd_base) {
 		for (i = 0; i < GRETH_RXBD_CNT; i++) {
 			greth->rxbd_base[i].stat =
-			    (i >= (GRETH_RXBD_CNT - 1)) ? GRETH_BD_WR : 0;
+			    (i >= (GRETH_RXBD_CNT - 1)) ? cpu_to_be32(GRETH_BD_WR) : 0;
 		}
 	}
 
 	if (greth->txbd_base) {
 		for (i = 0; i < GRETH_TXBD_CNT; i++) {
 			greth->txbd_base[i].stat =
-			    (i >= (GRETH_TXBD_CNT - 1)) ? GRETH_BD_WR : 0;
+			    (i >= (GRETH_TXBD_CNT - 1)) ? cpu_to_be32(GRETH_BD_WR) : 0;
 		}
 	}
 }
@@ -423,7 +423,7 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	unsigned int status;
 	unsigned int start, timeout;
 
-	debug("greth_send\n");
+	debug("greth_send eth_data = 0x%p, len = %d\n", eth_data, data_length);
 
 	/* send data, wait for data to be sent, then return */
 	if (((unsigned int)eth_data & (GRETH_BUF_ALIGN - 1))
@@ -448,8 +448,10 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	txbd = greth->txbd_base;
 
 	/* setup descriptor to wrap around to it self */
-	txbd->addr = (unsigned int)txbuf;
-	txbd->stat = GRETH_BD_EN | GRETH_BD_WR | data_length;
+	txbd->addr = cpu_to_be32((unsigned int)txbuf);
+	txbd->stat = cpu_to_be32(GRETH_BD_EN | GRETH_BD_WR | data_length);
+
+	GRETH_REGSAVE(&regs->status, 0x7F);
 
 	/* Remind Core which descriptor to use when sending */
 
@@ -506,9 +508,12 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 	int len;
 
 	rxbd = greth->rxbd_curr;
-	status = rxbd->stat;
+	status = be32_to_cpu(rxbd->stat);
 	if (status & GRETH_BD_EN)
+	{
+		debug("greth_recv: no more packets\n");	
 		return -1; // no more packets
+	}
 
 	// increment current descriptor
 	if (rxbd == greth->rxbd_max)
@@ -516,7 +521,7 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 	else
 		greth->rxbd_curr = rxbd + 1;
 
-	*packetp = (uchar*)rxbd->addr;
+	*packetp = (uchar*)be32_to_cpu(rxbd->addr);
 	len = status & GRETH_BD_LEN;
 
 	debug("greth_recv: packet 0x%x, 0x%x, len: %i\n",
@@ -545,7 +550,7 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 			greth->stats.rx_packets);
 		len = 0; // skip the packet (but free_pkt will be called)
 	} else {
-		d = (uchar*)rxbd->addr;
+		d = (uchar*)be32_to_cpu(rxbd->addr);
 		debug("greth_recv: new packet, length: %d. data: %x %x %x %x %x %x %x %x\n",
 			len, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
 		greth->stats.rx_packets++;
@@ -562,11 +567,11 @@ int greth_free_pkt(struct udevice *dev, uchar *packet, int length)
 
 	// find the descriptor
 	rxbd = greth->rxbd_base;
-	while (rxbd->addr != (unsigned)packet)
+	while (be32_to_cpu(rxbd->addr) != (unsigned)packet)
 		++rxbd;
 
 	// reenable descriptor to receive more packet with this descriptor, wrap around if needed
-	rxbd->stat = GRETH_BD_EN | (rxbd == greth->rxbd_max ? GRETH_BD_WR : 0);
+	rxbd->stat = cpu_to_be32(GRETH_BD_EN | (rxbd == greth->rxbd_max ? GRETH_BD_WR : 0));
 
 	// notify the adpater about the new descriptor
 	GRETH_REGORIN(&regs->control, GRETH_RXEN);
@@ -580,9 +585,15 @@ int greth_set_hwaddr(struct udevice *dev)
 	struct eth_pdata *pdata = dev_get_platdata(dev);
 	uchar *mac = pdata->enetaddr;
 
+#ifndef __BIG_ENDIAN
+	greth->regs->esa_msb = (mac[0] << 8) | mac[1];
+	greth->regs->esa_lsb =
+	    (mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5];
+#else
 	greth->regs->esa_msb = (mac[1] << 24) | (mac[0] << 16);
 	greth->regs->esa_lsb =
 	    (mac[5] << 24) | (mac[4] << 16) | (mac[3] << 8) | mac[2];
+#endif
 
 	debug("GRETH: New MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n",
 	       mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
