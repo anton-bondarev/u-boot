@@ -1,0 +1,18 @@
+if ARCH_RCM_ARM
+
+choice
+	prompt "RC-Module board select"
+
+config TARGET_1879VM8YA
+	bool "Support 1879VM8YA based boards"
+	select SPL_DM_SERIAL
+	select DM_SERIAL
+	select SPL_DM_SPI
+	select DM_SPI
+	select SPI
+
+endchoice
+
+endif
+
+source "board/rcm/mc127-05/Kconfig"

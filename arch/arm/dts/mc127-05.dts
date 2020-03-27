@@ -1,0 +1,95 @@
+
+/dts-v1/;
+/ {
+    model = "RC-Module 1879VM8YA SoC";
+	compatible = "rcm,1879VM8YA";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+
+    config {
+           u-boot,spl-payload-offset = <0x000000>; 
+    };
+
+	chosen {
+		stdout-path = "uart0";
+	};
+
+	aliases {
+		uart0 = &spiuart;
+		mmc0 = &mmc;
+		spi0 = &spi0;
+	}; 
+
+	axiclock: axiclock@100M {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <200000000>;
+		u-boot,dm-pre-reloc;
+	};
+
+	axi {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		u-boot,dm-pre-reloc;
+
+	    spi0: spi0@0x000CF000 {
+		    compatible = "rcm,pl022-spi";			
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+			clocks = <&axiclock>;
+		    reg = <0x000CF000 0x1000>;
+		    spi-max-frequency = <25000000>;		
+			cs-gpios = <&gpio0 1 0>, <&gpio0 0 0>, <&gpio0 2 0>, <&gpio0 3 0>;	
+		    u-boot,dm-pre-reloc;
+
+		    spi_flash@0 {
+			    compatible = "winbond,w25q128", "spi-flash";
+			    reg = <0>;
+				spi-max-frequency = <1000000>;
+				spi-cpol;
+				spi-cpha;
+			    u-boot,dm-pre-reloc;
+								
+		    };
+
+			mmc: mmc@1 {
+				compatible = "mmc-spi-slot";
+			    reg = <1>;
+				spi-max-frequency = <25000000>;
+			    u-boot,dm-pre-reloc;
+				//status="disabled";
+			};
+
+            spiuart: spiuart@2
+            {
+    		    compatible = "rcm,serial_pseudo_spi";			
+    		    reg = <2>;
+				spi-max-frequency = <35000>;
+				spi-cpol;
+				spi-cpha;
+    		    u-boot,dm-pre-reloc;
+            };
+        };
+
+        greth0: greth0@0x000D0000{
+            compatible = "rcm,greth";
+            reg = <0x000D0000 0x1000>;
+            mac-address = [ec 17 66 64 08 10];
+            phy-mode = "rmii";
+            status = "okay";
+        };
+
+		gpio0: gpio0@0x000CC000 {
+		    compatible = "rcm,pl060";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    reg = <0x000CC000 0x1000>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			u-boot,dm-pre-reloc;
+		};
+
+    };
+};

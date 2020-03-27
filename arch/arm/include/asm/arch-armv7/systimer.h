@@ -24,6 +24,7 @@ struct systimer {
 	u32 timer0ris;
 	u32 timer0mis;
 	u32 timer0bgload;
+	u32 reserve;
 	u32 timer1load;		/* 0x20 */
 	u32 timer1value;
 	u32 timer1control;

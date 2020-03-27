@@ -1,0 +1,36 @@
+if TARGET_1879VM8YA
+
+config SYS_BOARD
+	default "mc127-05"
+
+config SYS_VENDOR
+	default "rcm"
+
+config SYS_CONFIG_NAME
+	default "1879vm8ya"
+
+config SYS_TEXT_BASE
+	default 0x0E100040
+
+
+config ENV_OFFSET
+	hex "Environment offset"
+	help
+		Offset from base address where is environment of u-boot"
+	depends on ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC
+	default 0x140000 if ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC
+
+config ENV_SIZE
+	hex "Environment size"
+	help
+		"Size of enviroment of u-boot"
+	default 0x4000
+
+config ENV_SECT_SIZE
+	hex "Environment sector size"
+	help
+		"Size of sector of memory devices,where are storing data"
+	depends on ENV_IS_IN_SPI_FLASH
+	default 0x10000 if ENV_IS_IN_SPI_FLASH
+
+endif
