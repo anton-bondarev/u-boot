@@ -1,0 +1,31 @@
+/*
+*
+* Device Tree Source for RCM MB115.02 extention board ( SRAM-NOR module )
+*
+*/
+
+/ {
+	sram_nor_arbiter0: sram_nor_arbiter {
+		u-boot,dm-pre-reloc;
+		status = "okay";
+		sram-nor-mux = <1>;					/* 0 to route extmem wires to LSIF0, 1 - to MCIF, */
+		ce-manage = <2>;					/* MCIF(page 913 + confluence): cs0..3=>1 controller,cs4,5=>2 controller,cs-mode=0,chip-num=0x3F */
+	};
+
+	sram_plb_nor1: sram_plb_nor1@0x80190000 {
+		u-boot,dm-pre-reloc;
+		status = "okay";
+		chip-num = <0x3F>;
+		cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
+		addr-size = <26>; /* min 10 max 26 bit */
+		timings = <0x1f1f0808>;
+		mcif_nor0: mcif_nor0 {
+			u-boot,dm-pre-reloc;
+			ranges = <0x20000000 0x6 0x00000000 0x10000000>;
+		};
+		mcif_nor1: mcif_nor1 {
+			u-boot,dm-pre-reloc;
+			ranges = <0x10000000 0x6 0x10000000 0x10000000>;
+		};
+	};
+};

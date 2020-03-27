@@ -40,7 +40,6 @@
 	};
 
 	sram_nor_arbiter0: sram_nor_arbiter {
-		u-boot,dm-pre-reloc;
 		compatible = "rcm,sram-nor-arbiter";
 		pinctrl-names = "default";
 		pinctrl-0 =
@@ -54,11 +53,8 @@
 			<&lsif0_mgpio7_sram_nor>,
 			<&lsif0_mgpio8_sram_nor>;
 		sram-nor-mux = <1>;					/* 0 to route extmem wires to LSIF0, 1 - to MCIF, */
-		/* in case of LSIF0 following lines will be needed */
 		ext-mem-mux-mode = <2>;				/* page 913 0-SRAM_NOR(used for NOR)); 1-NAND,GBIT_GRETH0,GBIT_GRETH1; 2-GRETH0,GRETH1,NAND(used for NAND)*/
-		ce-manage = <2>;					/* MCIF(page 913 + confluence): cs0..3=>1 controller,cs4,5=>2 controller,cs-mode=0,chip-num=0x3F */
-		//ce-manage = <0>;					/* LSIF: all cs=>1 controller,cs-mode=1,chip-num=0x10 */
-		status = "okay";					/* dont forget also right set "okay" for sram_plb_nor1 or sram_nor0 */
+		ce-manage = <0>;					/* LSIF: all cs=>1 controller,cs-mode=1,chip-num=0x10 */
 		#address-cells = <1>;
 		#size-cells = <1>;
 		sctl-reg {							/* <&sctl> */
@@ -72,26 +68,12 @@
 	};
 
 	sram_plb_nor1: sram_plb_nor1@0x80190000 {
-		u-boot,dm-pre-reloc;
 		compatible = "rcm,sram-nor","simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		chip-num = <0x3F>;
 		dcr-reg = <0x80190000 0x1000>;
-		cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
-		addr-size = <26>; /* min 10 max 26 bit */
-		timings = <0x1f1f0808>;
 		// interrupt-parent = <&MPIC>;
 		// interrupts = <104 0>; // IRQ_TYPE_EDGE_RISING
-		status = "okay";
-		mcif_nor0: mcif_nor0 {
-			u-boot,dm-pre-reloc;
-			ranges = <0x20000000 0x6 0x00000000 0x10000000>;
-		};
-		mcif_nor1: mcif_nor1 {
-			u-boot,dm-pre-reloc;
-			ranges = <0x10000000 0x6 0x10000000 0x10000000>;
-		};
 	};
 
 	lsif0 {
@@ -316,7 +298,6 @@
 		};
 
 		nand0: nand0@0x3C032000 {
-			u-boot,dm-pre-reloc;
 			compatible = "rcm,nand";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -324,39 +305,7 @@
 			ranges = <0x00000000 0x20000000 0x20000000>;
 			clock-frequency = <100000000>;
 			config-reg = <0x3C03F000 0x1000>;
-			pinctrl-names = "default";
-			/*pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;*/
 			status = "disabled";
-			timings = < 200		/* tADL_min (ONFI_2_0_Gold.pdf,page 47)*/
-						20		/* tALH_min */
-						50		/* tALS_min */
-						20		/* tCH_min */
-						20		/* tCLH_min */
-						50		/* tCLS_min */
-						70		/* tCS_min */
-						20		/* tDH_min */
-						40		/* tDS_min */
-						100		/* tWC_min */
-						30		/* tWH_min */
-						50		/* tWP_min */
-						100		/* tWW_min */
-						25		/* tAR_min */
-						20		/* tCLR_min */
-						0		/* tCOH_min */
-						10		/* tIR_min */
-						100		/* tRC_min */
-						30		/* tREH_min */
-						0		/* tRHOH_min */
-						200		/* tRHW_min */
-						0		/* tRLOH_min */
-						50		/* tRP_min */
-						40		/* tRR_min */
-						120		/* tWHR_min */
-						100		/* tCEA_max */
-						100		/* tCHZ_max */
-						40		/* tREA_max */
-						200		/* tRHZ_max */
-						200 >;  /* tWB_max */
 			/*interrupt-parent = <&MPIC>;*/
 			/*interrupts = <109 0>;*/
 		};
@@ -553,7 +502,7 @@
 
 
 		mmc0: mmc0@0x3C064000 {
-			compatible = "rcm,mmc-0.2";
+			//compatible = "rcm,mmc-0.2";
 			reg = <0x3C064000 0x1000>;
 			carddetect-gpio = <&gpio1 1 0>;
 			u-boot,dm-pre-reloc;
@@ -586,3 +535,13 @@
 	    };	
 	};
 };
+
+
+/* SRAM-NOR */
+/include/ "mb115-02.dtsi"
+
+/* Ethernet,NAND */
+// /include/ "mb115-03.dtsi"
+
+/* AV ouput */
+// /include/ "mb115-04.dtsi"
