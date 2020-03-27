@@ -80,13 +80,13 @@ struct rcm_musb_data {
 #define to_rcm_musb_data(d)	\
 	container_of(d, struct rcm_musb_data, dev)
 
-static void rcm_musb_disable(struct musb *musb)
-{
+//static void rcm_musb_disable(struct musb *musb)
+//{
 	/* no way to shut the controller */
-}
+//}
 
 static int rcm_musb_reset(struct musb *musb);
-static int rcm_musb_enable(struct musb *musb);
+//static int rcm_musb_enable(struct musb *musb);
 
 static irqreturn_t rcm_interrupt(int irq, void *hci)
 {
@@ -132,34 +132,34 @@ static irqreturn_t rcm_interrupt(int irq, void *hci)
 
 
 
-static int rcm_musb_set_mode(struct musb *musb, u8 mode)
-{
-	struct device *dev = musb->controller;
-	struct rcm_musb_data *pdata = to_rcm_musb_data(dev);
+// static int rcm_musb_set_mode(struct musb *musb, u8 mode)
+// {
+// 	struct device *dev = musb->controller;
+// 	struct rcm_musb_data *pdata = to_rcm_musb_data(dev);
 
-	debug("rcm_musb_set_mode: %d\n", (int) mode);
+// 	debug("rcm_musb_set_mode: %d\n", (int) mode);
 
-	return 0;
+// 	return 0;
 
-	switch (mode) {
-	case MUSB_HOST:
-//		clrsetbits_le32(pdata->musb_ctrl + RCM_CONTROL_USBPHY_CFG_OFFSET,
-//				USBCRCON_USBIDVAL, USBCRCON_USBIDOVEN);
-		break;
-	case MUSB_PERIPHERAL:
-//		setbits_le32(pdata->musb_ctrl + USBCRCON,
-//			     USBCRCON_USBIDVAL | USBCRCON_USBIDOVEN);
-		break;
-	case MUSB_OTG:
-		dev_err(dev, "support for OTG is unimplemented\n");
-		break;
-	default:
-		dev_err(dev, "unsupported mode %d\n", mode);
-		return -EINVAL;
-	}
+// 	switch (mode) {
+// 	case MUSB_HOST:
+// //		clrsetbits_le32(pdata->musb_ctrl + RCM_CONTROL_USBPHY_CFG_OFFSET,
+// //				USBCRCON_USBIDVAL, USBCRCON_USBIDOVEN);
+// 		break;
+// 	case MUSB_PERIPHERAL:
+// //		setbits_le32(pdata->musb_ctrl + USBCRCON,
+// //			     USBCRCON_USBIDVAL | USBCRCON_USBIDOVEN);
+// 		break;
+// 	case MUSB_OTG:
+// 		dev_err(dev, "support for OTG is unimplemented\n");
+// 		break;
+// 	default:
+// 		dev_err(dev, "unsupported mode %d\n", mode);
+// 		return -EINVAL;
+// 	}
 
-	return 0;
-}
+// 	return 0;
+// }
 
 
 typedef enum
@@ -205,19 +205,19 @@ static int rcm_musb_reset(struct musb *musb)
 }
 
 
-static int rcm_musb_enable(struct musb *musb)
-{
-	/* soft reset by NRSTx */
-	musb_writeb(musb->mregs, MUSB_SOFTRST, MUSB_SOFTRST_NRSTX);
-
-	musb_ep_select(musb->mregs, 0);
-	musb_writeb(musb->mregs, MUSB_FADDR, 0);
-
-	/* set mode */
-	musb_platform_set_mode(musb, musb->board_mode);
-
-	return 0;
-}
+//static int rcm_musb_enable(struct musb *musb)
+//{
+//	/* soft reset by NRSTx */
+//	musb_writeb(musb->mregs, MUSB_SOFTRST, MUSB_SOFTRST_NRSTX);
+//
+//	musb_ep_select(musb->mregs, 0);
+//	musb_writeb(musb->mregs, MUSB_FADDR, 0);
+//
+//	/* set mode */
+//	musb_platform_set_mode(musb, musb->board_mode);
+//
+//	return 0;
+//}
 
 static int rcm_musb_init(struct musb *musb)
 {
@@ -438,7 +438,7 @@ static int musb_usb_probe(struct udevice *dev)
 	ret = musb_lowlevel_init(mdata);
 #else
 //	rcm_musb_plat.mode = MUSB_PERIPHERAL;
-	ret = musb_register(&rcm_musb_plat, &pdata->dev, mregs);
+	musb_register(&rcm_musb_plat, &pdata->dev, mregs);
 #endif
 
 	return ret;
