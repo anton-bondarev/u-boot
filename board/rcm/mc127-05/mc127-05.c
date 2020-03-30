@@ -65,7 +65,7 @@ bool is_ddr_ok(void)
 		return 0;
 }
 
-extern void EMIC_init(void);
+extern void EMIC_init (unsigned base);
 
 #define GPIO_BASE 0x000CC000
 #define SPI_BASE 0x000CF000
@@ -175,7 +175,11 @@ int sdcard_init(void)
 void spl_board_init(void)
 {
 	/* init dram */
-	EMIC_init();
+	EMIC_init(0x600C0000);
+	EMIC_init(0x800C0000);
+	EMIC_init(0xA00C0000);
+	EMIC_init(0xC00C0000);
+	EMIC_init(0xE00C0000);
 
 	if(!is_ddr_ok())
 	{
