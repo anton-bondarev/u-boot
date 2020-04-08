@@ -1,0 +1,39 @@
+if TARGET_1888BC048
+
+config SYS_BOARD
+	default "mt143-05"
+
+config SYS_VENDOR
+	default "rcm"
+
+config SYS_CONFIG_NAME
+	default "1888bc048"
+
+config SPL_TEXT_BASE
+	default 0x00040000
+
+config SYS_TEXT_BASE
+	default 0x80000040
+
+
+config ENV_OFFSET
+	hex "Environment offset"
+	help
+		Offset from base address where is environment of u-boot"
+	depends on ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC
+	default 0x40000 if ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC
+
+config ENV_SIZE
+	hex "Environment size"
+	help
+		"Size of enviroment of u-boot"
+	default 0x4000
+
+config ENV_SECT_SIZE
+	hex "Environment sector size"
+	help
+		"Size of sector of memory devices,where are storing data"
+	depends on ENV_IS_IN_SPI_FLASH
+	default 0x10000 if ENV_IS_IN_SPI_FLASH
+
+endif

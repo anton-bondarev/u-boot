@@ -11,8 +11,17 @@ config TARGET_1879VM8YA
 	select DM_SPI
 	select SPI
 
+config TARGET_1888BC048
+	bool "Support 1888BC048 based boards"
+	select SPL_DM_SERIAL
+	select DM_SERIAL
+	select SPL_DM_SPI
+	select DM_SPI
+	select SPI
+
 endchoice
 
 endif
 
 source "board/rcm/mc127-05/Kconfig"
+source "board/rcm/mt143-05/Kconfig"
