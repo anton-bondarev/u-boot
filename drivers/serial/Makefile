@@ -69,6 +69,7 @@ obj-$(CONFIG_OMAP_SERIAL) += serial_omap.o
 obj-$(CONFIG_MTK_SERIAL) += serial_mtk.o
 obj-$(CONFIG_SIFIVE_SERIAL) += serial_sifive.o
 obj-$(CONFIG_PSEUDO_SPI_SERIAL) += serial_pseudo_spi.o
+obj-$(CONFIG_RCM_MUART) += serial_rcm_muart.o
 
 ifndef CONFIG_SPL_BUILD
 obj-$(CONFIG_USB_TTY) += usbtty.o
