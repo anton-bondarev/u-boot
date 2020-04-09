@@ -97,8 +97,6 @@ void spl_board_init(void)
 		puts("Booting from SPI flash\n");
 	else if (boot_device == BOOT_DEVICE_MMC1)
 		puts("Booting from SD card\n");
-	else if (boot_device == BOOT_DEVICE_XIP)
-		puts("Enter HOST mode for EDCL boot\n");
 	else
 		puts("Unknown boot device\n");
 }
@@ -114,9 +112,9 @@ void board_boot_order(u32 *spl_boot_list)
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
 		break;
 	}
-    spl_boot_list[2] = BOOT_DEVICE_XIP; // just wait for marker
-    spl_boot_list[3] = BOOT_DEVICE_RAM;
-    spl_boot_list[4] = BOOT_DEVICE_NONE;
+//    spl_boot_list[2] = BOOT_DEVICE_XIP; // just wait for marker
+//    spl_boot_list[3] = BOOT_DEVICE_RAM;
+    spl_boot_list[2] = BOOT_DEVICE_NONE;
 }
 
 

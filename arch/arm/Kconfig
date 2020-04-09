@@ -1630,6 +1630,7 @@ config ARCH_RCM_ARM
 	select OF_PLATDATA
 	select OF_LIBFDT
 	select SPL_DM
+	select SPL_DM_SEQ_ALIAS
 	select SPL_OF_CONTROL
 	select SPL_OF_LIBFDT
 	select SUPPORT_SPL

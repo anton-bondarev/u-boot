@@ -110,7 +110,7 @@ int muart_probe(struct udevice *dev)
         printf("%s: error: Detected illegal version of uart core: 0x%08x 0x%08x\n", dev->name,
             ioread32(&priv->regs->id), 
             ioread32(&priv->regs->version));
-        return -EIO;
+        return -EINVAL;
     }
 
     priv->freq = plat->freq;

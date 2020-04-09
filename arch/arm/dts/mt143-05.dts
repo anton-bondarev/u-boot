@@ -8,7 +8,7 @@
 
 
     config {
-           u-boot,spl-payload-offset = <0x000000>; 
+           u-boot,spl-payload-offset = <0x060000>; 
     };
 
 	chosen {
@@ -35,7 +35,7 @@
 		u-boot,dm-pre-reloc;
 	};
 
-	axi_fast {
+	axi {
 		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -46,41 +46,45 @@
 			clocks = <&clock_axi_fast>;
 		    reg = <0x01044000 0x1000>;
 		    u-boot,dm-pre-reloc;
-        };
-	};
+		};
 
-	axi_slow {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <1>;
-		u-boot,dm-pre-reloc;
+		gpio0: gpio0@0x01088000 {
+		    compatible = "rcm,gpio";
+			#address-cells = <1>;
+		    #size-cells = <0>;
+			clocks = <&clock_axi_slow>;
+		    reg = <0x01088000 0x1000>;
+			#gpio-cells = <2>;
+			gpio-controller;
+		    u-boot,dm-pre-reloc;
+		};
         
-        spi0: spi0@0x01040000 {
+        spi0: spi@0x01040000 {
 		    compatible = "rcm,pl022-spi";			
 		    #address-cells = <1>;
 		    #size-cells = <0>;
 			clocks = <&clock_axi_slow>;
 		    reg = <0x01040000 0x1000>;
 		    spi-max-frequency = <25000000>;		
-			// cs-gpios = <&gpio0 1 0>, <&gpio0 0 0>, <&gpio0 2 0>, <&gpio0 3 0>;	
+			cs-gpios = <&gpio0 5 0>, <&gpio0 3 0>;	
 		    u-boot,dm-pre-reloc;
 
 		    spi_flash@0 {
-			    compatible = "st,m25p32", "spi-flash";
+			    compatible = "st,w25q32", "spi-flash";
 			    reg = <0>;
 				spi-max-frequency = <1000000>;
 				spi-cpol;
 				spi-cpha;
 			    u-boot,dm-pre-reloc;								
 		    };
-
+			
 			mmc: mmc@1 {
 				compatible = "mmc-spi-slot";
 			    reg = <1>;
 				spi-max-frequency = <25000000>;
-			    u-boot,dm-pre-reloc;
+			    //u-boot,dm-pre-reloc;
 				//status="disabled";
 			};
-        };
+		};
     };
 };
