@@ -179,7 +179,7 @@ int muart_setbrg(struct udevice *dev, int baudrate)
 
     if(baudrate > (priv->freq/8))
     {
-        printf("%s: errorunable to set requested baudrate %d - too fast\n", dev->name, baudrate);
+        printf("%s: error: unable to set requested baudrate %d - too fast\n", dev->name, baudrate);
         return -EINVAL;
     }
 
@@ -188,11 +188,11 @@ int muart_setbrg(struct udevice *dev, int baudrate)
         if(((priv->freq / 10) % baudrate) == 0)
             N = 1;
 
-    divisor = priv->freq / (N?10:8 * baudrate);
+    divisor = priv->freq / ((N?10:8) * baudrate);
 
     if(divisor > 0xFFFFFF)
     {
-        printf("%s: errorunable to set requested baudrate %d - too slow\n", dev->name, baudrate);
+        printf("%s: error: unable to set requested baudrate %d - too slow\n", dev->name, baudrate);
         return -EINVAL;
     }
 
