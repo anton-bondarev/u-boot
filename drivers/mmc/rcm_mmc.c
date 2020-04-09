@@ -548,11 +548,13 @@ int rcm_mmc_bind(struct udevice *dev)
 static void set_clock(struct udevice * dev, uint clock)
 {
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
-	
-	uint32_t m = BUS_CLOCK/(clock*2) - 1;		
-	if ( m > CLKDIV_MAX )
-		m = CLKDIV_MAX;
-	
+	uint32_t m = CLKDIV_MAX;
+	if(clock)
+	{
+		m = BUS_CLOCK/(clock*2) - 1;		
+		if ( m > CLKDIV_MAX )
+			m = CLKDIV_MAX;
+	}
 	rcm_writel(mmc, SPISDIO_SDIO_CLK_DIVIDE, m);  
 }
 
