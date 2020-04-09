@@ -120,7 +120,6 @@ static int rcm_gpio_probe(struct udevice *dev)
 
     struct rcm_gpio_regs *const regs = plat->regs;
     uc_priv->gpio_count = plat->gpio_count;
-    printf("rcm_gpio_probe\n");
 
     if(ioread32(&regs->id) != RCM_GPIO_ID || ioread32(&regs->version) != RCM_GPIO_VERSION)
     {
