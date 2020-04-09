@@ -248,7 +248,7 @@ static int pl022_spi_probe(struct udevice *bus)
 	ps->base = ioremap(plat->addr, plat->size);
 	ps->freq = plat->freq;
 
-#ifdef CONFIG_TARGET_1888TX018
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BC048)
 	int ret = pl022_setup_gpio(bus);
 	if (ret < 0)
 	{
