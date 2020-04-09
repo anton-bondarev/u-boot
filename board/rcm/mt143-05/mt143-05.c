@@ -112,9 +112,8 @@ void board_boot_order(u32 *spl_boot_list)
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
 		break;
 	}
-//    spl_boot_list[2] = BOOT_DEVICE_XIP; // just wait for marker
-//    spl_boot_list[3] = BOOT_DEVICE_RAM;
-    spl_boot_list[2] = BOOT_DEVICE_NONE;
+    spl_boot_list[2] = BOOT_DEVICE_UART; // Y-Modem
+    spl_boot_list[3] = BOOT_DEVICE_NONE;
 }
 
 
