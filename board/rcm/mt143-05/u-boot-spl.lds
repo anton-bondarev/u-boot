@@ -20,6 +20,7 @@ SECTIONS
 
 	.text :
 	{
+		spl_header = .;
 		KEEP(*(.header))
 		__image_copy_start = .;
 		*(.vectors)

@@ -45,4 +45,25 @@ struct __attribute__((packed)) rumboot_bootheader {
     char     data[];
 };
 
+struct rumboot_bootmodule {
+    int privdatalen;
+    size_t align;
+    bool (*init)      (const struct rumboot_bootsource* src, void* pdata);
+    void (*deinit)    (const struct rumboot_bootsource* src, void* pdata);
+    size_t  (*read)   (const struct rumboot_bootsource* src, void* pdata, void* to, size_t offset, size_t length);
+};
+
+struct rumboot_bootsource {
+   const char *name;
+   uintptr_t base;
+   uint64_t offset;
+//   uint32_t base_freq_khz;
+   uint32_t iface_freq_khz;
+   uint32_t slave_addr;
+   const struct rumboot_bootmodule *plugin;
+   bool (*enable)   (const struct rumboot_bootsource* src, void* pdata);
+   void (*disable) (const struct rumboot_bootsource* src, void* pdata);
+   void (*chipselect)(const struct rumboot_bootsource* src, void* pdata, int select);
+};
+
 #endif /* end of include guard: BOOTHEADER_H */
