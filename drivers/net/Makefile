@@ -83,3 +83,4 @@ obj-$(CONFIG_HIGMACV300_ETH) += higmacv300.o
 obj-$(CONFIG_MDIO_SANDBOX) += mdio_sandbox.o
 obj-$(CONFIG_FSL_ENETC) += fsl_enetc.o fsl_enetc_mdio.o
 obj-$(CONFIG_GRETH_ETH) += greth.o
+obj-$(CONFIG_RCM_MGETH) += rcm_mdio.o rcm_mgeth.o

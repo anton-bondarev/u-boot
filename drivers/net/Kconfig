@@ -253,6 +253,14 @@ config GRETH_ETH
 	  This driver supports the 10/100/1000 Fast Ethernet controller for
 	  1888TX018 RCM processors.
 
+config RCM_MGETH
+	bool "RC-Module MGETH MAC support"
+	depends on DM_ETH
+	select PHYLIB
+	select DM_MDIO
+	help
+	  This driver supports the RC-Module based MGETH Ethernet MAC.
+
 config FTMAC100
 	bool "Ftmac100 Ethernet Support"
 	help
