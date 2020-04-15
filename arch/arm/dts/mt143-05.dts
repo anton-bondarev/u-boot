@@ -86,6 +86,93 @@
 			carddetect-gpio = <&gpio0 3 0>;
 			u-boot,dm-pre-reloc;
 			status = "okay";
+		};
+
+		mdiomux0: mdiomux0@0x01084000 {
+			compatible = "pinctrl-single";
+			reg = <0x01084000 0x1000>;
+			pinctrl-single,register-width = <32>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#pinctrl-cells = <2>;
+			pinctrl-single,bit-per-mux;
+			mdio0mux0: mdio0mux0 {
+					pinctrl-single,bits = <0x24 0x03 0x00>;
+			};
+			mdio1mux0: mdio1mux0 {
+					pinctrl-single,bits = <0x24 0x0C 0x00>;
+			};
+			mdio2mux0: mdio2mux0 {
+					pinctrl-single,bits = <0x24 0x30 0x00>;
+			};
+			mdio3mux0: mdio3mux0 {
+					pinctrl-single,bits = <0x24 0xC0 0x00>;
+			};
+		};
+
+		mdiomux1: mdiomux1@0x01085000 {
+			compatible = "pinctrl-single";
+			reg = <0x01085000 0x1000>;
+			pinctrl-single,register-width = <32>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#pinctrl-cells = <2>;
+			pinctrl-single,bit-per-mux;
+			mdio0mux1: mdio0mux1 {
+					pinctrl-single,bits = <0x24 0x11 0x00>;
+			};
+			mdio1mux1: mdio1mux1 {
+					pinctrl-single,bits = <0x24 0x22 0x00>;
+			};
+			mdio2mux1: mdio2mux1 {
+					pinctrl-single,bits = <0x24 0x44 0x00>;
+			};
+			mdio3mux1: mdio3mux1 {
+					pinctrl-single,bits = <0x24 0x88 0x00>;
+			};
+		};
+
+		sctl: sctl@0x0108d000 {
+			compatible = "syscon";
+			reg = <0x0108d000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;			
+            status = "okay";
+		};
+
+		sgmiiphy: sgmiphy@0x01086000 {
+			compatible = "rcm,sgmii-phy";
+			reg = <0x01086000 0x2000>;
+			#phy-cells = <0>;
+			sctl = <&sctl>, <0x14>;
+			auto-negotiation;
+            status = "okay";
+		};
+
+		mdio0: mdio0@0x01080000 {
+			compatible = "rcm,mdio";
+			reg = <0x01080000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;			
+			clocks = <&clock_axi_slow>;		
+			pinctrl-names = "default";
+			pinctrl-0 = <&mdio0mux0>, <&mdio0mux1>;
+            status = "okay";
+
+			phy0: ethernet-phy@0 {
+				reg = <0xffffffff>;
+			};			
+		};
+
+		mgeth0: mgeth@0x01014000 {
+			compatible = "rcm,mgeth";
+			reg = <0x01014000 0x1000>;
+			clocks = <&clock_axi_fast>;
+			mac-address = [ec 17 66 64 08 10];
+			phys = <&sgmiiphy>;
+			phy = <&phy0>;
+            phy-mode = "gmii";
+			status = "okay";
 		};		
     };
 };

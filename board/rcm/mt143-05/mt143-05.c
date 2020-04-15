@@ -99,6 +99,7 @@ void board_boot_order(u32 *spl_boot_list)
 	case BOOT_DEVICE_BOOTROM:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;
 		spl_boot_list[2] = BOOT_DEVICE_SPI;
+		break;
 	case BOOT_DEVICE_SPI:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;
 		spl_boot_list[2] = BOOT_DEVICE_BOOTROM;

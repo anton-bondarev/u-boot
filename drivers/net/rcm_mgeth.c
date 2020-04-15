@@ -9,6 +9,9 @@
  *      - works in pull mode, 
  *      - only one channel used for rx and one for tx
  */
+#define DEBUG
+#define DBGPREFIX "[rcm-mgeth]: "
+
 #include <version.h>
 #include <common.h>
 #include <config.h>
@@ -20,8 +23,7 @@
 #include <net.h>
 #include <asm/io.h>
 #include <linux/io.h>
-
-DECLARE_GLOBAL_DATA_PTR;
+#include <generic-phy.h>
 
 typedef const volatile unsigned int roreg32;
 typedef volatile unsigned int rwreg32;
@@ -188,17 +190,50 @@ typedef struct _mgeth_regs {
 typedef struct {
 	mgeth_regs *regs;
 	struct eth_device *dev;
+	struct phy_device *phy;
+    struct phy sgmii_phy;
 
 } mgeth_priv;
 
+static int mgeth_config_phy(struct udevice *dev)
+{
+	mgeth_priv *priv = dev_get_priv(dev);
+
+    int ret = generic_phy_get_by_index(dev, 0, &priv->sgmii_phy);
+	if (ret && ret != -ENOENT) {
+        dev_err(dev, DBGPREFIX "unable find SGMII PHY\n");        
+        return ret;
+    }
+    ret = generic_phy_init(&priv->sgmii_phy);
+    if (ret) {
+        dev_err(dev, DBGPREFIX "unable init SGMII PHY\n");        
+        return ret;
+    }
+
+    priv->phy = dm_eth_phy_connect(dev);
+	if (!priv->phy)
+    {
+        dev_err(dev, DBGPREFIX "unable to configure PHY\n");
+		return -EINVAL;
+    }
+    phy_config(priv->phy);
+}
+
+
 static int mgeth_probe(struct udevice *dev)
 {
+    dev_dbg(mdio_dev, DBGPREFIX "probe called\n");
+
+    mgeth_config_phy(dev);
+
 	return 0;
 }
 
 static int mgeth_remove(struct udevice *dev)
 {
 	mgeth_priv *priv = dev_get_priv(dev);
+
+    dev_dbg(mdio_dev, DBGPREFIX "remove called\n");
 
 	return 0;
 }
@@ -210,6 +245,8 @@ static int mgeth_start(struct udevice *dev)
 {
 	mgeth_priv *priv = dev_get_priv(dev);
 
+    dev_dbg(mdio_dev, DBGPREFIX "start called\n");
+
 	return 0;
 }
 
@@ -220,6 +257,8 @@ static void mgeth_stop(struct udevice *dev)
 {
 	mgeth_priv *priv = dev_get_priv(dev);
 
+    dev_dbg(mdio_dev, DBGPREFIX "stop called\n");
+
 }
 
 /* Send the bytes passed in "packet" as a packet on the wire */
@@ -227,6 +266,8 @@ static int mgeth_send(struct udevice *dev, void *eth_data, int data_length)
 {
 	mgeth_priv *priv = dev_get_priv(dev);
 	mgeth_regs *regs = priv->regs;
+
+    dev_dbg(mdio_dev, DBGPREFIX "send called\n");
 
 	return 0;
 }
@@ -242,6 +283,8 @@ static int mgeth_recv(struct udevice *dev, int flags, uchar **packetp)
 	mgeth_priv *priv = dev_get_priv(dev);
 	mgeth_regs *regs = priv->regs;
 
+    dev_dbg(mdio_dev, DBGPREFIX "recv called\n");
+
 	return 0;
 }
 
@@ -253,6 +296,8 @@ static int mgeth_free_pkt(struct udevice *dev, uchar *packet, int length)
 {
 	mgeth_priv *priv = dev_get_priv(dev);
 	mgeth_regs *regs = priv->regs;
+
+    dev_dbg(mdio_dev, DBGPREFIX "free_pkt called\n");
 
 	return 0;
 }
@@ -268,6 +313,8 @@ static int mgeth_write_hwaddr(struct udevice *dev)
 	mgeth_priv *priv = dev_get_priv(dev);
 	struct eth_pdata *pdata = dev_get_platdata(dev);
 
+    dev_dbg(mdio_dev, DBGPREFIX "write_hwaddr called\n");
+
 	return 0;
 }
 
@@ -277,6 +324,8 @@ static int mgeth_ofdata_to_platdata(struct udevice *dev)
 	struct eth_pdata *pdata = dev_get_platdata(dev);
 	const char *mac;
 	int len;
+
+    dev_dbg(mdio_dev, DBGPREFIX "ofdata_to_platdata called\n");
 
 	priv->regs = (mgeth_regs *)(uintptr_t)devfdt_get_addr(dev);
 

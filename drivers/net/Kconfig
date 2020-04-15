@@ -258,6 +258,8 @@ config RCM_MGETH
 	depends on DM_ETH
 	select PHYLIB
 	select DM_MDIO
+	select PHY
+	select RCM_SGMII_PHY
 	help
 	  This driver supports the RC-Module based MGETH Ethernet MAC.
 

@@ -6,6 +6,8 @@
  *  Copyright (C) 2020 Alexey Spirkov <dev@alsp.net>
  *
  */
+#define DEBUG
+#define DBGPREFIX "[rcm-mdio]: "
 
 #include <common.h>
 #include <dm.h>
@@ -16,8 +18,6 @@
 #include <asm/io.h>
 #include <linux/io.h>
 #include <wait_bit.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define MDIO_ID 0x4F49444D
 #define MDIO_VER 0x00640101
@@ -60,7 +60,7 @@ static int rcm_mdio_reset(struct udevice *mdio_dev)
 {
     rcm_mdio_priv *priv = dev_get_priv(mdio_dev);
 
-	dev_dbg(mdio_dev, "reset called\n");
+	dev_dbg(mdio_dev, DBGPREFIX "reset called\n");
 
 	/* put to reset state */
 	iowrite32(0 << ETH_RST_N, &priv->regs->eth_rst_n);
@@ -77,19 +77,19 @@ static int rcm_mdio_reset(struct udevice *mdio_dev)
 static int rcm_mdio_probe(struct udevice *dev)
 {
 	rcm_mdio_priv *priv = dev_get_priv(dev);
-	rcm_mdio_regs* regs = dev_read_addr(dev);
+	rcm_mdio_regs* regs = (rcm_mdio_regs*) dev_read_addr(dev);
 
-	dev_dbg(dev, "probe called\n");
+	dev_dbg(dev, DBGPREFIX "probe called\n");
 
 	if(!regs)
 	{
-		dev_err(dev, "unable to get address of mdio core\n");
+		dev_err(dev, DBGPREFIX "unable to get address of mdio core\n");
         return -EINVAL;
 	}
 
     if(ioread32(&regs->id) != MDIO_ID || ioread32(&regs->version) != MDIO_VER)
     {
-        dev_err(dev, "detected illegal version of MDIO core: 0x%08x 0x%08x\n", dev->name,
+        dev_err(dev, DBGPREFIX "detected illegal version of MDIO core: 0x%08x 0x%08x\n",
             ioread32(&regs->id), 
             ioread32(&regs->version));
         return -ENOTSUPP;
@@ -105,7 +105,7 @@ static int rcm_mdio_probe(struct udevice *dev)
 
 static int rcm_mdio_bind(struct udevice *dev)
 {
-	dev_dbg(dev, "bind called\n");
+	dev_dbg(dev, DBGPREFIX "bind called\n");
 
 	if (ofnode_valid(dev->node))
 		device_set_name(dev, ofnode_get_name(dev->node));
@@ -117,14 +117,14 @@ static int rcm_mdio_read(struct udevice *mdio_dev, int addr, int devad, int reg)
 {
     rcm_mdio_priv *priv = dev_get_priv(mdio_dev);
 
-	dev_dbg(mdio_dev, "read called for %d:%d:%d\n", addr, devad, reg);
+	dev_dbg(mdio_dev, DBGPREFIX "read called for %d:%d:%d\n", addr, devad, reg);
 
 	if (devad != MDIO_DEVAD_NONE)
 		return -EOPNOTSUPP;
 
     iowrite32(reg << ADDR_REG | addr << ADDR_PHY | 1 << START_RD, &priv->regs->mg_control);
 
-	int ret = wait_for_bit_le32(&priv->regs->mg_control, BIT(BUSY), true, CONFIG_SYS_HZ, false);
+	int ret = wait_for_bit_le32((void*)&priv->regs->mg_control, BIT(BUSY), true, CONFIG_SYS_HZ, false);
 	if (ret < 0)
 		return ret;
 
@@ -135,13 +135,13 @@ static int rcm_mdio_write(struct udevice *mdio_dev, int addr, int devad, int reg
 {
     rcm_mdio_priv *priv = dev_get_priv(mdio_dev);
 
-	dev_dbg(mdio_dev, "write called for %d:%d:%d <= %d\n", addr, devad, reg, (int) val);
+	dev_dbg(mdio_dev, DBGPREFIX "write called for %d:%d:%d <= %d\n", addr, devad, reg, (int) val);
 
 	if (devad != MDIO_DEVAD_NONE)
 		return -EOPNOTSUPP;
 
 	// wait while busy
-	int ret = wait_for_bit_le32(&priv->regs->mg_control, BIT(BUSY), false, CONFIG_SYS_HZ, false);
+	int ret = wait_for_bit_le32((void*)&priv->regs->mg_control, BIT(BUSY), false, CONFIG_SYS_HZ, false);
 	if (ret < 0)
 		return ret;
 
