@@ -6,7 +6,7 @@
  *  Copyright (C) 2020 Alexey Spirkov <dev@alsp.net>
  *
  */
-#define DEBUG
+//#define DEBUG
 #define DBGPREFIX "[rcm-sgmii-phy]: "
 
 #include <version.h>

@@ -25,6 +25,9 @@
 #include <linux/io.h>
 #include <generic-phy.h>
 
+#define MGETH_ID 0x48544547
+#define MGETH_VER 0x01900144
+
 typedef const volatile unsigned int roreg32;
 typedef volatile unsigned int rwreg32;
 typedef const volatile unsigned long long roreg64;
@@ -186,14 +189,70 @@ typedef struct _mgeth_regs {
     roreg32 _skip05[128];                   /* 0xE00 - 0xFFC                */
 } mgeth_regs;
 
-
 typedef struct {
 	mgeth_regs *regs;
 	struct eth_device *dev;
 	struct phy_device *phy;
     struct phy sgmii_phy;
 
+    unsigned int speed;
+    unsigned int duplex;
+    unsigned int link;
+
+    unsigned char dev_addr[ETH_ALEN];
 } mgeth_priv;
+
+#define CTRL_FD_S 0
+#define CTRL_FD_M 0x00000001
+#define CTRL_SPEED_S 1
+#define CTRL_SPEED_M 0x00000006
+
+/* Ajust phy link to mgeth settings */
+static void mgeth_link_event(mgeth_priv *priv)
+{
+    struct phy_device *phydev = priv->phy;
+    mgeth_regs* regs = priv->regs; 
+	int status_change = 0;
+	unsigned int val;
+
+    dev_dbg(priv->dev, DBGPREFIX "link_event\n");
+
+    if(phydev->link)
+    {
+		if ((priv->speed != phydev->speed) ||
+		    (priv->duplex != phydev->duplex)) {            
+            val = ioread32(&regs->mg_control);
+            val &= ~(CTRL_FD_M | CTRL_SPEED_M);
+            if(phydev->duplex)
+                val |= CTRL_FD_M;
+
+            if(phydev->speed == SPEED_1000)
+                val |= 2 << CTRL_SPEED_S;
+            else if(phydev->speed == SPEED_100)
+                val |= 1 << CTRL_SPEED_S;
+            iowrite32(val, &regs->mg_control);
+            priv->speed = phydev->speed;
+            priv->duplex = phydev->duplex;
+            dev_dbg(priv->dev, DBGPREFIX "changing speed to %d, duplex to %d\n", priv->speed, priv->duplex);
+        }
+    }
+
+	if (phydev->link != priv->link) {
+		if (!phydev->link) {
+			priv->duplex = -1;
+			priv->speed = 0;
+		}
+
+		priv->link = phydev->link;
+        dev_dbg(priv->dev, DBGPREFIX "changing link to %d\n", priv->link);
+		status_change = 1;
+	}
+
+	if (status_change) {
+        // todo
+    }
+
+}
 
 static int mgeth_config_phy(struct udevice *dev)
 {
@@ -216,22 +275,31 @@ static int mgeth_config_phy(struct udevice *dev)
         dev_err(dev, DBGPREFIX "unable to configure PHY\n");
 		return -EINVAL;
     }
-    phy_config(priv->phy);
+    return phy_config(priv->phy);
 }
 
 
 static int mgeth_probe(struct udevice *dev)
 {
-    dev_dbg(mdio_dev, DBGPREFIX "probe called\n");
+    mgeth_priv *priv = dev_get_priv(dev);
+    mgeth_regs *regs = priv->regs;
 
-    mgeth_config_phy(dev);
+    dev_dbg(dev, DBGPREFIX "probe\n");
 
-	return 0;
+    if(ioread32(&regs->id) != MGETH_ID || ioread32(&regs->version) != MGETH_VER)
+    {
+        dev_err(dev, DBGPREFIX "detected illegal version of MGETH core: 0x%08x 0x%08x\n",
+            ioread32(&regs->id), 
+            ioread32(&regs->version));
+        return -ENOTSUPP;
+    }
+
+	return mgeth_config_phy(dev);
 }
 
 static int mgeth_remove(struct udevice *dev)
 {
-	mgeth_priv *priv = dev_get_priv(dev);
+	//mgeth_priv *priv = dev_get_priv(dev);
 
     dev_dbg(mdio_dev, DBGPREFIX "remove called\n");
 
@@ -243,11 +311,31 @@ static int mgeth_remove(struct udevice *dev)
  */
 static int mgeth_start(struct udevice *dev)
 {
+	struct eth_pdata *pdata = dev_get_platdata(dev);
 	mgeth_priv *priv = dev_get_priv(dev);
+    int ret;
 
     dev_dbg(mdio_dev, DBGPREFIX "start called\n");
 
-	return 0;
+	/* Load current MAC address */
+	memcpy(priv->dev_addr, pdata->enetaddr, ETH_ALEN);
+
+    // ToDo: set filters for given MAC
+
+    ret = generic_phy_power_on(&priv->sgmii_phy);
+    if(ret)
+        return ret;
+
+    // setup RT/TX queues
+
+    // startup PHY
+    ret = phy_startup(priv->phy);
+    if (!priv->phy->link)
+        printf("%s: No link\n", priv->phy->dev->name);
+
+    mgeth_link_event(priv);
+
+	return ret;
 }
 
 /* Stop the hardware from looking for packets - may be called even if
@@ -255,7 +343,7 @@ static int mgeth_start(struct udevice *dev)
  */
 static void mgeth_stop(struct udevice *dev)
 {
-	mgeth_priv *priv = dev_get_priv(dev);
+	//mgeth_priv *priv = dev_get_priv(dev);
 
     dev_dbg(mdio_dev, DBGPREFIX "stop called\n");
 
@@ -264,8 +352,8 @@ static void mgeth_stop(struct udevice *dev)
 /* Send the bytes passed in "packet" as a packet on the wire */
 static int mgeth_send(struct udevice *dev, void *eth_data, int data_length)
 {
-	mgeth_priv *priv = dev_get_priv(dev);
-	mgeth_regs *regs = priv->regs;
+	//mgeth_priv *priv = dev_get_priv(dev);
+	//mgeth_regs *regs = priv->regs;
 
     dev_dbg(mdio_dev, DBGPREFIX "send called\n");
 
@@ -280,8 +368,8 @@ static int mgeth_send(struct udevice *dev, void *eth_data, int data_length)
  */
 static int mgeth_recv(struct udevice *dev, int flags, uchar **packetp)
 {
-	mgeth_priv *priv = dev_get_priv(dev);
-	mgeth_regs *regs = priv->regs;
+	//mgeth_priv *priv = dev_get_priv(dev);
+	//mgeth_regs *regs = priv->regs;
 
     dev_dbg(mdio_dev, DBGPREFIX "recv called\n");
 
@@ -294,8 +382,8 @@ static int mgeth_recv(struct udevice *dev, int flags, uchar **packetp)
  */
 static int mgeth_free_pkt(struct udevice *dev, uchar *packet, int length)
 {
-	mgeth_priv *priv = dev_get_priv(dev);
-	mgeth_regs *regs = priv->regs;
+	//mgeth_priv *priv = dev_get_priv(dev);
+	//mgeth_regs *regs = priv->regs;
 
     dev_dbg(mdio_dev, DBGPREFIX "free_pkt called\n");
 
@@ -308,15 +396,15 @@ static int mgeth_free_pkt(struct udevice *dev, uchar *packet, int length)
  *		 return -ENOSYS to indicate that this is not implemented for
 		 this hardware
  */
-static int mgeth_write_hwaddr(struct udevice *dev)
-{
-	mgeth_priv *priv = dev_get_priv(dev);
-	struct eth_pdata *pdata = dev_get_platdata(dev);
+// static int mgeth_write_hwaddr(struct udevice *dev)
+// {
+// 	//mgeth_priv *priv = dev_get_priv(dev);
+// 	//struct eth_pdata *pdata = dev_get_platdata(dev);
 
-    dev_dbg(mdio_dev, DBGPREFIX "write_hwaddr called\n");
+//     dev_dbg(mdio_dev, DBGPREFIX "write_hwaddr called\n");
 
-	return 0;
-}
+// 	return 0;
+// }
 
 static int mgeth_ofdata_to_platdata(struct udevice *dev)
 {
@@ -348,7 +436,7 @@ static const struct eth_ops mgeth_ops = {
 	.recv = mgeth_recv,
 	.free_pkt = mgeth_free_pkt,
 	.stop = mgeth_stop,
-	.write_hwaddr = mgeth_write_hwaddr,
+//	.write_hwaddr = mgeth_write_hwaddr,
 };
 
 static const struct udevice_id mgeth_ids[] = { { .compatible = "rcm,mgeth" },

@@ -97,16 +97,16 @@
 			#pinctrl-cells = <2>;
 			pinctrl-single,bit-per-mux;
 			mdio0mux0: mdio0mux0 {
-					pinctrl-single,bits = <0x24 0x03 0x00>;
+					pinctrl-single,bits = <0x24 0x00 0x03>;
 			};
 			mdio1mux0: mdio1mux0 {
-					pinctrl-single,bits = <0x24 0x0C 0x00>;
+					pinctrl-single,bits = <0x24 0x00 0x0C>;
 			};
 			mdio2mux0: mdio2mux0 {
-					pinctrl-single,bits = <0x24 0x30 0x00>;
+					pinctrl-single,bits = <0x24 0x00 0x30>;
 			};
 			mdio3mux0: mdio3mux0 {
-					pinctrl-single,bits = <0x24 0xC0 0x00>;
+					pinctrl-single,bits = <0x24 0x00 0xC0>;
 			};
 		};
 
@@ -119,16 +119,16 @@
 			#pinctrl-cells = <2>;
 			pinctrl-single,bit-per-mux;
 			mdio0mux1: mdio0mux1 {
-					pinctrl-single,bits = <0x24 0x11 0x00>;
+					pinctrl-single,bits = <0x24 0x00 0x11>;
 			};
 			mdio1mux1: mdio1mux1 {
-					pinctrl-single,bits = <0x24 0x22 0x00>;
+					pinctrl-single,bits = <0x24 0x00 0x22>;
 			};
 			mdio2mux1: mdio2mux1 {
-					pinctrl-single,bits = <0x24 0x44 0x00>;
+					pinctrl-single,bits = <0x24 0x00 0x44>;
 			};
 			mdio3mux1: mdio3mux1 {
-					pinctrl-single,bits = <0x24 0x88 0x00>;
+					pinctrl-single,bits = <0x24 0x00 0x88>;
 			};
 		};
 
@@ -160,7 +160,7 @@
             status = "okay";
 
 			phy0: ethernet-phy@0 {
-				reg = <0xffffffff>;
+				reg = <0xffffffff>;	// autodetect
 			};			
 		};
 

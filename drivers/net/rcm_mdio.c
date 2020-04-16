@@ -6,7 +6,7 @@
  *  Copyright (C) 2020 Alexey Spirkov <dev@alsp.net>
  *
  */
-#define DEBUG
+// #define DEBUG
 #define DBGPREFIX "[rcm-mdio]: "
 
 #include <common.h>
@@ -43,7 +43,7 @@ typedef struct _rcm_mdio_regs
     rwreg32 status;           /* 0x008 - status            */
     rwreg32 irq_mask;         /* 0x00C - irq mask          */
     roreg32 phy_irq_state;    /* 0x010 - irq mask          */
-    rwreg32 mg_control;       /* 0x014 - control reg       */
+    rwreg32 control;          /* 0x014 - control reg       */
     rwreg32 eth_rst_n;        /* 0x018 - reset reg         */
     rwreg32 freq_divider;     /* 0x01C - frequency divider */
     rwreg32 mdio_en;          /* 0x020 - enable register   */
@@ -56,11 +56,24 @@ typedef struct _rcm_mdio_priv
 
 } rcm_mdio_priv;
 
+static void dump_regs(rcm_mdio_regs* regs)
+{
+	debug(DBGPREFIX "id: %x\n", ioread32(&regs->id));
+	debug(DBGPREFIX "version: %x\n", ioread32(&regs->version));
+	debug(DBGPREFIX "status: %x\n", ioread32(&regs->status));
+	debug(DBGPREFIX "irq_mask: %x\n", ioread32(&regs->irq_mask));
+	debug(DBGPREFIX "phy_irq_state: %x\n", ioread32(&regs->phy_irq_state));
+	debug(DBGPREFIX "control: %x\n", ioread32(&regs->control));
+	debug(DBGPREFIX "eth_rst_n: %x\n", ioread32(&regs->eth_rst_n));
+	debug(DBGPREFIX "freq_div: %x\n", ioread32(&regs->freq_divider));
+	debug(DBGPREFIX "mdio_en: %x\n", ioread32(&regs->mdio_en));
+}
+
 static int rcm_mdio_reset(struct udevice *mdio_dev)
 {
     rcm_mdio_priv *priv = dev_get_priv(mdio_dev);
 
-	dev_dbg(mdio_dev, DBGPREFIX "reset called\n");
+	dev_dbg(mdio_dev, DBGPREFIX "reset\n");
 
 	/* put to reset state */
 	iowrite32(0 << ETH_RST_N, &priv->regs->eth_rst_n);
@@ -79,7 +92,7 @@ static int rcm_mdio_probe(struct udevice *dev)
 	rcm_mdio_priv *priv = dev_get_priv(dev);
 	rcm_mdio_regs* regs = (rcm_mdio_regs*) dev_read_addr(dev);
 
-	dev_dbg(dev, DBGPREFIX "probe called\n");
+	dev_dbg(dev, DBGPREFIX "probe\n");
 
 	if(!regs)
 	{
@@ -97,6 +110,8 @@ static int rcm_mdio_probe(struct udevice *dev)
 
 	priv->regs = regs;
 
+	dump_regs(regs);
+
 	/* disable all interrupts */
 	iowrite32(0, &regs->irq_mask); 	
 
@@ -105,7 +120,7 @@ static int rcm_mdio_probe(struct udevice *dev)
 
 static int rcm_mdio_bind(struct udevice *dev)
 {
-	dev_dbg(dev, DBGPREFIX "bind called\n");
+	dev_dbg(dev, DBGPREFIX "bind\n");
 
 	if (ofnode_valid(dev->node))
 		device_set_name(dev, ofnode_get_name(dev->node));
@@ -117,35 +132,38 @@ static int rcm_mdio_read(struct udevice *mdio_dev, int addr, int devad, int reg)
 {
     rcm_mdio_priv *priv = dev_get_priv(mdio_dev);
 
-	dev_dbg(mdio_dev, DBGPREFIX "read called for %d:%d:%d\n", addr, devad, reg);
-
 	if (devad != MDIO_DEVAD_NONE)
 		return -EOPNOTSUPP;
 
-    iowrite32(reg << ADDR_REG | addr << ADDR_PHY | 1 << START_RD, &priv->regs->mg_control);
+    iowrite32((reg << ADDR_REG) | (addr << ADDR_PHY) | (1 << START_RD), &priv->regs->control);
 
-	int ret = wait_for_bit_le32((void*)&priv->regs->mg_control, BIT(BUSY), true, CONFIG_SYS_HZ, false);
+	int ret = wait_for_bit_le32((void*)&priv->regs->control, BIT(BUSY), false, CONFIG_SYS_HZ, false);
 	if (ret < 0)
+	{
+		dev_dbg(mdio_dev, DBGPREFIX "read %d:%d:%d => ERROR\n", addr, devad, reg);
 		return ret;
+	}
 
-    return (ioread32(&priv->regs->mg_control) >> CTRL_DATA)&0x0000FFFF;;
+	unsigned short val = (ioread32(&priv->regs->control) >> CTRL_DATA)&0x0000FFFF;
+	dev_dbg(mdio_dev, DBGPREFIX "read %d:%d:%d => %x:%x\n", addr, devad, reg, ioread32(&priv->regs->control), val);
+    return val;
 }
 
 static int rcm_mdio_write(struct udevice *mdio_dev, int addr, int devad, int reg, u16 val)
 {
     rcm_mdio_priv *priv = dev_get_priv(mdio_dev);
 
-	dev_dbg(mdio_dev, DBGPREFIX "write called for %d:%d:%d <= %d\n", addr, devad, reg, (int) val);
+	dev_dbg(mdio_dev, DBGPREFIX "write %d:%d:%d <= %d\n", addr, devad, reg, (int) val);
 
 	if (devad != MDIO_DEVAD_NONE)
 		return -EOPNOTSUPP;
 
 	// wait while busy
-	int ret = wait_for_bit_le32((void*)&priv->regs->mg_control, BIT(BUSY), false, CONFIG_SYS_HZ, false);
+	int ret = wait_for_bit_le32((void*)&priv->regs->control, BIT(BUSY), false, CONFIG_SYS_HZ, false);
 	if (ret < 0)
 		return ret;
 
-    iowrite32(reg << ADDR_REG | addr << ADDR_PHY | 1 << START_WR | val << CTRL_DATA, &priv->regs->mg_control);
+    iowrite32((reg << ADDR_REG) | (addr << ADDR_PHY) | (1 << START_WR) | (val << CTRL_DATA), &priv->regs->control);
 
     return 0;
 }
