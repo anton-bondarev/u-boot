@@ -147,7 +147,7 @@ int muart_putc(struct udevice *dev, const char ch)
     struct muart_regs* regs = priv->regs;
     int fifo_len = (ioread32(&regs->fifo_state) >> MUART_TXFS_i) & 0x7ff;
     
-    if(fifo_len == 0x7ff)
+    if(fifo_len > 1023)
     {
         return -EAGAIN;
     }
