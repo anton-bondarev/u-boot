@@ -35,6 +35,13 @@
 		u-boot,dm-pre-reloc;
 	};
 
+	L2: l2-cache-controller@0x01106000 {
+		compatible = "arm,pl310-cache";
+		reg = <0x01106000 0x1000>;
+		cache-unified;
+		cache-level = <2>;
+	};	
+
 	axi {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -145,7 +152,7 @@
 			reg = <0x01086000 0x2000>;
 			#phy-cells = <0>;
 			sctl = <&sctl>, <0x14>;
-			auto-negotiation;
+			//auto-negotiation;
             status = "okay";
 		};
 

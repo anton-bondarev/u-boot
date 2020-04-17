@@ -8,10 +8,13 @@
 #include <common.h>
 #include <cpu_func.h>
 
-#if !defined(CONFIG_SYS_DCACHE_OFF)
 void enable_caches(void)
 {
-	/* do not enable data cache for a while */
-	//dcache_enable();
-}
+#if !CONFIG_IS_ENABLED(SYS_ICACHE_OFF)
+	icache_enable();
 #endif
+#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+	dcache_enable();
+#endif
+}
+
