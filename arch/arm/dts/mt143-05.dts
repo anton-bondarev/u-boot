@@ -40,6 +40,7 @@
 		reg = <0x01106000 0x1000>;
 		cache-unified;
 		cache-level = <2>;
+		status = "okay";
 	};	
 
 	axi {
@@ -152,7 +153,7 @@
 			reg = <0x01086000 0x2000>;
 			#phy-cells = <0>;
 			sctl = <&sctl>, <0x14>;
-			//auto-negotiation;
+			auto-negotiation;
             status = "okay";
 		};
 
@@ -178,7 +179,7 @@
 			mac-address = [ec 17 66 64 08 10];
 			phys = <&sgmiiphy>;
 			phy = <&phy0>;
-            phy-mode = "gmii";
+            phy-mode = "sgmii";
 			status = "okay";
 		};		
     };

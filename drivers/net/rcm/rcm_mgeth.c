@@ -9,7 +9,8 @@
  *      - works in pull mode, 
  *      - only one channel used for rx and one for tx
  */
-#define DEBUG
+//#define DEBUG
+//#define DETAILED_DEBUG
 #define DBGPREFIX "[rcm-mgeth]: "
 
 #include <version.h>
@@ -22,16 +23,47 @@
 #include <miiphy.h>
 #include <net.h>
 #include <asm/io.h>
+#include <cpu_func.h>
 #include <linux/io.h>
 #include <generic-phy.h>
+#include <wait_bit.h>
+//#include "rcm_mdma_chan.h"
 
 #define MGETH_ID 0x48544547
 #define MGETH_VER 0x01900144
+
+// RXBD_COUNT should be multiply of 4
+#define MGETH_RXBD_CNT 8
+#define MGETH_TXBD_CNT 1
+
+#define MGETH_BD_POLL_ALIGN 0x1000
+
+// descriptor flags
+#define MGETH_BD_OWN 0x80000000
+#define MGETH_BD_LINK 0x40000000
+#define MGETH_BD_STOP 0x10000000
+
+// channel settings
+#define MGETH_CHAN_DESC_NORMAL 0x00000000
+#define MGETH_CHAN_DESC_LONG 0x00000002
+#define MGETH_CHAN_DESC_PITCH 0x00000003
+#define MGETH_CHAN_ADD_INFO 0x00000010
+#define MGETH_CHAN_DESC_GAP_SHIFT 16
+
+// generic flags
+#define MGETH_ENABLE 0x1
+
+#define MGETH_MIN_PACKET_LEN 60
+#define MGETH_MAX_PACKET_LEN 0x3fff
+
+#define MGETH_RXBUF_SIZE 1540
 
 typedef const volatile unsigned int roreg32;
 typedef volatile unsigned int rwreg32;
 typedef const volatile unsigned long long roreg64;
 typedef volatile unsigned long long rwreg64;
+
+#define BUF_SIZE 2048
 
 typedef struct _mgeth_rx_regs {
 /************************* RX Channel registers *****************************/
@@ -83,7 +115,7 @@ typedef struct _mgeth_rx_regs {
     roreg32 descriptor_short;               /* 0x1D8                        */
     roreg32 rtp_overmuch_line;              /* 0x1DC                        */
     roreg32 _skip08[8];                     /* 0x1E0 - 0x1FC                */
-} mgeth_rx_regs;
+} __attribute__ ((packed)) mgeth_rx_regs;
 
 typedef struct _mgeth_tx_regs {
     rwreg32 enable;                         /* 0x000 - enable channel       */
@@ -129,7 +161,7 @@ typedef struct _mgeth_tx_regs {
     roreg32 if_out_multicast_pkts;          /* 0x0D0                        */
     roreg32 if_out_broadcast_pkts;          /* 0x0D4                        */
     roreg32 _skip08[10];                    /* 0x0D8 - 0x0FC                */
-} mgeth_tx_regs;
+} __attribute__ ((packed)) mgeth_tx_regs;
 
 typedef struct _mgeth_regs {
 /***************** Common registers for MGETH and MDMA **********************/
@@ -187,19 +219,38 @@ typedef struct _mgeth_regs {
     mgeth_tx_regs tx[4];                    /* 0xA00 - 0xDFC                */
 /******************************* Reserved ***********************************/
     roreg32 _skip05[128];                   /* 0xE00 - 0xFFC                */
-} mgeth_regs;
+}   __attribute__ ((packed)) mgeth_regs;
+
+typedef struct __long_desc {
+	unsigned int usrdata_l;
+	unsigned int usrdata_h;
+	unsigned int memptr;
+	unsigned int flags_length;
+} __attribute__((packed, aligned(16))) long_desc;
 
 typedef struct {
 	mgeth_regs *regs;
 	struct eth_device *dev;
 	struct phy_device *phy;
-    struct phy sgmii_phy;
+	struct phy sgmii_phy;
 
-    unsigned int speed;
-    unsigned int duplex;
-    unsigned int link;
+	struct mdma_chan *tx_chan;
+	struct mdma_chan *rx_chan;
 
-    unsigned char dev_addr[ETH_ALEN];
+	long_desc *rxbd_base, *rxbd_max;
+	long_desc *txbd_base, *txbd_max;
+	long_desc *rxbd_curr;
+
+	void *rxbuf_base;
+	void *txbuf_base;
+
+	unsigned int speed;
+	unsigned int duplex;
+	unsigned int link;
+
+	unsigned char *buffer;
+
+	unsigned char dev_addr[ETH_ALEN];
 } mgeth_priv;
 
 #define CTRL_FD_S 0
@@ -210,32 +261,36 @@ typedef struct {
 /* Ajust phy link to mgeth settings */
 static void mgeth_link_event(mgeth_priv *priv)
 {
-    struct phy_device *phydev = priv->phy;
-    mgeth_regs* regs = priv->regs; 
+	struct phy_device *phydev = priv->phy;
+	mgeth_regs *regs = priv->regs;
 	int status_change = 0;
 	unsigned int val;
 
-    dev_dbg(priv->dev, DBGPREFIX "link_event\n");
+	dev_dbg(priv->dev, DBGPREFIX "link_event\n");
 
-    if(phydev->link)
-    {
+	if (phydev->link) {
 		if ((priv->speed != phydev->speed) ||
-		    (priv->duplex != phydev->duplex)) {            
-            val = ioread32(&regs->mg_control);
-            val &= ~(CTRL_FD_M | CTRL_SPEED_M);
-            if(phydev->duplex)
-                val |= CTRL_FD_M;
+		    (priv->duplex != phydev->duplex)) {
+			val = ioread32(&regs->mg_control);
+			val &= ~(CTRL_FD_M | CTRL_SPEED_M);
+			if (phydev->duplex)
+				val |= CTRL_FD_M;
 
-            if(phydev->speed == SPEED_1000)
-                val |= 2 << CTRL_SPEED_S;
-            else if(phydev->speed == SPEED_100)
-                val |= 1 << CTRL_SPEED_S;
-            iowrite32(val, &regs->mg_control);
-            priv->speed = phydev->speed;
-            priv->duplex = phydev->duplex;
-            dev_dbg(priv->dev, DBGPREFIX "changing speed to %d, duplex to %d\n", priv->speed, priv->duplex);
-        }
-    }
+			if (phydev->speed == SPEED_1000)
+				val |= 2 << CTRL_SPEED_S;
+			else if (phydev->speed == SPEED_100)
+				val |= 1 << CTRL_SPEED_S;
+			iowrite32(val, &regs->mg_control);
+			dev_dbg(priv->dev, DBGPREFIX "write %x to %p\n", val,
+				&regs->mg_control);
+			priv->speed = phydev->speed;
+			priv->duplex = phydev->duplex;
+			dev_dbg(priv->dev,
+				DBGPREFIX
+				"changing speed to %d, duplex to %d\n",
+				priv->speed, priv->duplex);
+		}
+	}
 
 	if (phydev->link != priv->link) {
 		if (!phydev->link) {
@@ -244,66 +299,167 @@ static void mgeth_link_event(mgeth_priv *priv)
 		}
 
 		priv->link = phydev->link;
-        dev_dbg(priv->dev, DBGPREFIX "changing link to %d\n", priv->link);
+		dev_dbg(priv->dev, DBGPREFIX "changing link to %d\n",
+			priv->link);
 		status_change = 1;
 	}
 
 	if (status_change) {
-        // todo
-    }
-
+		// if need some time
+	}
 }
 
 static int mgeth_config_phy(struct udevice *dev)
 {
 	mgeth_priv *priv = dev_get_priv(dev);
 
-    int ret = generic_phy_get_by_index(dev, 0, &priv->sgmii_phy);
+	int ret = generic_phy_get_by_index(dev, 0, &priv->sgmii_phy);
 	if (ret && ret != -ENOENT) {
-        dev_err(dev, DBGPREFIX "unable find SGMII PHY\n");        
-        return ret;
-    }
-    ret = generic_phy_init(&priv->sgmii_phy);
-    if (ret) {
-        dev_err(dev, DBGPREFIX "unable init SGMII PHY\n");        
-        return ret;
-    }
+		dev_err(dev, DBGPREFIX "unable find SGMII PHY\n");
+		return ret;
+	}
+	ret = generic_phy_init(&priv->sgmii_phy);
+	if (ret) {
+		dev_err(dev, DBGPREFIX "unable init SGMII PHY\n");
+		return ret;
+	}
 
-    priv->phy = dm_eth_phy_connect(dev);
-	if (!priv->phy)
-    {
-        dev_err(dev, DBGPREFIX "unable to configure PHY\n");
+	priv->phy = dm_eth_phy_connect(dev);
+	if (!priv->phy) {
+		dev_err(dev, DBGPREFIX "unable to configure PHY\n");
 		return -EINVAL;
-    }
-    return phy_config(priv->phy);
+	}
+	return phy_config(priv->phy);
 }
-
 
 static int mgeth_probe(struct udevice *dev)
 {
-    mgeth_priv *priv = dev_get_priv(dev);
-    mgeth_regs *regs = priv->regs;
+	mgeth_priv *priv = dev_get_priv(dev);
+	mgeth_regs *regs = priv->regs;
+	int ret;
 
-    dev_dbg(dev, DBGPREFIX "probe\n");
+	dev_dbg(dev, DBGPREFIX "probe %p, %p\n",
+		&regs->rx[1].a_frames_received_ok, &regs->tx[0]);
 
-    if(ioread32(&regs->id) != MGETH_ID || ioread32(&regs->version) != MGETH_VER)
-    {
-        dev_err(dev, DBGPREFIX "detected illegal version of MGETH core: 0x%08x 0x%08x\n",
-            ioread32(&regs->id), 
-            ioread32(&regs->version));
-        return -ENOTSUPP;
-    }
+	if (ioread32(&regs->id) != MGETH_ID ||
+	    ioread32(&regs->version) != MGETH_VER) {
+		dev_err(dev,
+			DBGPREFIX
+			"detected illegal version of MGETH core: 0x%08x 0x%08x\n",
+			ioread32(&regs->id), ioread32(&regs->version));
+		return -ENOTSUPP;
+	}
+
+	iowrite32(1, &regs->sw_rst);
+	ret = wait_for_bit_le32((void *)&regs->sw_rst, BIT(1), false,
+				CONFIG_SYS_HZ * 2, false);
+	if (ret < 0) {
+		dev_err(dev, DBGPREFIX "Unable to reset\n");
+		return ret;
+	}
+
+	iowrite32(0, &regs->mg_irq_mask); // disable inerrupts
 
 	return mgeth_config_phy(dev);
 }
 
-static int mgeth_remove(struct udevice *dev)
+static void init_descr(mgeth_priv *priv)
 {
-	//mgeth_priv *priv = dev_get_priv(dev);
+	int i;
 
-    dev_dbg(mdio_dev, DBGPREFIX "remove called\n");
+	if (!priv->rxbd_base) {
+		/* allocate descriptors */
+		priv->rxbd_base = (long_desc *)memalign(
+			MGETH_BD_POLL_ALIGN,
+			MGETH_RXBD_CNT * sizeof(long_desc));
+		priv->txbd_base = (long_desc *)memalign(
+			MGETH_BD_POLL_ALIGN,
+			MGETH_TXBD_CNT * sizeof(long_desc));
 
-	return 0;
+		memset(priv->rxbd_base, 0, MGETH_RXBD_CNT * sizeof(long_desc));
+		memset(priv->txbd_base, 0, MGETH_RXBD_CNT * sizeof(long_desc));
+
+		/* allocate buffers to all descriptors  */
+		priv->rxbuf_base = malloc(MGETH_RXBUF_SIZE * MGETH_RXBD_CNT);
+
+		if (!priv->rxbuf_base)
+			dev_err(priv->phy->dev, DBGPREFIX
+				"Unable to allocate enough rx descriptor buffers\n");
+
+		priv->txbuf_base = malloc(MGETH_MIN_PACKET_LEN);
+
+		if (!priv->txbuf_base)
+			dev_err(priv->phy->dev, DBGPREFIX
+				"Unable to allocate enough tx buffers\n");
+
+		dev_dbg(priv->phy->dev,
+			DBGPREFIX
+			"rxbd_base: 0x%p, txbd_base:0x%p, rxbuf_base: 0x%p\n",
+			priv->rxbd_base, priv->txbd_base, priv->rxbuf_base);
+	}
+
+	/* initate rx decriptors */
+	for (i = 0; i < MGETH_RXBD_CNT; i++) {
+		priv->rxbd_base[i].memptr =
+			(unsigned int)(priv->rxbuf_base +
+				       (MGETH_RXBUF_SIZE * i));
+		priv->rxbd_base[i].usrdata_h = 0;
+		priv->rxbd_base[i].usrdata_l = 0;
+		/* enable desciptor & set wrap last to first descriptor */
+		if (i >= (MGETH_RXBD_CNT - 1)) {
+			priv->rxbd_base[i].flags_length =
+				MGETH_BD_LINK; // link descriptor
+			priv->rxbd_base[i].memptr =
+				(unsigned int)&priv->rxbd_base[0];
+		} else {
+			priv->rxbd_base[i].flags_length =
+				MGETH_RXBUF_SIZE; // usual descriptor
+		}
+	}
+
+	/* initiate indexes */
+	priv->rxbd_curr = priv->rxbd_base;
+	priv->rxbd_max = priv->rxbd_base + (MGETH_RXBD_CNT - 1);
+	priv->txbd_max = priv->txbd_base + (MGETH_TXBD_CNT - 1);
+
+	/* initate tx decriptor */
+	priv->txbd_base[0].usrdata_h = 0;
+	priv->txbd_base[0].usrdata_l = 0;
+	priv->txbd_base[0].memptr = 0;
+	priv->txbd_base[0].flags_length = MGETH_BD_STOP;
+
+	flush_cache((unsigned long)&priv->rxbd_base[0],
+		    sizeof(long_desc) * MGETH_RXBD_CNT);
+	flush_cache((unsigned long)&priv->txbd_base[0],
+		    sizeof(long_desc) * MGETH_TXBD_CNT);
+
+	/* Set pointer to rx descriptor areas */
+
+	iowrite32(MGETH_CHAN_DESC_LONG | MGETH_CHAN_ADD_INFO |
+			  (sizeof(long_desc) << MGETH_CHAN_DESC_GAP_SHIFT),
+		  &priv->regs->rx[0].settings);
+	iowrite32((unsigned int)&priv->rxbd_base[0],
+		  &priv->regs->rx[0].desc_addr);
+
+	dev_dbg(priv->phy->dev,
+		DBGPREFIX
+		"&priv->regs->tx[0].desc_addr: 0x%p, &priv->regs->tx[0].settings: 0x%p\n",
+		&priv->regs->tx[0].desc_addr, &priv->regs->tx[0].settings);
+}
+
+static void mgeth_set_packet_filter(mgeth_priv *priv)
+{
+	dev_dbg(priv->phy->dev, DBGPREFIX "Set RX filter to %x:%x:%x:%x:%x:%x\n",
+	       priv->dev_addr[0], priv->dev_addr[1], priv->dev_addr[2],
+	       priv->dev_addr[3], priv->dev_addr[4], priv->dev_addr[5]);
+	iowrite32(priv->dev_addr[0] | priv->dev_addr[1] << 8 |
+			  priv->dev_addr[2] << 16 | priv->dev_addr[3] << 24,
+		  &priv->regs->rx[0].rx_eth_mask_value[0]);
+	iowrite32(priv->dev_addr[4] | priv->dev_addr[5] << 8,
+		  &priv->regs->rx[0].rx_eth_mask_value[1]);
+	iowrite32(0xffffffff, &priv->regs->rx[0].rx_eth_mask_activ[0]);
+	iowrite32(0x0000ffff, &priv->regs->rx[0].rx_eth_mask_activ[1]);
+	iowrite32(6, &priv->regs->mg_len_mask_ch0);
 }
 
 /* init/start hardware and allocate descriptor buffers for rx side
@@ -313,27 +469,32 @@ static int mgeth_start(struct udevice *dev)
 {
 	struct eth_pdata *pdata = dev_get_platdata(dev);
 	mgeth_priv *priv = dev_get_priv(dev);
-    int ret;
+	int ret;
 
-    dev_dbg(mdio_dev, DBGPREFIX "start called\n");
+	dev_dbg(dev, DBGPREFIX "start called\n");
 
 	/* Load current MAC address */
 	memcpy(priv->dev_addr, pdata->enetaddr, ETH_ALEN);
 
-    // ToDo: set filters for given MAC
+	// set filters for given MAC
+	mgeth_set_packet_filter(priv);
 
-    ret = generic_phy_power_on(&priv->sgmii_phy);
-    if(ret)
-        return ret;
+	ret = generic_phy_power_on(&priv->sgmii_phy);
+	if (ret)
+		return ret;
 
-    // setup RT/TX queues
+	// startup PHY
+	ret = phy_startup(priv->phy);
+	if (!priv->phy->link)
+		printf("%s: No link\n", priv->phy->dev->name);
 
-    // startup PHY
-    ret = phy_startup(priv->phy);
-    if (!priv->phy->link)
-        printf("%s: No link\n", priv->phy->dev->name);
+	mgeth_link_event(priv);
 
-    mgeth_link_event(priv);
+	// setup RX/TX queues
+	init_descr(priv);
+
+	// enable rx
+	iowrite32(MGETH_ENABLE, &priv->regs->rx[0].enable);
 
 	return ret;
 }
@@ -343,19 +504,90 @@ static int mgeth_start(struct udevice *dev)
  */
 static void mgeth_stop(struct udevice *dev)
 {
-	//mgeth_priv *priv = dev_get_priv(dev);
+	mgeth_priv *priv = dev_get_priv(dev);
 
-    dev_dbg(mdio_dev, DBGPREFIX "stop called\n");
+	dev_dbg(dev, DBGPREFIX "stop called\n");
 
+	iowrite32(MGETH_ENABLE, &priv->regs->rx[0].cancel);
+	iowrite32(MGETH_ENABLE, &priv->regs->tx[0].cancel);
 }
 
 /* Send the bytes passed in "packet" as a packet on the wire */
 static int mgeth_send(struct udevice *dev, void *eth_data, int data_length)
 {
-	//mgeth_priv *priv = dev_get_priv(dev);
-	//mgeth_regs *regs = priv->regs;
+	mgeth_priv *priv = dev_get_priv(dev);
+	int ret;
 
-    dev_dbg(mdio_dev, DBGPREFIX "send called\n");
+	dev_dbg(dev, DBGPREFIX "send called %d\n", data_length);
+
+	// copy to internal buffer if size less than min
+	if (data_length < MGETH_MIN_PACKET_LEN) {
+		dev_dbg(dev, DBGPREFIX "copy data to internal buffer\n");
+		memset(priv->txbuf_base, 0, MGETH_MIN_PACKET_LEN);
+		memcpy(priv->txbuf_base, eth_data, data_length);
+		data_length = MGETH_MIN_PACKET_LEN;
+		eth_data = priv->txbuf_base;
+	}
+
+	dev_dbg(dev,
+		DBGPREFIX
+		"global_status: %x, status %x, desc_status %x, rx desc_status %x (%x)\n",
+		ioread32(&priv->regs->global_status),
+		ioread32(&priv->regs->mg_status),
+		ioread32(&priv->regs->tx[0].status),
+		ioread32(&priv->regs->rx[0].status),
+		ioread32(&priv->regs->rx[0].curr_desc_addr));
+
+#ifdef DETAILED_DEBUG
+	dev_dbg(dev, DBGPREFIX "transmitted: %d:%d\n",
+		ioread32(&priv->regs->a_frames_transmitted_ok),
+		ioread32(&priv->regs->a_frame_check_sequence_errors));
+
+	dev_dbg(dev, DBGPREFIX "curr_descr: %x\n",
+		ioread32(&priv->regs->tx[0].curr_desc_addr));
+
+	dev_dbg(dev, DBGPREFIX "rx curr_descr: %x\n",
+		ioread32(&priv->regs->rx[0].curr_desc_addr));
+
+	dev_dbg(dev, DBGPREFIX "axierr descr: %x:%x\n",
+		ioread32(&priv->regs->tx[0].desc_raxi_err_addr),
+		ioread32(&priv->regs->tx[0].desc_waxi_err_addr));
+
+	dev_dbg(dev, DBGPREFIX "rx axierr descr: %x:%x\n",
+		ioread32(&priv->regs->rx[0].desc_raxi_err_addr),
+		ioread32(&priv->regs->rx[0].desc_waxi_err_addr));
+
+	dev_dbg(dev, DBGPREFIX "axierr: %x\n",
+		ioread32(&priv->regs->tx[0].waxi_err_addr));
+
+	dev_dbg(dev, DBGPREFIX "rx axierr: %x\n",
+		ioread32(&priv->regs->rx[0].waxi_err_addr));
+#endif
+
+	// wait for completion of previous transfer
+	ret = wait_for_bit_le32((void *)&priv->regs->tx[0].enable, BIT(1),
+				false, CONFIG_SYS_HZ * 2, false);
+	if (ret < 0) {
+		dev_dbg(dev,
+			DBGPREFIX
+			"WARNING: Failed wait for tx transaction end (ret = %d)!\n",
+			ret);
+		return -EIO;
+	}
+
+	priv->txbd_base[0].flags_length = MGETH_BD_STOP | data_length;
+	priv->txbd_base[0].memptr = (unsigned int)eth_data;
+	flush_cache((unsigned long)&priv->txbd_base[0], sizeof(long_desc));
+	flush_cache((unsigned long)eth_data, data_length);
+
+	// enable tx
+	dev_dbg(dev, DBGPREFIX "Enable TX at %p\n", &priv->regs->tx[0].enable);
+	iowrite32(MGETH_CHAN_DESC_LONG | MGETH_CHAN_ADD_INFO |
+			  (sizeof(long_desc) << MGETH_CHAN_DESC_GAP_SHIFT),
+		  &priv->regs->tx[0].settings);
+	iowrite32((unsigned int)&priv->txbd_base[0],
+		  &priv->regs->tx[0].desc_addr);
+	iowrite32(MGETH_ENABLE, &priv->regs->tx[0].enable);
 
 	return 0;
 }
@@ -366,45 +598,98 @@ static int mgeth_send(struct udevice *dev, void *eth_data, int data_length)
  *	 network stack will not process the empty packet, but free_pkt() will be
  *	 called if supplied
  */
-static int mgeth_recv(struct udevice *dev, int flags, uchar **packetp)
+
+static void invalidate_dcache(unsigned long start, unsigned long size)
 {
-	//mgeth_priv *priv = dev_get_priv(dev);
-	//mgeth_regs *regs = priv->regs;
+	unsigned long aligned_start = start & ~(CONFIG_SYS_CACHELINE_SIZE - 1);
+	unsigned long aligned_end =
+		((start + size) & ~(CONFIG_SYS_CACHELINE_SIZE - 1)) +
+		CONFIG_SYS_CACHELINE_SIZE;
+	invalidate_dcache_range(aligned_start, aligned_end);
+}
 
-    dev_dbg(mdio_dev, DBGPREFIX "recv called\n");
+static int mgeth_recv(struct udevice *dev, int flags, unsigned char **packetp)
+{
+	mgeth_priv *priv = dev_get_priv(dev);
+	// mgeth_regs *regs = priv->regs;
+	long_desc *curr_bd = priv->rxbd_curr;
+	int len;
 
-	return 0;
+	invalidate_dcache((unsigned long)curr_bd, sizeof(long_desc));
+	if (!(curr_bd->flags_length & MGETH_BD_OWN))
+		return -1;
+
+	if (priv->rxbd_curr == &priv->rxbd_base[0]) // start again
+	{
+		// update link descriptor flags
+		dev_dbg(dev, DBGPREFIX "update link descriptor\n");
+		priv->rxbd_base[MGETH_RXBD_CNT - 1].flags_length =
+			MGETH_BD_LINK; // link descriptor
+		flush_cache((unsigned long)&priv->rxbd_base[MGETH_RXBD_CNT - 1],
+			    sizeof(long_desc));
+	}
+
+	// increment current descriptor
+	priv->rxbd_curr++;
+	if (priv->rxbd_curr == priv->rxbd_max)
+		priv->rxbd_curr = priv->rxbd_base;
+
+	*packetp = (unsigned char *)curr_bd->memptr;
+	len = curr_bd->flags_length & MGETH_MAX_PACKET_LEN;
+	invalidate_dcache((unsigned long)(*packetp), len);
+
+	dev_dbg(dev, DBGPREFIX "packet received desc %d, len %d\n",
+		(*packetp - (unsigned char *)(priv->rxbuf_base)) /
+			MGETH_RXBUF_SIZE,
+		len);
+
+	return len;
 }
 
 /* Give the driver an opportunity to manage its packet buffer memory
  *	     when the network stack is finished processing it. This will only be
  *	     called when no error was returned from recv
  */
-static int mgeth_free_pkt(struct udevice *dev, uchar *packet, int length)
+static int mgeth_free_pkt(struct udevice *dev, unsigned char *packet,
+			  int length)
 {
-	//mgeth_priv *priv = dev_get_priv(dev);
-	//mgeth_regs *regs = priv->regs;
+	mgeth_priv *priv = dev_get_priv(dev);
 
-    dev_dbg(mdio_dev, DBGPREFIX "free_pkt called\n");
+	int desc_no = (packet - (unsigned char *)(priv->rxbuf_base)) /
+		      MGETH_RXBUF_SIZE;
+
+	dev_dbg(mdio_dev, DBGPREFIX "free_pkt called %d\n", desc_no);
+
+	// reset flags
+	priv->rxbd_base[desc_no].flags_length =
+		MGETH_RXBUF_SIZE; // usual descriptor
+	flush_cache((unsigned long)&priv->rxbd_base[desc_no],
+		    sizeof(long_desc));
 
 	return 0;
 }
 
-/* Write a MAC address to the hardware (used to pass it to Linux
- *		 on some platforms like ARM). This function expects the
- *		 eth_pdata::enetaddr field to be populated. The method can
- *		 return -ENOSYS to indicate that this is not implemented for
-		 this hardware
- */
-// static int mgeth_write_hwaddr(struct udevice *dev)
-// {
-// 	//mgeth_priv *priv = dev_get_priv(dev);
-// 	//struct eth_pdata *pdata = dev_get_platdata(dev);
+static int mgeth_remove(struct udevice *dev)
+{
+	mgeth_priv *priv = dev_get_priv(dev);
+	dev_dbg(mdio_dev, DBGPREFIX "remove called\n");
 
-//     dev_dbg(mdio_dev, DBGPREFIX "write_hwaddr called\n");
+	mgeth_stop(dev);
 
-// 	return 0;
-// }
+	if (priv->rxbd_base)
+		free(priv->rxbd_base);
+
+	if (priv->txbd_base)
+		free(priv->txbd_base);
+
+	if (priv->rxbuf_base)
+		free(priv->rxbuf_base);
+
+	if (priv->txbuf_base)
+		free(priv->txbuf_base);
+
+	return 0;
+}
 
 static int mgeth_ofdata_to_platdata(struct udevice *dev)
 {
@@ -413,7 +698,7 @@ static int mgeth_ofdata_to_platdata(struct udevice *dev)
 	const char *mac;
 	int len;
 
-    dev_dbg(mdio_dev, DBGPREFIX "ofdata_to_platdata called\n");
+	dev_dbg(mdio_dev, DBGPREFIX "ofdata_to_platdata called\n");
 
 	priv->regs = (mgeth_regs *)(uintptr_t)devfdt_get_addr(dev);
 
@@ -436,7 +721,6 @@ static const struct eth_ops mgeth_ops = {
 	.recv = mgeth_recv,
 	.free_pkt = mgeth_free_pkt,
 	.stop = mgeth_stop,
-//	.write_hwaddr = mgeth_write_hwaddr,
 };
 
 static const struct udevice_id mgeth_ids[] = { { .compatible = "rcm,mgeth" },

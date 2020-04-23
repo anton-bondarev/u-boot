@@ -6,7 +6,7 @@
  *  Copyright (C) 2020 Alexey Spirkov <dev@alsp.net>
  *
  */
-// #define DEBUG
+//#define DEBUG
 #define DBGPREFIX "[rcm-mdio]: "
 
 #include <common.h>
@@ -135,17 +135,22 @@ static int rcm_mdio_read(struct udevice *mdio_dev, int addr, int devad, int reg)
 	if (devad != MDIO_DEVAD_NONE)
 		return -EOPNOTSUPP;
 
-    iowrite32((reg << ADDR_REG) | (addr << ADDR_PHY) | (1 << START_RD), &priv->regs->control);
-
+	// wait while busy
 	int ret = wait_for_bit_le32((void*)&priv->regs->control, BIT(BUSY), false, CONFIG_SYS_HZ, false);
 	if (ret < 0)
+		return ret;
+
+    iowrite32((reg << ADDR_REG) | (addr << ADDR_PHY) | (1 << START_RD), &priv->regs->control);
+
+	ret = wait_for_bit_le32((void*)&priv->regs->control, BIT(BUSY), false, CONFIG_SYS_HZ, false);
+	if (ret < 0)
 	{
-		dev_dbg(mdio_dev, DBGPREFIX "read %d:%d:%d => ERROR\n", addr, devad, reg);
+		dev_dbg(mdio_dev, DBGPREFIX "read %d:%d:%x => ERROR\n", addr, devad, reg);
 		return ret;
 	}
 
 	unsigned short val = (ioread32(&priv->regs->control) >> CTRL_DATA)&0x0000FFFF;
-	dev_dbg(mdio_dev, DBGPREFIX "read %d:%d:%d => %x:%x\n", addr, devad, reg, ioread32(&priv->regs->control), val);
+	dev_dbg(mdio_dev, DBGPREFIX "read %d:%d:%x => %x\n", addr, devad, reg, val);
     return val;
 }
 
@@ -153,7 +158,7 @@ static int rcm_mdio_write(struct udevice *mdio_dev, int addr, int devad, int reg
 {
     rcm_mdio_priv *priv = dev_get_priv(mdio_dev);
 
-	dev_dbg(mdio_dev, DBGPREFIX "write %d:%d:%d <= %d\n", addr, devad, reg, (int) val);
+	dev_dbg(mdio_dev, DBGPREFIX "write %d:%d:%x <= %x\n", addr, devad, reg, (int) val);
 
 	if (devad != MDIO_DEVAD_NONE)
 		return -EOPNOTSUPP;

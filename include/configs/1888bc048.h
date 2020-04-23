@@ -20,9 +20,9 @@
 #define CONFIG_SYS_SPL_MALLOC_START	0x00060000
 #endif
 
-#define CONFIG_SYS_MALLOC_LEN		SZ_4M
+#define CONFIG_SYS_MALLOC_LEN		SZ_16M
 
-#define CONFIG_SYS_LOAD_ADDR            0x40200000
+#define CONFIG_SYS_LOAD_ADDR        0x80000000
 
 /* to check following */
 #define CONFIG_SYS_SDRAM_BASE		0x81000000

@@ -18,3 +18,9 @@ void enable_caches(void)
 #endif
 }
 
+void flush_cache(unsigned long start, unsigned long size)
+{
+	unsigned long aligned_start = start & ~(CONFIG_SYS_CACHELINE_SIZE-1);
+	unsigned long aligned_end = ((start + size) & ~(CONFIG_SYS_CACHELINE_SIZE-1)) + CONFIG_SYS_CACHELINE_SIZE;
+	flush_dcache_range(aligned_start, aligned_end);
+}
