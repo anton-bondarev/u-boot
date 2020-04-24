@@ -33,7 +33,7 @@
 #define MGETH_VER 0x01900144
 
 // RXBD_COUNT should be multiply of 4
-#define MGETH_RXBD_CNT 8
+#define MGETH_RXBD_CNT 4
 #define MGETH_TXBD_CNT 1
 
 #define MGETH_BD_POLL_ALIGN 0x1000
@@ -497,7 +497,7 @@ static int mgeth_start(struct udevice *dev)
     if(ret)
         return ret;
 
-    iowrite32(0, &priv->regs->mg_irq_mask); // disable inerrupts
+    iowrite32(0, &priv->regs->mg_irq_mask); // disable interrupts
 
 	// set filters for given MAC
 	mgeth_set_packet_filter(priv);
