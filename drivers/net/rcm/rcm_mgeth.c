@@ -237,9 +237,9 @@ typedef struct {
 	struct mdma_chan *tx_chan;
 	struct mdma_chan *rx_chan;
 
-	long_desc *rxbd_base, *rxbd_max;
-	long_desc *txbd_base, *txbd_max;
-	long_desc *rxbd_curr;
+	long_desc *rxbd_base;
+	long_desc *txbd_base;
+    int rxbd_no;
 
 	void *rxbuf_base;
 	void *txbuf_base;
@@ -271,25 +271,22 @@ static void mgeth_link_event(mgeth_priv *priv)
 	if (phydev->link) {
 		if ((priv->speed != phydev->speed) ||
 		    (priv->duplex != phydev->duplex)) {
-			val = ioread32(&regs->mg_control);
-			val &= ~(CTRL_FD_M | CTRL_SPEED_M);
-			if (phydev->duplex)
-				val |= CTRL_FD_M;
-
-			if (phydev->speed == SPEED_1000)
-				val |= 2 << CTRL_SPEED_S;
-			else if (phydev->speed == SPEED_100)
-				val |= 1 << CTRL_SPEED_S;
-			iowrite32(val, &regs->mg_control);
-			dev_dbg(priv->dev, DBGPREFIX "write %x to %p\n", val,
-				&regs->mg_control);
 			priv->speed = phydev->speed;
 			priv->duplex = phydev->duplex;
-			dev_dbg(priv->dev,
-				DBGPREFIX
-				"changing speed to %d, duplex to %d\n",
-				priv->speed, priv->duplex);
+            status_change = 1;
 		}
+        val = ioread32(&regs->mg_control);
+        val &= ~(CTRL_FD_M | CTRL_SPEED_M);
+        if (phydev->duplex)
+            val |= CTRL_FD_M;
+
+        if (phydev->speed == SPEED_1000)
+            val |= 2 << CTRL_SPEED_S;
+        else if (phydev->speed == SPEED_100)
+            val |= 1 << CTRL_SPEED_S;
+        iowrite32(val, &regs->mg_control);
+        dev_dbg(priv->dev, DBGPREFIX "write %x to %p\n", val,
+            &regs->mg_control);
 	}
 
 	if (phydev->link != priv->link) {
@@ -305,7 +302,18 @@ static void mgeth_link_event(mgeth_priv *priv)
 	}
 
 	if (status_change) {
-		// if need some time
+        if(priv->link)
+        {
+			dev_info(priv->dev,
+				DBGPREFIX
+				"phy link at %d %s duplex\n",
+				priv->speed, priv->duplex?"full":"half");
+        }
+        else
+        {
+			dev_info(priv->dev, DBGPREFIX
+				"link down\n");
+        }
 	}
 }
 
@@ -332,6 +340,19 @@ static int mgeth_config_phy(struct udevice *dev)
 	return phy_config(priv->phy);
 }
 
+static int mgeth_reset(mgeth_priv *priv)
+{
+    int ret = 0;
+	iowrite32(MGETH_ENABLE, &priv->regs->sw_rst);
+	ret = wait_for_bit_le32((void *)&priv->regs->sw_rst, BIT(1), false,
+				CONFIG_SYS_HZ * 2, false);
+	if (ret < 0) {
+		dev_err(dev, DBGPREFIX "Unable to reset\n");
+		return ret;
+	}
+    return ret;
+}
+
 static int mgeth_probe(struct udevice *dev)
 {
 	mgeth_priv *priv = dev_get_priv(dev);
@@ -350,15 +371,12 @@ static int mgeth_probe(struct udevice *dev)
 		return -ENOTSUPP;
 	}
 
-	iowrite32(1, &regs->sw_rst);
-	ret = wait_for_bit_le32((void *)&regs->sw_rst, BIT(1), false,
-				CONFIG_SYS_HZ * 2, false);
-	if (ret < 0) {
-		dev_err(dev, DBGPREFIX "Unable to reset\n");
-		return ret;
-	}
+    ret = mgeth_reset(priv);
+    
+    if(ret)
+        return ret;
 
-	iowrite32(0, &regs->mg_irq_mask); // disable inerrupts
+    iowrite32(0, &regs->mg_irq_mask); // disable inerrupts
 
 	return mgeth_config_phy(dev);
 }
@@ -400,9 +418,6 @@ static void init_descr(mgeth_priv *priv)
 
 	/* initate rx decriptors */
 	for (i = 0; i < MGETH_RXBD_CNT; i++) {
-		priv->rxbd_base[i].memptr =
-			(unsigned int)(priv->rxbuf_base +
-				       (MGETH_RXBUF_SIZE * i));
 		priv->rxbd_base[i].usrdata_h = 0;
 		priv->rxbd_base[i].usrdata_l = 0;
 		/* enable desciptor & set wrap last to first descriptor */
@@ -414,13 +429,14 @@ static void init_descr(mgeth_priv *priv)
 		} else {
 			priv->rxbd_base[i].flags_length =
 				MGETH_RXBUF_SIZE; // usual descriptor
-		}
+            priv->rxbd_base[i].memptr =
+                (unsigned int)(priv->rxbuf_base +
+				       (MGETH_RXBUF_SIZE * i));	
+    	}
 	}
 
 	/* initiate indexes */
-	priv->rxbd_curr = priv->rxbd_base;
-	priv->rxbd_max = priv->rxbd_base + (MGETH_RXBD_CNT - 1);
-	priv->txbd_max = priv->txbd_base + (MGETH_TXBD_CNT - 1);
+    priv->rxbd_no = 0;
 
 	/* initate tx decriptor */
 	priv->txbd_base[0].usrdata_h = 0;
@@ -476,6 +492,13 @@ static int mgeth_start(struct udevice *dev)
 	/* Load current MAC address */
 	memcpy(priv->dev_addr, pdata->enetaddr, ETH_ALEN);
 
+    ret = mgeth_reset(priv);
+    
+    if(ret)
+        return ret;
+
+    iowrite32(0, &priv->regs->mg_irq_mask); // disable inerrupts
+
 	// set filters for given MAC
 	mgeth_set_packet_filter(priv);
 
@@ -508,8 +531,8 @@ static void mgeth_stop(struct udevice *dev)
 
 	dev_dbg(dev, DBGPREFIX "stop called\n");
 
-	iowrite32(MGETH_ENABLE, &priv->regs->rx[0].cancel);
-	iowrite32(MGETH_ENABLE, &priv->regs->tx[0].cancel);
+	iowrite32(0, &priv->regs->rx[0].enable);
+	iowrite32(0, &priv->regs->tx[0].enable);
 }
 
 /* Send the bytes passed in "packet" as a packet on the wire */
@@ -612,14 +635,16 @@ static int mgeth_recv(struct udevice *dev, int flags, unsigned char **packetp)
 {
 	mgeth_priv *priv = dev_get_priv(dev);
 	// mgeth_regs *regs = priv->regs;
-	long_desc *curr_bd = priv->rxbd_curr;
+	long_desc *curr_bd = &priv->rxbd_base[priv->rxbd_no];
 	int len;
 
 	invalidate_dcache((unsigned long)curr_bd, sizeof(long_desc));
 	if (!(curr_bd->flags_length & MGETH_BD_OWN))
 		return -1;
 
-	if (priv->rxbd_curr == &priv->rxbd_base[0]) // start again
+    int curr_no = priv->rxbd_no;
+
+	if (priv->rxbd_no == 0) // start again
 	{
 		// update link descriptor flags
 		dev_dbg(dev, DBGPREFIX "update link descriptor\n");
@@ -630,11 +655,13 @@ static int mgeth_recv(struct udevice *dev, int flags, unsigned char **packetp)
 	}
 
 	// increment current descriptor
-	priv->rxbd_curr++;
-	if (priv->rxbd_curr == priv->rxbd_max)
-		priv->rxbd_curr = priv->rxbd_base;
+	priv->rxbd_no++;
+	if (priv->rxbd_no == (MGETH_RXBD_CNT - 1))
+		priv->rxbd_no = 0;
 
-	*packetp = (unsigned char *)curr_bd->memptr;
+	*packetp = (priv->rxbuf_base +
+				       (MGETH_RXBUF_SIZE * curr_no));
+
 	len = curr_bd->flags_length & MGETH_MAX_PACKET_LEN;
 	invalidate_dcache((unsigned long)(*packetp), len);
 
@@ -663,6 +690,7 @@ static int mgeth_free_pkt(struct udevice *dev, unsigned char *packet,
 	// reset flags
 	priv->rxbd_base[desc_no].flags_length =
 		MGETH_RXBUF_SIZE; // usual descriptor
+    priv->rxbd_base[desc_no].memptr = (unsigned int) packet;
 	flush_cache((unsigned long)&priv->rxbd_base[desc_no],
 		    sizeof(long_desc));
 

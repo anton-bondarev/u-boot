@@ -182,5 +182,84 @@
             phy-mode = "sgmii";
 			status = "okay";
 		};		
+
+		mdio1: mdio1@0x01081000 {
+			compatible = "rcm,mdio";
+			reg = <0x01081000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;			
+			clocks = <&clock_axi_slow>;		
+			pinctrl-names = "default";
+			pinctrl-0 = <&mdio1mux0>, <&mdio1mux1>;
+            status = "okay";
+
+			phy1: ethernet-phy@0 {
+				reg = <0xffffffff>;	// autodetect
+			};			
+		};
+
+		mgeth1: mgeth@0x01015000 {
+			compatible = "rcm,mgeth";
+			reg = <0x01015000 0x1000>;
+			clocks = <&clock_axi_fast>;
+			mac-address = [ec 17 66 64 08 11];
+			phys = <&sgmiiphy>;
+			phy = <&phy1>;
+            phy-mode = "sgmii";
+			status = "okay";
+		};		
+
+		mdio2: mdio2@0x01082000 {
+			compatible = "rcm,mdio";
+			reg = <0x01082000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;			
+			clocks = <&clock_axi_slow>;		
+			pinctrl-names = "default";
+			pinctrl-0 = <&mdio2mux0>, <&mdio2mux1>;
+            status = "okay";
+
+			phy2: ethernet-phy@0 {
+				reg = <0xffffffff>;	// autodetect
+			};			
+		};
+
+		mgeth2: mgeth@0x01016000 {
+			compatible = "rcm,mgeth";
+			reg = <0x01016000 0x1000>;
+			clocks = <&clock_axi_fast>;
+			mac-address = [ec 17 66 64 08 12];
+			phys = <&sgmiiphy>;
+			phy = <&phy2>;
+            phy-mode = "sgmii";
+			status = "okay";
+		};		
+
+		mdio3: mdio3@0x01083000 {
+			compatible = "rcm,mdio";
+			reg = <0x01083000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;			
+			clocks = <&clock_axi_slow>;		
+			pinctrl-names = "default";
+			pinctrl-0 = <&mdio3mux0>, <&mdio3mux1>;
+            status = "okay";
+
+			phy3: ethernet-phy@0 {
+				reg = <0xffffffff>;	// autodetect
+			};			
+		};
+
+		mgeth3: mgeth@0x01017000 {
+			compatible = "rcm,mgeth";
+			reg = <0x01017000 0x1000>;
+			clocks = <&clock_axi_fast>;
+			mac-address = [ec 17 66 64 08 13];
+			phys = <&sgmiiphy>;
+			phy = <&phy3>;
+            phy-mode = "sgmii";
+			status = "okay";
+		};		
+
     };
 };
