@@ -248,6 +248,8 @@ ALL-$(CONFIG_ARCH_MEDIATEK)	+= $(obj)/u-boot-spl-mtk.bin
 
 ALL-$(CONFIG_TARGET_1888TX018)		+= $(obj)/$(SPL_BIN)-dtb.rbi
 
+ALL-$(CONFIG_TARGET_1888BC048)		+= $(obj)/$(SPL_BIN)-dtb.rbi
+
 all:	$(ALL-y)
 
 quiet_cmd_cat = CAT     $@

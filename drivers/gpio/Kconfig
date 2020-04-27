@@ -434,4 +434,10 @@ config MT7621_GPIO
 	help
 	  Say yes here to support MediaTek MT7621 compatible GPIOs.
 
+config RCM_GPIO
+	bool "RCM GPIO driver"
+	depends on DM_GPIO
+	help
+	  Supports RC-Module GPIO.
+
 endmenu

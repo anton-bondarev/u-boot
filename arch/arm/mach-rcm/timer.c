@@ -4,12 +4,17 @@
 #include <asm/io.h>
 #include <asm/arch-armv7/systimer.h>
 
+#ifdef CONFIG_TARGET_1879VM8YA
+// Value was measured experimentally. If someone find right value - fix it!
+#define TIMER_1US_VAL	200
 #define TIMER_BASE	0x000CD000
+#elif CONFIG_TARGET_1888BC048
+#define TIMER_1US_VAL	100
+#define TIMER_BASE	0x01048000
+#endif
 
 static struct systimer *systimer_base = (struct systimer *)TIMER_BASE;
 
-// Value was measured experimentally. If someone find right value - fix it!
-#define TIMER_1US_VAL	200
 
 #define TIMER_START_VAL	0xFFFFFFF0
 #define TIMER_US_MAX	53687091
@@ -26,7 +31,6 @@ static struct systimer *systimer_base = (struct systimer *)TIMER_BASE;
 int timer_init (void)
 {
 	u32 ctrl;
-
 	/*
 	 * Initialise to a known state (all timers off)
 	 */
@@ -39,6 +43,7 @@ int timer_init (void)
 	writel(TIMER_START_VAL, &(systimer_base->timer1bgload));
 	writel(TIMER_START_VAL, &(systimer_base->timer1load));
 	writel(ctrl, &(systimer_base->timer1control));
+
 	return 0;
 }
 

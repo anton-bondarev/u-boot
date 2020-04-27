@@ -518,6 +518,8 @@ static int rcm_mmc_probe(struct udevice * dev)
 
 	rcm_writel(mmc, SDIO_SDR_ERROR_ENABLE_REG, 0x16F);  //enable interrupt and error flag
 
+	rcm_writel(mmc, SPISDIO_ENABLE, 0x0);  //sdio-on, spi-off
+
 	return 0;
 }
 
@@ -548,11 +550,13 @@ int rcm_mmc_bind(struct udevice *dev)
 static void set_clock(struct udevice * dev, uint clock)
 {
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
-	
-	uint32_t m = BUS_CLOCK/(clock*2) - 1;		
-	if ( m > CLKDIV_MAX )
-		m = CLKDIV_MAX;
-	
+	uint32_t m = CLKDIV_MAX;
+	if(clock)
+	{
+		m = BUS_CLOCK/(clock*2) - 1;		
+		if ( m > CLKDIV_MAX )
+			m = CLKDIV_MAX;
+	}
 	rcm_writel(mmc, SPISDIO_SDIO_CLK_DIVIDE, m);  
 }
 
@@ -610,6 +614,8 @@ static int rcm_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, struct 
 	struct mmc * mmc = mmc_get_mmc_dev(dev);
 	int ret = 0;
 	
+	rcm_writel(mmc, SPISDIO_ENABLE, 0x1);  //sdio-on, spi-off
+
 	int resp = SDIO_RESPONSE_NONE;	
 	if ( cmd->resp_type & MMC_RSP_PRESENT ) {
 		if ( cmd->resp_type & MMC_RSP_136 )
@@ -695,6 +701,8 @@ static int rcm_dm_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd, struct 
 
 	rcm_mmc_read_response(mmc, cmd);
 	
+	rcm_writel(mmc, SPISDIO_ENABLE, 0x0);  //sdio-on, spi-off
+
 	return ret;
 }
 
