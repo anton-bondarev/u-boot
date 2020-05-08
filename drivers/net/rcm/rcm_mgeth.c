@@ -308,6 +308,7 @@ static void mgeth_link_event(mgeth_priv *priv)
 				DBGPREFIX
 				"phy link at %d %s duplex\n",
 				priv->speed, priv->duplex?"full":"half");
+            udelay(2000000);    // ToDo: workaround for first packet sending issue
         }
         else
         {

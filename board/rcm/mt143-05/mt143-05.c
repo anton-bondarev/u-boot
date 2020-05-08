@@ -125,11 +125,12 @@ int dram_init(void)
 
 int board_init(void)
 {
+#ifdef CONFIG_L2X0_CACHE
 	struct udevice *dev;
 	printk("Enabling L2 Cache\n");
 	if (uclass_get_device(UCLASS_CACHE, 0, &dev))
 		pr_err("cache controller driver NOT found!\n");
-
+#endif
     return 0; 
 }
 
