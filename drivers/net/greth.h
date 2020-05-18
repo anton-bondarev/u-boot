@@ -77,5 +77,5 @@ typedef struct _greth_regs {
 /* Ethernet buffer descriptor */
 typedef struct _greth_bd {
 	volatile unsigned int stat;
-	unsigned int addr;	/* Buffer address not changed by HW */
+	volatile unsigned int addr;	/* Buffer address not changed by HW */
 } greth_bd;
