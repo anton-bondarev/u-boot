@@ -38,7 +38,8 @@
 #define GRETH_PHY_ADR_DEFAULT 0
 #endif
 
-static void invalidate_dcache(unsigned long start, unsigned long size)
+static inline void greth_invalidate_dcache(unsigned long start, 
+                                           unsigned long size)
 {
 	unsigned long aligned_start = start & ~(CONFIG_SYS_CACHELINE_SIZE - 1);
 	unsigned long aligned_end =
@@ -116,12 +117,16 @@ typedef struct {
 static inline void greth_write_bd(volatile u32 *bd, u32 val)
 {
 	writel(cpu_to_be32(val), bd);
+#ifdef CONFIG_ARM
 	flush_cache((unsigned long)bd, sizeof(val));
+#endif
 }
 
 static inline u32 greth_read_bd(volatile u32 *bd)
 {
-	invalidate_dcache((unsigned long)bd, sizeof(u32));
+#ifdef CONFIG_ARM
+	greth_invalidate_dcache((unsigned long)bd, sizeof(u32));
+#endif
 	return be32_to_cpu(readl(bd));
 }
 
@@ -137,7 +142,7 @@ static int read_mii(int phyaddr, int regaddr, volatile greth_regs * regs)
 	}
 
 	GRETH_REGSAVE(&regs->mdio, ((phyaddr & 0x1F) << 11) | 
-                                    ((regaddr & 0x1F) << 6) | 2);
+	                            ((regaddr & 0x1F) << 6) | 2);
 
 	start = get_timer(0);
 	while (GRETH_REGLOAD(&regs->mdio) & GRETH_MII_BUSY) {
@@ -473,8 +478,10 @@ int greth_send(struct udevice *dev, void *eth_data, int data_length)
 	} else {
 		txbuf = (void *)eth_data;
 	}
-	
+
+#ifdef CONFIG_ARM
 	flush_cache((unsigned long)txbuf, data_length);
+#endif
 
 	/* get descriptor to use, only 1 supported... hehe easy */
 	txbd = greth->txbd_base;
@@ -584,7 +591,9 @@ int greth_recv(struct udevice *dev, int flags, uchar **packetp)
 		len = 0; // skip the packet (but free_pkt will be called)
 	} else {
 		d = *packetp;
-		invalidate_dcache((unsigned long)d, len);
+#ifdef CONFIG_ARM
+		greth_invalidate_dcache((unsigned long)d, len);
+#endif
 		debug("greth_recv: new packet, length: %d. data: "
 		      "%x %x %x %x %x %x %x %x\n",
 		      len, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
