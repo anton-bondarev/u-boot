@@ -107,21 +107,21 @@
 #define CONFIG_IPADDR 192.168.0.2
 #define CONFIG_SERVERIP 192.168.0.1
 #define CONFIG_NETMASK 255.255.255.0
-#define CONFIG_HOSTNAME "tx011"
+#define CONFIG_HOSTNAME "tx018"
 #define CONFIG_LOADADDR 50000000
 #define CONFIG_EXTRA_ENV_SETTINGS \
         "baudrate=1000000\0" \
-        "bootfile=tx011/uImage\0" \
+        "bootfile=tx018/uImage\0" \
         "bootm_low=08000000\0" \
         "bootm_size=04000000\0" \
         "fdt_addr_r=50f00000\0" \
         "fileaddr=50f00000\0" \
         "kernel=run setmem; run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
         "kernelsd=run setmem; run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
-        "loadfdt=tftp ${fdt_addr_r} tx011/tx011.dtb\0" \
-        "loadfdtsd=ext4load mmc 0:2 ${fdt_addr_r} /boot/uImage-tx011.dtb\0" \
+        "loadfdt=tftp ${fdt_addr_r} tx018/tx018.dtb\0" \
+        "loadfdtsd=ext4load mmc 0:2 ${fdt_addr_r} /boot/uImage-tx018.dtb\0" \
         "loadkernel=tftp ${loadaddr} ${bootfile}\0" \
-        "loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage-tx011.bin\0" \
+        "loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage-tx018.bin\0" \
         "loadsd=run loadfdtsd; run loadkernelsd\0" \
         "setmem=mmap drop all; mmap drop 0 1m; mmap set 0 256m 00000000; mmap set ${loadaddr} 16m 10000000\0" \
         "tftptimeout=1000\0" \
@@ -202,6 +202,10 @@
     #define CONFIG_ENV_SECT_SIZE            0x40000
     #define CONFIG_SPL_ENV_SUPPORT
     #define CONFIG_TPL_ENV_SUPPORT
+#elif defined CONFIG_ENV_IS_IN_MMC
+    #define CONFIG_ENV_OFFSET               0x50000
+    #define CONFIG_ENV_SIZE                 0x4000
+    #define CONFIG_ENV_SECT_SIZE            0x10000
 #else
     #define CONFIG_ENV_OFFSET               0x140000
     #define CONFIG_ENV_SIZE                 0x4000

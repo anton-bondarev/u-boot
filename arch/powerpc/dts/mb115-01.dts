@@ -502,7 +502,7 @@
 
 
 		mmc0: mmc0@0x3C064000 {
-			//compatible = "rcm,mmc-0.2";
+			compatible = "rcm,mmc-0.2";
 			reg = <0x3C064000 0x1000>;
 			carddetect-gpio = <&gpio1 1 0>;
 			u-boot,dm-pre-reloc;
