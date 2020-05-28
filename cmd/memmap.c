@@ -149,7 +149,7 @@ static int mem_map_tlbs(void)
 
 typedef struct 
 {
-	uint32_t phys_adr;
+	uint64_t phys_adr;
 	uint32_t cpu_adr;
 	tlb_size_id sid;
 } map_entr;
@@ -176,7 +176,7 @@ static int mem_map_list(bool ddr_rgns)
 	for ( map_ind = 0; map_ind < countof(s_maps); ++ map_ind ) {
 		if ( s_maps[map_ind].sid == TLBSID_ERR ) 
 			continue;
-		printf("  Phys=%08x, Cpu=%08x, Size=%s\n", s_maps[map_ind].phys_adr, s_maps[map_ind].cpu_adr, get_tlb_sid_name(s_maps[map_ind].sid));
+		printf("  Phys=%08llx, Cpu=%08x, Size=%s\n", s_maps[map_ind].phys_adr, s_maps[map_ind].cpu_adr, get_tlb_sid_name(s_maps[map_ind].sid));
 	}
 	if(ddr_rgns)
 		bi_dram_print_info();
@@ -241,7 +241,7 @@ static int mem_map_drop_all(void)
 	return 0;
 }
 
-static int mem_map_set(uint32_t phys_adr, uint32_t cpu_adr, tlb_size_id tlb_sid)
+static int mem_map_set(uint64_t phys_adr, uint32_t cpu_adr, tlb_size_id tlb_sid)
 {
 	int map_ind;
 	
@@ -275,7 +275,7 @@ static int mem_map_test(bool read_flag)
 		if ( s_maps[map_ind].sid == TLBSID_ERR ) 
 			continue;
 		uint32_t len = get_tlb_sid_size(s_maps[map_ind].sid) / sizeof(uint32_t);
-		uint32_t pat = s_maps[map_ind].phys_adr;
+		uint64_t pat = s_maps[map_ind].phys_adr;
 		uint32_t * ptr = (uint32_t *) s_maps[map_ind].cpu_adr;
 		bool is_ok = true;
 		while ( len -- ) {
@@ -291,9 +291,9 @@ static int mem_map_test(bool read_flag)
 			pat += sizeof(uint32_t);
 		}
 		if ( read_flag ) {
-			printf("[%08x:%08x] : ", s_maps[map_ind].phys_adr, s_maps[map_ind].phys_adr + (get_tlb_sid_size(s_maps[map_ind].sid) - 1));
+			printf("[%08llx:%08llx] : ", s_maps[map_ind].phys_adr, s_maps[map_ind].phys_adr + (get_tlb_sid_size(s_maps[map_ind].sid) - 1));
 			if ( is_ok ) printf("ok\n");
-			else         printf("failed([%08x] = %08x)\n", pat, * ptr);			
+			else         printf("failed([%08llx] = %08x)\n", pat, * ptr);
 		} else
 			printf(".");						
 	}
@@ -348,13 +348,10 @@ static int do_mem_map_set(int argc, char * const argv[])
 			printf("Bad size\n");
 			return CMD_RET_USAGE;
 		}
-		
-		ulong phys_adr;
-		if ( strict_strtoul(argv[2], 16, & phys_adr) < 0 ) {
-			printf("Bad phys_adr\n");
-			return CMD_RET_USAGE;
-		}
-		
+
+		char* endptr;
+		uint64_t phys_adr = simple_strtoull(argv[2], &endptr, 16 );
+
 		return mem_map_set(phys_adr, cpu_adr, tlb_sid);
 	}
 
