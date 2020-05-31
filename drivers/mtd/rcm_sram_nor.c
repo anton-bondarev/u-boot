@@ -36,6 +36,7 @@
         #include <dm/of_access.h>
         #include <dm/of_addr.h>
         #include <dm/uclass.h>
+        #include <dm/device-internal.h>
         #include <regmap.h>
         #include <flash.h>
         #include <mtd/cfi_flash.h>
@@ -164,28 +165,32 @@ void dcr_reg_writel(void *base, u32 offset, u32 val)
 
 #ifdef __UBOOT__
 
-static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, bool dcr_reg, unsigned int flash_num ) {
-        char flash_node_name_pat[2][10] = { "mcif_nor*", "lsif_nor*" },
-            *flash_node_name = flash_node_name_pat[ dcr_reg ? 0 : 1 ];
+static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, const char* node_name_fmr_str, int chip_num, bool cfi_setup ) {
         struct rcm_mtd *rcm_mtd = pdev->priv;
         u32 ranges[4], bus_addr, size;
         u64 parent_bus_addr;
+        ofnode node;
+        char node_name[16];
 
-        flash_node_name[8] = '0'+flash_num;
-        ofnode flash_node = ofnode_find_subnode( pdev->node, flash_node_name );
-        if( !ofnode_valid( flash_node ) ) {
-                dev_err( &pdev->dev, "failed to get resource for %s\n", flash_node_name );
+        snprintf( node_name, sizeof(node_name), node_name_fmr_str, chip_num );
+
+        node = ofnode_find_subnode( pdev->node, node_name );
+        if( !ofnode_valid( node ) ) {
+                dev_warn( &pdev->dev, "failed to get resource for %s\n", node_name );
                 return -ENOENT;
         }
-        if( ofnode_read_u32_array( flash_node, "ranges", ranges, 4 ) ) {
+
+        if( ofnode_read_u32_array( node, "ranges", ranges, 4 ) ) {
             dev_err( &pdev->dev, "failed to read memory ranges\n" );
             return -ENOENT;
         }
+
         bus_addr = ranges[0];
         parent_bus_addr = ((u64)ranges[1]<<32) | ranges[2];
         size = ranges[3];
         DBG_PRINT( "Memmap: bus addr=%08x,plb addr=%016llx,size=%08x\n", bus_addr, parent_bus_addr, size );
-        if( flash_num ) {                       // was defined before,now must be same
+
+        if( chip_num ) {                       // was defined before,now must be same
             if( rcm_mtd->high_addr != ranges[1] ) {
                     dev_err( &pdev->dev, "high halfs of address must be match\n" );
                     return -EINVAL;
@@ -193,7 +198,12 @@ static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, bool dcr_reg, u
         }
         else
             rcm_mtd->high_addr = ranges[1];     // this fist function call,just saving address
+
         switch( size ) {
+        case 0x01000000:
+                tlb47x_inval( bus_addr, TLBSID_16M );
+                tlb47x_map( parent_bus_addr, bus_addr, TLBSID_16M, TLB_MODE_RWX );
+                break;
         case 0x10000000:
                 tlb47x_inval( bus_addr, TLBSID_256M );
                 tlb47x_map( parent_bus_addr, bus_addr, TLBSID_256M, TLB_MODE_RWX );
@@ -201,9 +211,24 @@ static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, bool dcr_reg, u
         default:
                 dev_err( &pdev->dev, "support only 256M window\n" );
                 return -EINVAL;
-       }
-       cfi_flash_bank_addr_update( flash_num, bus_addr );
-       return 0;
+        }
+
+        if( cfi_setup ) // for nor only setup for cfi flash
+                cfi_flash_bank_addr_update( chip_num, bus_addr );
+
+        return 0;
+}
+
+static int setup_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, const char* node_name_fmr_str, int max_chip, bool flash ) {
+        int i, err;
+        for( i = 0; i < max_chip; i++ ) {
+                err = set_high_addr_and_map_tlb( pdev, node_name_fmr_str, i, flash );
+                if( err ) {
+                        if ( i == 0 ) // first nor or sram must be mapped
+                                return err;
+                }
+        }
+        return 0;
 }
 
 #endif /* __UBOOT__ */
@@ -373,12 +398,11 @@ static int rcm_mtd_probe( rcm_sram_nor_device* pdev )
         }
 
 #ifdef __UBOOT__
-        int i, err;
-        for( i = 0; i < CONFIG_SYS_MAX_FLASH_BANKS; i++ ) {
-                err = set_high_addr_and_map_tlb( pdev, dcr_reg, i );
-                if( err && ( i == 0 ) )
-                        return err; // first flash must be
-        }
+        int err = setup_high_addr_and_map_tlb( pdev, dcr_reg ? "mcif_nor%u" : "lsif_nor%u", CONFIG_SYS_MAX_FLASH_BANKS, true ); // try for flash mmap
+        if( err )
+            err = setup_high_addr_and_map_tlb( pdev, dcr_reg ? "mcif_sram%u" : "lsif_sram%u", MAX_SRAM_BANKS, false );          // try for ram mmap
+        if( err )
+                return err;
 #endif
 
         if (rcm_controller_setup(pdev)) {
@@ -442,15 +466,15 @@ U_BOOT_DRIVER(rcm_sram_nor) = {
 };
 
 void rcm_sram_nor_init( void ) {
-        struct udevice *dev;
-        int ret;
+        struct uclass *uc;
+	struct udevice *dev, *next;
 
-        ret = uclass_get_device_by_driver( UCLASS_MISC,
-                                           DM_GET_DRIVER(rcm_sram_nor),
-                                           &dev );
-        if( ret && ret != -ENODEV ) {
-                dev_err(&pdev->dev, "Failed to initialize RCM SRAM NOR,error=%d\n", ret );
-        }
+	if( !uclass_get(UCLASS_MISC, &uc) ) {
+                uclass_foreach_dev_safe(dev, next, uc) {
+                        if( !strcmp( dev->driver->of_match->compatible, rcm_sram_nor_ids[0].compatible )  )
+                                device_probe(dev);
+                }
+	}
 }
 
 #endif

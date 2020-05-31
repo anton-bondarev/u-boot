@@ -81,6 +81,7 @@
 
 #define CONFIG_SYS_MAX_FLASH_BANKS      2       // if NOR via LSIF need 1!!! (little window)+correct mtdpart
 #define CONFIG_SYS_MAX_FLASH_SECT       1024
+#define MAX_SRAM_BANKS                  4       // SRAM chip select number for board mb115-02
 
 #define CONFIG_CHIP_SELECTS_PER_CTRL    2
 #define CONFIG_DIMM_SLOTS_PER_CTLR      2

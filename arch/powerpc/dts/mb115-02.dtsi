@@ -12,7 +12,31 @@
 		ce-manage = <2>;					/* MCIF(page 913 + confluence): cs0..3=>1 controller,cs4,5=>2 controller,cs-mode=0,chip-num=0x3F */
 	};
 
-	sram_plb_nor1: sram_plb_nor1@0x80190000 {
+	plb_sram_nor0: plb_sram_nor0@0x80170000 {
+		u-boot,dm-pre-reloc;
+		status = "okay";
+		chip-num = <0x3F>;
+		cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
+		addr-size = <22>; /* min 10 max 26 bit */
+		mcif_sram0: mcif_sram0 {
+			u-boot,dm-pre-reloc;
+			ranges = <0xc0000000 0x4 0x00000000 0x01000000>;
+		};
+		mcif_sram1: mcif_sram1 {
+			u-boot,dm-pre-reloc;
+			ranges = <0xc1000000 0x4 0x01000000 0x01000000>;
+		};
+		mcif_sram2: mcif_sram2 {
+			u-boot,dm-pre-reloc;
+			ranges = <0xc2000000 0x4 0x02000000 0x01000000>;
+		};
+		mcif_sram3: mcif_sram3 {
+			u-boot,dm-pre-reloc;
+			ranges = <0xc3000000 0x4 0x03000000 0x01000000>;
+		};
+	};
+
+	plb_sram_nor1: plb_sram_nor1@0x80190000 {
 		u-boot,dm-pre-reloc;
 		status = "okay";
 		chip-num = <0x3F>;

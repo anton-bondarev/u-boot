@@ -2187,4 +2187,11 @@ config CMD_UBIFS
 	help
 	  UBIFS is a file system for flash devices which works on top of UBI.
 
+config CMD_RCM_SRAM_NOR_TEST
+	bool "Static RAM and NOR flash tests for the board MB115"
+	depends on MTD_RCM_NOR
+	help
+	  Enable tests for SRAM-NOR controller of the board MB115.
+
+
 endmenu
