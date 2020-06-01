@@ -188,7 +188,7 @@ static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, const char* nod
         bus_addr = ranges[0];
         parent_bus_addr = ((u64)ranges[1]<<32) | ranges[2];
         size = ranges[3];
-        DBG_PRINT( "Memmap: bus addr=%08x,plb addr=%016llx,size=%08x\n", bus_addr, parent_bus_addr, size );
+        DBG_PRINT( "Memmap: bus addr=%08x,plb addr=%08x%08x,size=%08x\n", bus_addr, (uint32_t)(parent_bus_addr>>32), (uint32_t)parent_bus_addr, size );
 
         if( chip_num ) {                       // was defined before,now must be same
             if( rcm_mtd->high_addr != ranges[1] ) {

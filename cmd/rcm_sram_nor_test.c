@@ -6,16 +6,33 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define SRAM_BANK_SIZE 0x01000000	// 16m
-#define SRAM_PHYS_ADDR 0x0400000000ull
-#define SRAM_BANK_COUNT 4
+#define SRAM_BANK_SIZE		0x01000000	// 16m
+#define SRAM_PHYS_ADDR_MCIF	0x0400000000ull
+#define SRAM_BANK_COUNT_MCIF	4		// SRAM EM2 (8GB) 
 
-#define NOR_BANK_SIZE 0x10000000	// 256m
-#define NOR_PHYS_ADDR 0x0600000000ull
-#define NOR_BANK_COUNT 2
-#define NOR_SECT_SIZE 0x40000
+#define NOR_SECT_SIZE		0x40000
 
-static int verbose = 0;
+#define NOR_BANK_SIZE		0x10000000	// 256m
+#define NOR_PHYS_ADDR_MCIF	0x0600000000ull
+#define NOR_BANK_COUNT_MCIF	2		// SRAM EM3 (8GB)
+#define NOR_PHYS_ADDR_LSIF	0x1020000000ull
+#define NOR_BANK_COUNT_LSIF	1		// SRAM EM3 (128MB)
+
+#define SRAM_PHYS_ADDR	SRAM_PHYS_ADDR_MCIF	// sram - test for mcif mode only
+#define SRAM_BANK_COUNT	SRAM_BANK_COUNT_MCIF
+#define NOR_PHYS_ADDR	NOR_PHYS_ADDR_MCIF	// nor - full test for mcif mode
+#define NOR_BANK_COUNT	NOR_BANK_COUNT_MCIF
+
+
+/*#define LSIF_CONFIG*/				// it's very optionally,need properly settings dts files,and it's work for 1 bank only
+#if defined LSIF_CONFIG
+	#undef NOR_PHYS_ADDR
+	#define NOR_PHYS_ADDR	NOR_PHYS_ADDR_LSIF
+	#undef NOR_BANK_COUNT
+	#define NOR_BANK_COUNT	NOR_BANK_COUNT_LSIF
+#endif
+
+static int verbose_sram = 0, verbose_nor = 0;
 
 static int conv_size_to_tlb( unsigned int size )
 {
@@ -165,7 +182,7 @@ static int do_nor_test_info( uint32_t** nor_banks_addr )
 		ea = get_cpu_addr( pa, NOR_BANK_SIZE );
 		if( ea == 0 ) {
 			printf( "error for NOR bank %u\n", bank );
-			break;
+			return -1;
 		}
 		printf( "bank %u:\n\t mapping: physical %016llx, logical %08x\n", bank, pa, ea );
 		pa += NOR_BANK_SIZE;
@@ -206,7 +223,7 @@ static int do_sram_test_run( bool rand )
 		}
 	}
 	printf( "SRAM test passed\n" );
-	if( verbose )
+	if( verbose_sram )
 		printf( "Checksum: %08x-%08x\n", csw, csr );
 	return 0;
 }
@@ -240,12 +257,12 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 	uint32_t* bwr;
 	uint32_t csw, csr;
 
-	if( !nor_test_warning() )
-		return 0;
-
 	srand(get_ticks());
 
 	if( do_nor_test_info( ea ) )
+		return 0;
+
+	if( !nor_test_warning() )
 		return 0;
 
 	if( check_bank != UINT_MAX ) {
@@ -283,9 +300,11 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 			csr = 0;
 
 			bwr = (uint32_t*)info->start[sect];
+			if( verbose_nor ) printf( "Flash erase...\n" );
 			flash_erase (info, sect, sect );
+			if( verbose_nor ) printf( "Flash protect...\n" );
 			flash_protect( FLAG_PROTECT_CLEAR, (ulong)bwr, (ulong)bwr+NOR_SECT_SIZE-1, info );
-
+			if( verbose_nor ) printf( "Flash write...\n" );
 			if( ( err = flash_write( (char*)buf, (ulong)bwr, NOR_SECT_SIZE ) ) != 0 ) {
 				printf( "Write to flash failed,sector %u(%08x), error code %d\n", sect, (uint32_t)bwr, err );
 				return 0;
@@ -298,64 +317,79 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 					printf( "Compare flash data failed,sector %u(%08x), data %x!=%x\n", sect, (uint32_t)bwr, *bwr, buf[nb] );
 					return 0;
 				}
-				if( verbose ) printf( "Compare at %u: %02x-%02x\n", nb, *bwr, buf[nb] );
+				//if( verbose_nor ) printf( "Compare at %u: %02x-%02x\n", nb, *bwr, buf[nb] );
 				csr += *bwr;
 				bwr++;
 			}
 			printf( "Bank %u, sector %u(%08lx): compare data OK\n", bank, sect, info->start[sect] );
-			if( verbose )
+			if( verbose_nor )
 				printf( "Checksum: %08x-%08x\n", csw, csr );
 		}
 	}
 	return 0;
 }
 
-static int do_verbose( const char* on_off ) {
-	if( !strcmp( on_off, "on" ) )
-		verbose = 1;
-	else if( !strcmp( on_off, "off" ) )
-		verbose = 0;
-	else
-		return CMD_RET_USAGE;
-	return 0;
+static int do_verbose( const char* on_off, int* verbose) {
+	if( !strcmp( on_off, "on" ) ) {
+		*verbose = 1;
+		return 0;
+	}
+	else if( !strcmp( on_off, "off" ) ) {
+		*verbose = 0;
+		return 0;
+	}
+	return CMD_RET_USAGE;
 }
 
 static int do_sram_test(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
-	if ( argc == 2 && !strcmp( argv[1], "info" ) )
-		return do_sram_test_info(NULL);
-	else if( argc == 2 && !strcmp( argv[1], "run" ) )
-		return do_sram_test_run( false );
+	if ( argc == 2 && !strcmp( argv[1], "info" ) ) {
+		do_sram_test_info(NULL);
+		return 0;
+	}
+	else if( argc == 2 && !strcmp( argv[1], "run" ) ) {
+		do_sram_test_run( false );
+		return 0;
+	}
 	else if( argc == 3 && !strcmp( argv[1], "verbose" ) )
-		return do_verbose( argv[2] );
-	else if( argc == 3 && !strcmp( argv[1], "run" ) && !strcmp( argv[2], "rand" ) )
-		return do_sram_test_run( true );
+		return do_verbose( argv[2], &verbose_sram );
+	else if( argc == 3 && !strcmp( argv[1], "run" ) && !strcmp( argv[2], "rand" ) ) {
+		do_sram_test_run( true );
+		return 0;
+	}
 	return CMD_RET_USAGE;
 }
 
 static int do_nor_test(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
-	if ( argc == 2 && !strcmp( argv[1], "info" ) )
-		return do_nor_test_info(NULL);
-	else if( argc == 2 && !strcmp( argv[1], "run" ) )
-		return do_nor_test_run( UINT_MAX, UINT_MAX, UINT_MAX );
+	if ( argc == 2 && !strcmp( argv[1], "info" ) ) {
+		do_nor_test_info(NULL);
+		return 0;
+	}
+	else if( argc == 2 && !strcmp( argv[1], "run" ) ) {
+		do_nor_test_run( UINT_MAX, UINT_MAX, UINT_MAX );
+		return 0;
+	}
 	else if( argc == 3 && !strcmp( argv[1], "verbose" ) )
-		return do_verbose( argv[2] );
+		return do_verbose( argv[2], &verbose_nor );
 	else if( argc == 3 || argc == 5 ) {
 		unsigned long bank;
 		if( strict_strtoul( argv[2], 10, &bank ) < 0 ) {
 			printf( "Wrong bank number\n" );
 			return 0;
 		}
-		if( argc == 3 )
-			return do_nor_test_run( (unsigned int)bank, UINT_MAX, UINT_MAX );
+		if( argc == 3 ) {
+			do_nor_test_run( (unsigned int)bank, UINT_MAX, UINT_MAX );
+			return 0;
+		}
 		if( argc == 5 ) {
 			unsigned long sec_first, sec_end;
 			if( strict_strtoul( argv[3], 10, &sec_first ) < 0 || strict_strtoul( argv[4], 10, &sec_end ) < 0 ) {
 				printf( "Wrong sector number\n" );
 				return 0;
 			}
-			return do_nor_test_run( (unsigned int)bank, (unsigned int)sec_first, (unsigned int)sec_end );
+			do_nor_test_run( (unsigned int)bank, (unsigned int)sec_first, (unsigned int)sec_end );
+			return 0;
 		}
 	}
 	return CMD_RET_USAGE;
