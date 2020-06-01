@@ -102,7 +102,12 @@
 
 #define CONFIG_SYS_FLASH_QUIET_TEST 1
 
-#define CONFIG_BOOTCOMMAND "run kernelsd"
+#ifdef CONFIG_CMD_RCM_SRAM_NOR_TEST_AUTO // special mode, for testing only
+    #define CONFIG_BOOTCOMMAND "run sramnortest"
+#else
+    #define CONFIG_BOOTCOMMAND "run kernelsd"
+#endif
+
 #define CONFIG_USE_BOOTARGS
 #define CONFIG_BOOTARGS "console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
 #define CONFIG_IPADDR 192.168.0.2
@@ -126,8 +131,8 @@
         "loadsd=run loadfdtsd; run loadkernelsd\0" \
         "setmem=mmap drop all; mmap drop 0 1m; mmap set 0 256m 00000000; mmap set ${loadaddr} 16m 10000000\0" \
         "tftptimeout=1000\0" \
-        "tftptimeoutcountmax=100\0"
-
+        "tftptimeoutcountmax=100\0" \
+        "sramnortest=sramtest run rand; nortest run"
 
 #define CONFIG_PL01X_SERIAL
 #define CONFIG_BAUDRATE 1000000

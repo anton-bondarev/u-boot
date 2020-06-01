@@ -24,6 +24,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define NOR_BANK_COUNT	NOR_BANK_COUNT_MCIF
 
 
+/*#define TEST_WARNING*/			// y or n before nor test
 /*#define LSIF_CONFIG*/				// it's very optionally,need properly settings dts files,and it's work for 1 bank only
 #if defined LSIF_CONFIG
 	#undef NOR_PHYS_ADDR
@@ -203,6 +204,8 @@ static int do_sram_test_run( bool rand )
 	uint32_t *bad;
 	uint32_t csw = 0, csr = 0;
 
+	printf( "[INFO] SRAM test starts:\n" );
+
 	srand(get_ticks());
 
 	if( do_sram_test_info( ea ) )
@@ -218,11 +221,11 @@ static int do_sram_test_run( bool rand )
 		printf( "Sram bank %u:\n", bank );
 		bad = (rand ? check_bank_as_two_half_rand : check_bank_as_addr)( ea[bank], SRAM_BANK_SIZE/4, &csr );
 		if( bad ) {
-			printf( "SRAM test error at %08x\n", (uint32_t)bad );
+			printf( "[ERROR] SRAM test error at %08x\n", (uint32_t)bad );
 			return 0;
 		}
 	}
-	printf( "SRAM test passed\n" );
+	printf( "[INFO] SRAM test passed\n" );
 	if( verbose_sram )
 		printf( "Checksum: %08x-%08x\n", csw, csr );
 	return 0;
@@ -230,6 +233,7 @@ static int do_sram_test_run( bool rand )
 
 static int nor_test_warning( void )
 {
+#ifdef TEST_WARNING
 	static int enable = 0;
 	if( enable )
 		return 1;
@@ -243,6 +247,9 @@ static int nor_test_warning( void )
 		case 'n': return 0;
 		}
 	}
+#else
+	return 1;
+#endif
 }
 
 static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_first, unsigned int check_sect_end )
@@ -257,6 +264,8 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 	uint32_t* bwr;
 	uint32_t csw, csr;
 
+	printf( "[INFO] NOR test starts:\n" );
+
 	srand(get_ticks());
 
 	if( do_nor_test_info( ea ) )
@@ -270,7 +279,7 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 			bank_start = bank_end = check_bank;
 		}
 		else {
-			printf( "Too many bank number\n" );
+			printf( "[ERROR] Too many bank number\n" );
 			return 0;
 		}
 	}
@@ -283,7 +292,7 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 			sect_start = check_sect_first;
 			sect_end = check_sect_end;
 			if( sect_end >= info->sector_count || sect_start > sect_end ) {
-				printf( "Uncorrect sector number\n" );
+				printf( "[ERROR] Uncorrect sector number\n" );
 				return 0;
 			}
 		}
@@ -306,7 +315,7 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 			flash_protect( FLAG_PROTECT_CLEAR, (ulong)bwr, (ulong)bwr+NOR_SECT_SIZE-1, info );
 			if( verbose_nor ) printf( "Flash write...\n" );
 			if( ( err = flash_write( (char*)buf, (ulong)bwr, NOR_SECT_SIZE ) ) != 0 ) {
-				printf( "Write to flash failed,sector %u(%08x), error code %d\n", sect, (uint32_t)bwr, err );
+				printf( "[ERROR] Write to flash failed,sector %u(%08x), error code %d\n", sect, (uint32_t)bwr, err );
 				return 0;
 			}
 			//printf( "\n" );
@@ -314,7 +323,7 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 			for( nb = 0; nb < NOR_SECT_SIZE/4; nb++ )
 			{
 				if( *bwr != buf[nb] ) {
-					printf( "Compare flash data failed,sector %u(%08x), data %x!=%x\n", sect, (uint32_t)bwr, *bwr, buf[nb] );
+					printf( "[ERROR] Compare flash data failed,sector %u(%08x), data %x!=%x\n", sect, (uint32_t)bwr, *bwr, buf[nb] );
 					return 0;
 				}
 				//if( verbose_nor ) printf( "Compare at %u: %02x-%02x\n", nb, *bwr, buf[nb] );
@@ -326,6 +335,7 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 				printf( "Checksum: %08x-%08x\n", csw, csr );
 		}
 	}
+	printf( "[INFO] NOR test passed\n" );
 	return 0;
 }
 
