@@ -132,7 +132,7 @@
         "setmem=mmap drop all; mmap drop 0 1m; mmap set 0 256m 00000000; mmap set ${loadaddr} 16m 10000000\0" \
         "tftptimeout=1000\0" \
         "tftptimeoutcountmax=100\0" \
-        "sramnortest=sramtest run rand; nortest run"
+        "sramnortest=sramtest run rand; nortest run\0"
 
 #define CONFIG_PL01X_SERIAL
 #define CONFIG_BAUDRATE 1000000
