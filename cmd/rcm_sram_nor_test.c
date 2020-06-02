@@ -24,6 +24,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define NOR_BANK_COUNT	NOR_BANK_COUNT_MCIF
 
 
+#define MAX_NOR_ERRORS		3		// NOR maximum error before return
 /*#define TEST_WARNING*/			// y or n before nor test
 /*#define LSIF_CONFIG*/				// it's very optionally,need properly settings dts files,and it's work for 1 bank only
 #if defined LSIF_CONFIG
@@ -252,17 +253,52 @@ static int nor_test_warning( void )
 #endif
 }
 
+static int nor_test_sector( flash_info_t* info, unsigned int bank, unsigned int sect )
+{
+	static uint32_t buf[NOR_SECT_SIZE/4];
+	uint32_t csw, csr;
+	uint32_t* bwr;
+	int err;
+	unsigned int nb;
+
+	csw = fill_buf32_as_rand( buf, NOR_SECT_SIZE/4 );
+	csr = 0;
+
+	bwr = (uint32_t*)info->start[sect];
+	if( verbose_nor ) printf( "Flash erase...\n" );
+	flash_erase (info, sect, sect );
+	if( verbose_nor ) printf( "Flash protect...\n" );
+	flash_protect( FLAG_PROTECT_CLEAR, (ulong)bwr, (ulong)bwr+NOR_SECT_SIZE-1, info );
+	if( verbose_nor ) printf( "Flash write...\n" );
+	if( ( err = flash_write( (char*)buf, (ulong)bwr, NOR_SECT_SIZE ) ) != 0 ) {
+		printf( "[ERROR] Write to flash failed,sector %u(%08x), error code %d\n", sect, (uint32_t)bwr, err );
+		return err;
+	}
+	//printf( "\n" );
+
+	for( nb = 0; nb < NOR_SECT_SIZE/4; nb++ )
+	{
+		if( *bwr != buf[nb] ) {
+			printf( "[ERROR] Compare flash data failed,sector %u(%08x), data %x!=%x\n", sect, (uint32_t)bwr, *bwr, buf[nb] );
+			return ERR_INVAL;
+		}
+		//if( verbose_nor ) printf( "Compare at %u: %x-%x\n", nb, *bwr, buf[nb] );
+		csr += *bwr;
+		bwr++;
+	}
+	printf( "Bank %u, sector %u(%08lx): compare data OK\n", bank, sect, info->start[sect] );
+	if( verbose_nor )
+		printf( "Checksum: %08x-%08x\n", csw, csr );
+	return 0;
+}
+
 static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_first, unsigned int check_sect_end )
 {
 	unsigned int bank, bank_start = 0, bank_end = NOR_BANK_COUNT-1;
 	unsigned int sect, sect_start, sect_end;
-	unsigned int nb;
 	int err;
 	uint32_t* ea[NOR_BANK_COUNT];
 	flash_info_t* info = NULL;
-	uint32_t buf[NOR_SECT_SIZE];
-	uint32_t* bwr;
-	uint32_t csw, csr;
 
 	printf( "[INFO] NOR test starts:\n" );
 
@@ -304,35 +340,14 @@ static int do_nor_test_run( unsigned int check_bank, unsigned int check_sect_fir
 		for( sect = sect_start; sect <= sect_end; sect++ )
 		{
 			//printf( "Check for bank %u,sector %u\n", bank, sect ); continue;
-
-			csw = fill_buf32_as_rand( buf, NOR_SECT_SIZE/4 );
-			csr = 0;
-
-			bwr = (uint32_t*)info->start[sect];
-			if( verbose_nor ) printf( "Flash erase...\n" );
-			flash_erase (info, sect, sect );
-			if( verbose_nor ) printf( "Flash protect...\n" );
-			flash_protect( FLAG_PROTECT_CLEAR, (ulong)bwr, (ulong)bwr+NOR_SECT_SIZE-1, info );
-			if( verbose_nor ) printf( "Flash write...\n" );
-			if( ( err = flash_write( (char*)buf, (ulong)bwr, NOR_SECT_SIZE ) ) != 0 ) {
-				printf( "[ERROR] Write to flash failed,sector %u(%08x), error code %d\n", sect, (uint32_t)bwr, err );
-				return 0;
-			}
-			//printf( "\n" );
-
-			for( nb = 0; nb < NOR_SECT_SIZE/4; nb++ )
-			{
-				if( *bwr != buf[nb] ) {
-					printf( "[ERROR] Compare flash data failed,sector %u(%08x), data %x!=%x\n", sect, (uint32_t)bwr, *bwr, buf[nb] );
+			err = 0;
+			while( nor_test_sector( info, bank, sect) ) {
+				if( ++err >= MAX_NOR_ERRORS ) {
+					printf( "[ERROR] NOR test failed,exceed maximum errors number\n" );
 					return 0;
 				}
-				//if( verbose_nor ) printf( "Compare at %u: %02x-%02x\n", nb, *bwr, buf[nb] );
-				csr += *bwr;
-				bwr++;
 			}
-			printf( "Bank %u, sector %u(%08lx): compare data OK\n", bank, sect, info->start[sect] );
-			if( verbose_nor )
-				printf( "Checksum: %08x-%08x\n", csw, csr );
+
 		}
 	}
 	printf( "[INFO] NOR test passed\n" );
@@ -365,6 +380,10 @@ static int do_sram_test(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv
 		return do_verbose( argv[2], &verbose_sram );
 	else if( argc == 3 && !strcmp( argv[1], "run" ) && !strcmp( argv[2], "rand" ) ) {
 		do_sram_test_run( true );
+		return 0;
+	}
+	else if( argc == 2 && !strcmp( argv[1], "version" ) ) {
+		printf( "SRAM test 1.0.1\n" );
 		return 0;
 	}
 	return CMD_RET_USAGE;
@@ -402,6 +421,10 @@ static int do_nor_test(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[
 			return 0;
 		}
 	}
+	else if( argc == 2 && !strcmp( argv[1], "version" ) ) {
+		printf( "NOR test 1.0.1\n" );
+		return 0;
+	}
 	return CMD_RET_USAGE;
 }
 
@@ -411,7 +434,8 @@ U_BOOT_CMD(
 	"info              - mapping information\n" \
 	"sramtest verbose [on off]  - show advanced information\n" \
 	"sramtest run               - sram words are 32 bits wide and are filled with address values\n" \
-	"sramtest run rand          - the two halves of the sram bank are filled with the same random values ​​and compared"
+	"sramtest run rand          - the two halves of the sram bank are filled with the same random values and compared\n" \
+	"sramtest version           - output version information"
 );
 
 U_BOOT_CMD(
@@ -421,5 +445,6 @@ U_BOOT_CMD(
 	"nortest verbose [on off]      - set advanced information\n" \
 	"nortest run                   - check for all banks and sectors,erase, ramdom values write,read and compare\n" \
 	"nortest run #bank             - the same check for #bank only (0,1...)\n" \
-	"nortest run #bank #start #end - the same check for #bank and sectors from #start(0,1...) to #end only"
+	"nortest run #bank #start #end - the same check for #bank and sectors from #start(0,1...) to #end only\n" \
+	"nortest version               - output version information"
 );
