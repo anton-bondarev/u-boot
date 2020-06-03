@@ -13,7 +13,8 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifdef CONFIG_TARGET_1888TX018
+// ??? #ifdef CONFIG_TARGET_1888TX018
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18)
 
 
 static void (*bootrom_enter_host_mode)(void) = (void (*)(void)) BOOT_ROM_HOST_MODE;
@@ -22,7 +23,8 @@ static void (*bootrom_enter_host_mode)(void) = (void (*)(void)) BOOT_ROM_HOST_MO
 static int spl_edcl_load_image(struct spl_image_info *spl_image,
 			      struct spl_boot_device *bootdev)
 {
-#ifdef CONFIG_TARGET_1888TX018
+// ??? #ifdef CONFIG_TARGET_1888TX018
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18)
 	debug("Enter HOST mode for EDCL loading\n");
 	bootrom_enter_host_mode();
 #elif CONFIG_TARGET_1879VM8YA
@@ -46,7 +48,8 @@ static int spl_edcl_load_image(struct spl_image_info *spl_image,
 	return 0; /* never happens */
 }
 
-#ifdef CONFIG_TARGET_1888TX018
+// ??? #ifdef CONFIG_TARGET_1888TX018
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18)
 SPL_LOAD_IMAGE_METHOD("EDCL", 0, BOOT_DEVICE_EDCL, spl_edcl_load_image);
 #else
 SPL_LOAD_IMAGE_METHOD("EDCL", 0, BOOT_DEVICE_XIP, spl_edcl_load_image);
