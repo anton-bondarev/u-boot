@@ -10,7 +10,4 @@
 
 ifdef CONFIG_1888TX018_DDR
 obj-$(CONFIG_TARGET_1888TX018) += ddr_init.o timer.o
-# ???? 
-obj-$(CONFIG_TARGET_1888BM18) += ddr_init.o timer.o
-# ????
 endif

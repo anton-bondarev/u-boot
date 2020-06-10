@@ -3,6 +3,7 @@
 
 #include <linux/sizes.h>
 
+// ???
 /* memory map for 1888tx018 
  *      0x00040000 - 0x18 bytes romboot header
  *      0x00040018 - Start of SPL
@@ -18,32 +19,43 @@
  *      0x4F100000 - Initial stack (1Mb)
  *
  */
+// ???
+/* memory map for 1888bm18
+ *	0x80000000 0x20000 - IM0 used by rumboot
+ *	0x80020000 0x20000 - IM1 <- SPL
+ */
 
-/* need to define CONFIG_SPL_TEXT_BASE first because of u-boot scripts */
-/* now is in Kconfig for board #define CONFIG_SPL_TEXT_BASE	0x40000 */
+/* need to define CONFIG_SPL_TEXT_BASE first because of u-boot scripts */ // ???
+/* now is in Kconfig for board #define CONFIG_SPL_TEXT_BASE	0x40000 */ // ???
+// ???
 #define CONFIG_SYS_UBOOT_BASE	CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_UBOOT_START  CONFIG_SYS_TEXT_BASE
 
-#define RCM_1888TX018_IM0_START           CONFIG_SPL_TEXT_BASE
-#define RCM_1888TX018_IM0_SIZE            (0x40000)
+// ???
+// ??? #define RCM_1888TX018_IM0_START           CONFIG_SPL_TEXT_BASE
+// ??? #define RCM_1888TX018_IM0_SIZE            (0x40000)
+#define RCM_1888BM18_IM1_START           CONFIG_SPL_TEXT_BASE // ???
+#define RCM_1888BM18_IM1_SIZE            (0x20000) // ???
 
-#define RCM_1888TX018_SPL_STACK_SIZE 0x4000
+// ??? #define RCM_1888TX018_SPL_STACK_SIZE 0x4000
+// ???
 #define CONFIG_SYS_SPL_MALLOC_SIZE  0x2000
 
 /* stack for first processor 0x0043C000 */
-#define CONFIG_SPL_STACK        (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_STACK_SIZE)
+// ??? #define CONFIG_SPL_STACK        (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_STACK_SIZE)
 
-#define RCM_1888TX018_SPL_SPINTABLE_SIZE 32
+// ??? #define RCM_1888TX018_SPL_SPINTABLE_SIZE 32
 
-#define RCM_1888TX018_SPL_SPINTABLE (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_SPINTABLE_SIZE)
+// ??? #define RCM_1888TX018_SPL_SPINTABLE (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_SPINTABLE_SIZE)
 
 /* stack for second processor 0x043FFFE0 */
-#define RCM_1888TX018_SPL_STACK_SECONDARY   (RCM_1888TX018_SPL_SPINTABLE)
+// ??? #define RCM_1888TX018_SPL_STACK_SECONDARY   (RCM_1888TX018_SPL_SPINTABLE)
 
 
 /* dual stack size for second CPU */
-#define CONFIG_SYS_SPL_MALLOC_START ((CONFIG_SPL_STACK - RCM_1888TX018_SPL_STACK_SIZE*2) \
-                                    - CONFIG_SYS_SPL_MALLOC_SIZE)
+/* ???// ??? #define CONFIG_SYS_SPL_MALLOC_START ((CONFIG_SPL_STACK - RCM_1888TX018_SPL_STACK_SIZE*2) 
+// ???                                    - CONFIG_SYS_SPL_MALLOC_SIZE)*/
+#define CONFIG_SYS_SPL_MALLOC_START (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_SIZE)
 
 #ifndef CONFIG_SPL_BUILD
 /*		Start address of memory area that can be used for
@@ -58,6 +70,7 @@
 #define CONFIG_SYS_INIT_RAM_ADDR		(CONFIG_SYS_SPL_MALLOC_START - CONFIG_SYS_INIT_RAM_SIZE) 
 #endif
 
+// ??? name
 #define RCM_1888TX018_SPL_FDT_MAX_LEN 0x1000
 #define RCM_1888TX018_SPL_ADDR_LIMIT (CONFIG_SYS_INIT_RAM_ADDR - RCM_1888TX018_SPL_FDT_MAX_LEN)
 
@@ -135,7 +148,7 @@
         "sramnortest=sramtest run rand; nortest run\0"
 
 #define CONFIG_PL01X_SERIAL
-#define CONFIG_BAUDRATE 1000000
+// ??? #define CONFIG_BAUDRATE 1000000
 /*#define CONFIG_DEBUG_UART_SKIP_INIT 1*/
 
 #define CONFIG_SYS_PBSIZE 1024
@@ -152,7 +165,7 @@
 
 #define CONFIG_SYS_BOOTM_LEN 0x1000000
 
-#define CONFIG_SPD_EEPROM
+// ??? #define CONFIG_SPD_EEPROM
 
 #ifndef CONFIG_MTD_PARTITIONS
 #define CONFIG_MTD_PARTITIONS
@@ -225,32 +238,33 @@
 
 #define CONFIG_SYS_NAND_BASE_LIST           {1}; /*v2020.01: it's dummy!!!but need...*/
 
-#ifdef CONFIG_MTD_RCM_NOR
-    /* #define CONFIG_CFI_FLASH */
-    #define CONFIG_FLASH_CFI_DRIVER
-    #define CONFIG_FLASH_CFI_MTD
-    #define CONFIG_SYS_FLASH_CFI
-    #define CONFIG_SYS_FLASH_CFI_WIDTH      FLASH_CFI_16BIT
-    #define CONFIG_SYS_FLASH_EMPTY_INFO     /* flinfo show E and/or RO */
-    #define CONFIG_FLASH_SHOW_PROGRESS      100
-    #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
-    #define CONFIG_SYS_WRITE_SWAPPED_DATA
-    #ifndef CONFIG_PPC_DCR
-        #define CONFIG_PPC_DCR
-    #endif
+// ???
+// #ifdef CONFIG_MTD_RCM_NOR
+//     /* #define CONFIG_CFI_FLASH */
+//     #define CONFIG_FLASH_CFI_DRIVER
+//     #define CONFIG_FLASH_CFI_MTD
+//     #define CONFIG_SYS_FLASH_CFI
+//     #define CONFIG_SYS_FLASH_CFI_WIDTH      FLASH_CFI_16BIT
+//     #define CONFIG_SYS_FLASH_EMPTY_INFO     /* flinfo show E and/or RO */
+//     #define CONFIG_FLASH_SHOW_PROGRESS      100
+//     #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
+//     #define CONFIG_SYS_WRITE_SWAPPED_DATA
+//     #ifndef CONFIG_PPC_DCR
+//         #define CONFIG_PPC_DCR
+//     #endif
 
-    #define CONFIG_SYS_FLASH_BASE0          0x20000000      /* base address 0 for work via MCIF and LSIF */
-    #define CONFIG_SYS_FLASH_BASE1          0x10000000      /* base address 1 for work via MCIF only */
-    #define CONFIG_SYS_FLASH_BANKS_LIST     {CONFIG_SYS_FLASH_BASE0,CONFIG_SYS_FLASH_BASE1}
-    #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
-    #define CONFIG_SYS_MONITOR_BASE         0x40000000      /* CONFIG_SYS_FLASH_BASE */
+//     #define CONFIG_SYS_FLASH_BASE0          0x20000000      /* base address 0 for work via MCIF and LSIF */
+//     #define CONFIG_SYS_FLASH_BASE1          0x10000000      /* base address 1 for work via MCIF only */
+//     #define CONFIG_SYS_FLASH_BANKS_LIST     {CONFIG_SYS_FLASH_BASE0,CONFIG_SYS_FLASH_BASE1}
+//     #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
+//     #define CONFIG_SYS_MONITOR_BASE         0x40000000      /* CONFIG_SYS_FLASH_BASE */
 
-    #ifdef CONFIG_SYS_UBOOT_BASE
-        #undef CONFIG_SYS_UBOOT_BASE
-    	#define CONFIG_SYS_UBOOT_BASE       0x20040000 
-    #endif
+//     #ifdef CONFIG_SYS_UBOOT_BASE
+//         #undef CONFIG_SYS_UBOOT_BASE
+//     	#define CONFIG_SYS_UBOOT_BASE       0x20040000 
+//     #endif
 
-#endif
+// #endif
 
 #endif /* __1888BM18_H */
 

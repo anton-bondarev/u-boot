@@ -73,7 +73,7 @@ int arch_fixup_fdt(void *blob)
 
 #endif
 
-phys_size_t get_physical_mem_size(void)
+/* ??? phys_size_t get_physical_mem_size(void)
 {
 	int dimm0_params_invalid = 1;
 	int dimm1_params_invalid = 1;
@@ -105,15 +105,15 @@ phys_size_t get_physical_mem_size(void)
 	result = CONFIG_SYS_DDR_SIZE;
 #endif
 	return result;
-}
+}*/
 
 int dram_init(void)
 {
-#ifdef CONFIG_SPL_BUILD
+/* ???? #ifdef CONFIG_SPL_BUILD
 	ddr_init();
 #else
 	gd->ram_size = get_physical_mem_size();
-#endif
+#endif*/
 	return 0;
 }
 
@@ -222,6 +222,7 @@ int testdram(void)
 
 #endif
 
+// ???
 int power_init_board(void)
 {
 #ifdef CONFIG_MTD_RCM_NOR
@@ -232,11 +233,13 @@ int power_init_board(void)
 	return 0;
 }
 
+// ???
 phys_size_t get_effective_memsize(void)	// clon of weak procedure from file common/memsize.c
 {
 	return gd->ram_size;
 }
 
+// ???
 int dram_init_banksize(void)		// clon of weak procedure from file common/board_f.c
 {									// now is same,but may be rewrite
 #if defined(CONFIG_NR_DRAM_BANKS) && defined(CONFIG_SYS_SDRAM_BASE)

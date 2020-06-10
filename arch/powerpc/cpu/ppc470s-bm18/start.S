@@ -7,6 +7,7 @@
 #include <asm/cache.h>
 #include <asm/mmu.h>
 #include <asm/u-boot.h>
+#include <asm/arch/ppc470s_regs.h>
 
 
 .macro  load_const_link rD, constant
@@ -21,14 +22,14 @@
 _start:
 
 // setup stack
-#ifdef CONFIG_SPL_BUILD
-#ifdef CONFIG_SPL_STACK
-    load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
-#endif
-    bl _fix_fpu
-#else
-    load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
-#endif
+// ??? #ifdef CONFIG_SPL_BUILD
+// ??? #ifdef CONFIG_SPL_STACK /// ??? no symbol
+// ???     load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
+// ??? #endif
+// ???     bl _fix_fpu // ???? maybe need
+// ??? #else
+// ???     load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
+// ??? #endif
 
 clear_bss:
     /*
@@ -65,42 +66,63 @@ clear_bss:
 
 	bl	cpu_init_f	/* return boot_flag for calling board_init_f */
 	bl	board_init_f
-	bl	board_init_r    
-    isync
+
+    // ???
+// ???     li r9, '&'
+// ???     lis r10, 0xC002
+// ???     ori r10, r10, 0x9000
+// ???     stw r9, 0(r10)
+// ??? mmm:
+// ???     b mmm
+    // ???
+
+	bl	board_init_r    // ??? it is in board_init_f ????
+// ???
+mmm:
+	b mmm // ???
 
 # ASTRO TODO
 .global relocate_code
-relocate_code:
+relocate_code: // ???? WTF
     b relocate_code
 
+// ???
 endless_loop:
     b endless_loop
 
+// ???
 .global crash
 crash:
     div 0,0,0
 
-
+// ???
     .globl	dcache_enable
 dcache_enable:
     blr
 
+// ???
     .globl	dcache_disable
 dcache_disable:
     blr
 
+// ???
     .globl	dcache_status
 dcache_status:
     blr
 
+// ???
    .globl  trap_init
 trap_init:
 // all traps  initiated by romboot
     blr
 
-		
+// for TID=0, TS=0
 .global _invalidate_tlb_entry
 _invalidate_tlb_entry:
+	// set TID=0, TS=0
+	li r12, 0
+	mtspr SPR_MMUCR, r12
+
 	tlbsx. r4, r0, r3      // [r3] - EA, [r4] - Way, Index
 	bne    ite_end         // branch if not found
 	oris   r4, r4, 0x8000  // r4[0]=1, r4[4]=0
@@ -112,19 +134,23 @@ ite_end:
 	msync
 	blr
 	
-	
+// for TID=0, TS=0
 .global _write_tlb_entry
 _write_tlb_entry:
-	addis r6, r0, 0x0000  // zero [r6]
-	tlbwe r3, r6, 0
-	tlbwe r4, r6, 1
-	tlbwe r5, r6, 2
-        
+	// set TID=0, TS=0
+	li r12, 0
+	mtspr SPR_MMUCR, r12
+
+	tlbwe r3, r12, 0
+	tlbwe r4, r12, 1
+	tlbwe r5, r12, 2
+
 	isync
 	msync
 	blr
 		
-		
+
+// ???
 .global _read_tlb_entry
 _read_tlb_entry:
 	tlbsx. r5, r0, r3  // [r3] - EA, [r5] - Way, Index
@@ -196,12 +222,11 @@ _fix_fpu:
 __doublezero:
     .double 0.0
 
-.section ".text.start_secondary","ax",@progbits
-.global _start_secondary
-_start_secondary:
-    load_const_link sp, CONFIG_SPL_STACK
-    bl _fix_fpu
-	bl	process_spintable    
+// ???? .section ".text.start_secondary","ax",@progbits
+// ???? .global _start_secondary
+// ???? _start_secondary:
+// ????     load_const_link sp, CONFIG_SPL_STACK
+// ????     bl _fix_fpu
+// ???? 	bl	process_spintable    
 
 #endif
-

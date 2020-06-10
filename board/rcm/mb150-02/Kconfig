@@ -17,9 +17,10 @@ config SYS_TEXT_BASE
 	hex "Entry point for u-boot startup"
 	default 0x4D000040
 
+# // ???
 config SPL_TEXT_BASE
 	hex "Entry point for SPL startup"
-	default 0x00040000
+	default 0x80020000
 
 config PPC_DCR
     bool "Enable cotrol via DCR bus"

@@ -14,6 +14,13 @@
 #include <asm/io.h>
 #include <asm/tlb47x.h>
 
+// ???
+#include "boot.h"
+
+// ???
+#include "emi-temp.h"
+#include "timer.h"
+
 DECLARE_GLOBAL_DATA_PTR;
 
 void ddr_init (int slowdown);
@@ -24,17 +31,41 @@ void rcm_sram_nor_init(void);
 
 volatile unsigned int* _test_addr;
 
-static void init_byte_order(void)
+// ??? + not here -> cpu
+extern void _start(void);
+
+static const __attribute__((used)) __attribute__((section(".header")))
+struct rumboot_bootheader hdr = {
+    .magic    = RUMBOOT_HEADER_MAGIC,
+    .version  = RUMBOOT_HEADER_VERSION,
+    .chip_id  = RUMBOOT_PLATFORM_CHIPID,
+    .chip_rev = RUMBOOT_PLATFORM_CHIPREV,
+    .entry_point = {
+        (uint32_t)&_start,
+    }
+};
+// ???
+
+
+/* ??? static void init_byte_order(void)
 {
 	tlb47x_inval( 0x30000000, TLBSID_256M ); 
 	tlb47x_map( 0x1030000000, 0x30000000, TLBSID_256M, TLB_MODE_RWX );	
+}*/
+
+static void init_byte_order(void)
+{
+	tlb47x_inval(0xD0020000, TLBSID_64K); 
+	tlb47x_map(0x20C0020000, 0xD0020000, TLBSID_64K, TLB_MODE_RW);
+	tlb47x_inval(0xD0030000, TLBSID_64K); 
+	tlb47x_map(0x20C0030000, 0xD0030000, TLBSID_64K, TLB_MODE_RW);
 }
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
 
 void board_init_f(ulong dummy)
 {
-	init_byte_order();
+	init_byte_order(); // ??? name
 
 	spl_early_init();
 
@@ -42,16 +73,17 @@ void board_init_f(ulong dummy)
 
 	spl_set_bd();
 
-	board_init_r(NULL, 0);
+	// ??? board_init_r(NULL, 0); // ????
 }
 
 u32 spl_boot_device(void)
 {
 	return BOOT_DEVICE_MMC1;
+	// ??? return BOOT_DEVICE_EDCL; // ??? disable at all
 }
 
 
-bool is_ddr_ok(void)
+/* ??? bool is_ddr_ok(void)
 {
 	int i;
 	_test_addr = (unsigned int*)0x4D000000; 
@@ -75,14 +107,20 @@ bool is_ddr_ok(void)
 	}
 	else
 		return 0;
-}
+}*/
 
-void usleep(uint32_t usec);
+// ??? void usleep(uint32_t usec); // ????
 
 void spl_board_init(void)
 {
+	if (!emi_init()) {
+		printf("Error in the EMI initialization - resetting...\n");
+		usleep(5000000);
+		do_reset(0, 0, 0, 0);
+	}
+
 	/* init dram */
-	ddr_init(0);
+	/* ??? ddr_init(0);
 
 	if(!is_ddr_ok())
 	{
@@ -90,11 +128,11 @@ void spl_board_init(void)
 		usleep(1000);
 		do_reset(0,0,0,0);
 	}
-	gd->ram_size = CONFIG_SYS_DDR_SIZE;
+	gd->ram_size = CONFIG_SYS_DDR_SIZE;*/
 
+	/* ??? u32 boot_device = spl_boot_device();
 
-	u32 boot_device = spl_boot_device();
-
+	// ???
 	if (boot_device == BOOT_DEVICE_SPI)
 		puts("Booting from SPI flash\n");
 	else if (boot_device == BOOT_DEVICE_MMC1)
@@ -102,15 +140,15 @@ void spl_board_init(void)
 	else if (boot_device == BOOT_DEVICE_EDCL)
 		puts("Enter HOST mode for EDCL boot\n");
 	else
-		puts("Unknown boot device\n");
+		puts("Unknown boot device\n");*/
 
-#ifdef CONFIG_MTD_RCM_NOR
+/* ??? #ifdef CONFIG_MTD_RCM_NOR
 	rcm_mtd_arbiter_init();
 	rcm_sram_nor_init();
-#endif
+#endif*/
 }
 
-
+// ????
 #ifdef CONFIG_SPL_MMC_SUPPORT
 u32 spl_boot_mode(const u32 boot_device)
 {
@@ -122,7 +160,7 @@ u32 spl_boot_mode(const u32 boot_device)
 void board_boot_order(u32 *spl_boot_list)
 {
 	spl_boot_list[0] = spl_boot_device();
-	switch (spl_boot_list[0]) {
+	/* ??? switch (spl_boot_list[0]) {
 	case BOOT_DEVICE_SPI:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;
 		spl_boot_list[2] = BOOT_DEVICE_NOR;		// NOR before NAND, becose now GPIOAFSEL is initialized for NOR earlier(see spl_board_init)
@@ -135,12 +173,13 @@ void board_boot_order(u32 *spl_boot_list)
 		spl_boot_list[3] = BOOT_DEVICE_NAND;
 		spl_boot_list[4] = BOOT_DEVICE_EDCL;
 		break;
-	}
+	}*/
 }
 
 #define SPRN_DBCR0_44X 0x134
 #define DBCR0_RST_SYSTEM 0x30000000
 
+// ??? static
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned long tmp;
@@ -153,5 +192,5 @@ int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		: "i"(SPRN_DBCR0_44X), "i"(DBCR0_RST_SYSTEM));
 
 	return 0;
-	}
+}
 
