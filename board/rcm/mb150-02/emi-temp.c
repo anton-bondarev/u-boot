@@ -675,18 +675,75 @@ void emi_init_impl (uint32_t const emi_dcr_base, uint32_t const plb6mcif2_dcr_ba
     msync();
 }
 
+typedef int(*enable_icache_type)(void);
+
+int enable_icache(void)
+{
+	__asm__ __volatile__(
+		"mfmsr r12 \n"
+		"lis r11, 0xFFFF \n"
+		"ori r11, r11, 0xEFFF \n"
+		"and r12, r12, r11 \n"
+		"mtmsr r12 \n" // disable Machine Check
+		"tlbwe	%0, %3, 0 \n"
+		"tlbwe	%1, %3, 1 \n"
+		"tlbwe	%2, %3, 2 \n"
+		"isync \n"
+		"msync \n"
+	:
+	:
+	  "r" (0x80020000 | (1 << 11) | (0x03 << 4)),
+	  "r" (0xC0000020),
+	  "r" ((0x7 << 3) | (0x7 << 0)),
+	  "r" (0x88000000 | 3)
+	:
+	  "r11", "r12");
+	/* ???asm volatile (
+		"lis r10, 0 \n"
+		"mtspr 946, r10 \n" // MMUCR
+		"lis r11, 0x8002 \n"
+		"tlbsx r12, r0, r11 \n" // r12 way & index
+		"oris r12, r12, 0x8000 \n"
+	:
+	:
+	: "r10", "r11", "r12");*/
+/* ???	tlb47x_inval(0x80020000, TLBSID_64K);
+	tlb47x_map(0x20C0000000, 0x80020000, TLBSID_64K, TLB_MODE_RWX); // ???*/
+
+/*		li r12, 0
+	mtspr SPR_MMUCR, r12
+
+	tlbsx. r4, r0, r3      // [r3] - EA, [r4] - Way, Index
+	bne    ite_end         // branch if not found
+	oris   r4, r4, 0x8000  // r4[0]=1, r4[4]=0
+	tlbwe  r3, r4, 0       // [r3] - EA[0:19], V[20], [r4]- Way[1:2], Index[8:15], index is NU
+ite_end:
+	or     r3, r4, r4      // return [r3]
+	
+	isync
+	msync
+*/
+
+	return 0;
+}
+
 bool emi_init(void)
 {
+	// ????
+	dcr_write(0x80000600, 0xC10);
+	dcr_write(0x80000604, 0x1);
+
 	emi_init_impl (DCR_EM2_EMI_BASE, DCR_EM2_PLB6MCIF2_BASE, 0x00);
 	dcr_write((DCR_EM2_EMI_BASE + 0xc), 0x9622);
 	// ??? dcr_write((DCR_EM2_EMI_BASE + 0x34), 0x2);
 
 
-	tlb47x_inval(0xE0000000, TLBSID_256M); 
-	tlb47x_map(0x0020000000, 0xE0000000, TLBSID_256M, TLB_MODE_RWX);
+	tlb47x_inval(0x00000000, TLBSID_256M); // ???
+	tlb47x_map(0x0020000000, 0x40000000, TLBSID_256M, TLB_MODE_RWX); // ???
 
-	uint32_t base_addr = 0xE0000000;
-	uint32_t length = 32 * 1024 * 1024;
+	uint32_t base_addr = 0x40000000; // ???
+	uint32_t length = 4096; // ??? 32 * 1024 * 1024;
+	// ??? uint32_t length = 32 * 1024 * 1024;
 	int i;
 
 	printf("Testing by word...\n");
@@ -704,7 +761,87 @@ bool emi_init(void)
 	}
 	printf("ok\n");
 
-	printf("Testing by halfword...\n");
+	volatile uint32_t *p = (volatile uint32_t*)0x80000000;
+	unsigned count = 0;
+	unsigned long now = get_timer(0);
+	while (get_timer(now) < 1000) {
+		*p; *p; *p; *p; *p;
+		*p; *p; *p; *p; *p;
+		++count;
+	}
+	printf("IM0 %u\n", count);
+	p = (volatile uint32_t*)0x80020000;
+	count = 0;
+	now = get_timer(0);
+	while (get_timer(now) < 1000) {
+		*p; *p; *p; *p; *p;
+		*p; *p; *p; *p; *p;
+		++count;
+	}
+	printf("IM1 %u\n", count);
+	p = (volatile uint32_t*)0x80040000;
+	count = 0;
+	now = get_timer(0);
+	while (get_timer(now) < 1000) {
+		*p; *p; *p; *p; *p;
+		*p; *p; *p; *p; *p;
+		++count;
+	}
+	printf("IM2 %u\n", count);
+	p = (volatile uint32_t*)base_addr;
+	count = 0;
+	now = get_timer(0);
+	while (get_timer(now) < 1000) {
+		*p; *p; *p; *p; *p;
+		*p; *p; *p; *p; *p;
+		++count;
+	}
+	printf("SDRAM %u\n", count);
+
+	uint32_t addr = (uint32_t)(void*)enable_icache;
+	addr -= 0x80020000;
+	addr += 0xC0000000;
+	int result = ((enable_icache_type)(void*)addr)();
+	printf("result = 0x%08x\n", (unsigned)result);
+
+	p = (volatile uint32_t*)0x80000000;
+	count = 0;
+	now = get_timer(0);
+	while (get_timer(now) < 1000) {
+		*p; *p; *p; *p; *p;
+		*p; *p; *p; *p; *p;
+		++count;
+	}
+	printf("IM0 %u\n", count);
+	p = (volatile uint32_t*)0x80020000;
+	count = 0;
+	now = get_timer(0);
+	while (get_timer(now) < 1000) {
+		*p; *p; *p; *p; *p;
+		*p; *p; *p; *p; *p;
+		++count;
+	}
+	printf("IM1 %u\n", count);
+	p = (volatile uint32_t*)0x80040000;
+	count = 0;
+	now = get_timer(0);
+	while (get_timer(now) < 1000) {
+		*p; *p; *p; *p; *p;
+		*p; *p; *p; *p; *p;
+		++count;
+	}
+	printf("IM2 %u\n", count);
+	p = (volatile uint32_t*)base_addr;
+	count = 0;
+	now = get_timer(0);
+	while (get_timer(now) < 1000) {
+		*p; *p; *p; *p; *p;
+		*p; *p; *p; *p; *p;
+		++count;
+	}
+	printf("SDRAM %u\n", count);
+
+	/* ??? printf("Testing by halfword...\n");
 	for (i = 0; i < length / 2; ++i) {
 		uint32_t addr = base_addr + i * 2;
 		*((volatile uint16_t*)addr) = addr;
@@ -732,7 +869,7 @@ bool emi_init(void)
 			return false;
 		}
 	}
-	printf("ok\n");
+	printf("ok\n");*/
 
 	printf("Test has been passed\n");
 

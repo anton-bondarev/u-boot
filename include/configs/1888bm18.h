@@ -21,73 +21,56 @@
  */
 // ???
 /* memory map for 1888bm18
- *	0x80000000 0x20000 - IM0 used by rumboot
- *	0x80020000 0x20000 - IM1 <- SPL
+ *	0x40000000  0x40     - U-Boot header (64B)
+ *	0x40000040  0xB00000 - U-Boot binary image (11MB - 64B)
+ *	0x40B00000  0x200000 - U-Boot RAM (2MB)
+ *	0x40D00000  0x200000 - U-Boot heap (2MB)
+ *	0x40F00000  0x100000 - U-Boot stack (1MB)
+ *	0x41000000 0x1000000 - Kernel load space (16MB)
+ *
+ *	0x80000000   0x20000 - IM0 used by rumboot
+ *	0x80020000   0x20000 - IM1 <- SPL
  */
 
-/* need to define CONFIG_SPL_TEXT_BASE first because of u-boot scripts */ // ???
-/* now is in Kconfig for board #define CONFIG_SPL_TEXT_BASE	0x40000 */ // ???
-// ???
-#define CONFIG_SYS_UBOOT_BASE	CONFIG_SYS_TEXT_BASE
-#define CONFIG_SYS_UBOOT_START  CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_UBOOT_BASE CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_UBOOT_START CONFIG_SYS_TEXT_BASE
 
-// ???
-// ??? #define RCM_1888TX018_IM0_START           CONFIG_SPL_TEXT_BASE
-// ??? #define RCM_1888TX018_IM0_SIZE            (0x40000)
-#define RCM_1888BM18_IM1_START           CONFIG_SPL_TEXT_BASE // ???
-#define RCM_1888BM18_IM1_SIZE            (0x20000) // ???
+#define RCM_1888BM18_IM1_START CONFIG_SPL_TEXT_BASE
+#define RCM_1888BM18_IM1_SIZE (0x20000)
 
-// ??? #define RCM_1888TX018_SPL_STACK_SIZE 0x4000
-// ???
-#define CONFIG_SYS_SPL_MALLOC_SIZE  0x2000
-
-/* stack for first processor 0x0043C000 */
-// ??? #define CONFIG_SPL_STACK        (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_STACK_SIZE)
-
-// ??? #define RCM_1888TX018_SPL_SPINTABLE_SIZE 32
-
-// ??? #define RCM_1888TX018_SPL_SPINTABLE (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_SPINTABLE_SIZE)
-
-/* stack for second processor 0x043FFFE0 */
-// ??? #define RCM_1888TX018_SPL_STACK_SECONDARY   (RCM_1888TX018_SPL_SPINTABLE)
-
-
-/* dual stack size for second CPU */
-/* ???// ??? #define CONFIG_SYS_SPL_MALLOC_START ((CONFIG_SPL_STACK - RCM_1888TX018_SPL_STACK_SIZE*2) 
-// ???                                    - CONFIG_SYS_SPL_MALLOC_SIZE)*/
+#define CONFIG_SYS_SPL_MALLOC_SIZE 0x2000
 #define CONFIG_SYS_SPL_MALLOC_START (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_SIZE)
 
 #ifndef CONFIG_SPL_BUILD
-/*		Start address of memory area that can be used for
-		initial data and stack; */        
-#define CONFIG_SYS_INIT_RAM_ADDR		0x4E000000
-/*      16 Megabyte for U-boot           */
-#define CONFIG_SYS_INIT_RAM_SIZE		0x01000000
-
-#define CONFIG_SYS_MONITOR_LEN  SZ_256K
+#define CONFIG_SYS_INIT_RAM_ADDR 0x40B00000
+#define CONFIG_SYS_INIT_RAM_SIZE 0x200000
+#define CONFIG_SYS_MONITOR_LEN SZ_256K /* ??? SZ_11M*/
+// ??? #define CONFIG_SYS_MONITOR_BASE CONFIG_SYS_TEXT_BASE
 #else
-#define CONFIG_SYS_INIT_RAM_SIZE		CONFIG_SYS_MALLOC_F_LEN
-#define CONFIG_SYS_INIT_RAM_ADDR		(CONFIG_SYS_SPL_MALLOC_START - CONFIG_SYS_INIT_RAM_SIZE) 
+#define CONFIG_SYS_INIT_RAM_SIZE CONFIG_SYS_MALLOC_F_LEN
+#define CONFIG_SYS_INIT_RAM_ADDR (CONFIG_SYS_SPL_MALLOC_START - CONFIG_SYS_INIT_RAM_SIZE) 
 #endif
 
 // ??? name
 #define RCM_1888TX018_SPL_FDT_MAX_LEN 0x1000
 #define RCM_1888TX018_SPL_ADDR_LIMIT (CONFIG_SYS_INIT_RAM_ADDR - RCM_1888TX018_SPL_FDT_MAX_LEN)
 
-
+// ???
 /* #define CONFIG_SPL_FRAMEWORK */
 
-#define CONFIG_SYS_MALLOC_LEN   (2*2*1024*1024)
+#define CONFIG_SYS_MALLOC_LEN SZ_2M
 
 #define CONFIG_VERY_BIG_RAM
-#ifndef CONFIG_MAX_MEM_MAPPED
-#define CONFIG_MAX_MEM_MAPPED   ((phys_size_t)256 << 20)
+#ifndef CONFIG_MAX_MEM_MAPPED // ???
+#define CONFIG_MAX_MEM_MAPPED   ((phys_size_t)256 << 20) // ???
 #endif
-#define CONFIG_SYS_DDR_BASE     0x40000000
-#define CONFIG_SYS_SDRAM_BASE   CONFIG_SYS_DDR_BASE
-#define CONFIG_SYS_DDR_SIZE     SZ_2G
-#define CONFIG_SYS_LOAD_ADDR    CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_DDR_BASE 0x40000000
+#define CONFIG_SYS_SDRAM_BASE CONFIG_SYS_DDR_BASE
+// ??? #define CONFIG_SYS_DDR_SIZE     SZ_2G
+#define CONFIG_SYS_DDR_SIZE SZ_32M
+#define CONFIG_SYS_LOAD_ADDR CONFIG_SYS_TEXT_BASE
 
+// ???
 #define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
 /*#define CONFIG_SYS_DRAM_TEST*/
@@ -105,7 +88,8 @@
 
 #define BOOT_DEVICE_NAND 10
 #define BOOT_DEVICE_SPI 11
-#define BOOT_DEVICE_EDCL 12
+#define BOOT_DEVICE_EDCL 12 // ??? del
+#define BOOT_DEVICE_UART 13
 
 #define BOOT_ROM_HOST_MODE 0xfffc04d8
 #define BOOT_ROM_MAIN 0xfffc0594
@@ -123,14 +107,15 @@
 
 #define CONFIG_USE_BOOTARGS
 #define CONFIG_BOOTARGS "console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
-#define CONFIG_IPADDR 192.168.0.2
+#define CONFIG_IPADDR 192.168.0.12
 #define CONFIG_SERVERIP 192.168.0.1
 #define CONFIG_NETMASK 255.255.255.0
-#define CONFIG_HOSTNAME "tx018"
-#define CONFIG_LOADADDR 50000000
+#define CONFIG_HOSTNAME "bm18"
+// /?? #define CONFIG_LOADADDR 50000000
+// ??? see below
 #define CONFIG_EXTRA_ENV_SETTINGS \
-        "baudrate=1000000\0" \
-        "bootfile=tx018/uImage\0" \
+        "baudrate=115200\0" \
+        "bootfile=bm18/uImage\0" \
         "bootm_low=08000000\0" \
         "bootm_size=04000000\0" \
         "fdt_addr_r=50f00000\0" \
@@ -153,10 +138,11 @@
 
 #define CONFIG_SYS_PBSIZE 1024
 
+// ????
 /* todo - count by freq values */
-#define TIMER_TICKS_PER_US  800
+#define TIMER_TICKS_PER_US  200
 
-#define CONFIG_USB_MUSB_PIO_ONLY
+// ??? #define CONFIG_USB_MUSB_PIO_ONLY
 
 #ifndef CONFIG_TFTP_BLOCKSIZE
 #define CONFIG_TFTP_BLOCKSIZE		1466

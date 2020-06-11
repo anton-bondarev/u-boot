@@ -117,6 +117,7 @@ int dram_init(void)
 	return 0;
 }
 
+// ??? spl.o
 #define SPR_TBL_R 0x10C
 #define SPR_TBU_R 0x10D
 
@@ -153,7 +154,7 @@ int __weak timer_init(void)
 /* Returns time in milliseconds */
 ulong get_timer(ulong base)
 {
-	return mcurrent() - base;
+	return 100; // ??? mcurrent() - base;
 }
 
 #ifdef CONFIG_CMD_USB_MASS_STORAGE

@@ -148,6 +148,47 @@ void spl_board_init(void)
 #endif*/
 }
 
+// ??? copy form mb*
+#define SPR_TBL_R 0x10C
+#define SPR_TBU_R 0x10D
+
+static uint64_t tcurrent(void)
+{
+	uint32_t valuel = 0;
+	uint32_t valueh = 0;
+
+	__asm volatile(
+		"mfspr %0, %1 \n\t"
+		: "=r"(valuel)
+		: "i"(SPR_TBL_R)
+		:);
+
+	__asm volatile(
+		"mfspr %0, %1 \n\t"
+		: "=r"(valueh)
+		: "i"(SPR_TBU_R)
+		:);
+
+
+	return (((uint64_t)valueh) << 32) + valuel;
+}
+
+static uint32_t mcurrent(void)
+{
+	return (tcurrent() / (1000 * TIMER_TICKS_PER_US));
+}
+
+int __weak timer_init(void)
+{
+	return 0;
+}
+/* Returns time in milliseconds */
+ulong get_timer(ulong base)
+{
+	return mcurrent() - base;
+}
+// ????
+
 // ????
 #ifdef CONFIG_SPL_MMC_SUPPORT
 u32 spl_boot_mode(const u32 boot_device)
@@ -160,6 +201,9 @@ u32 spl_boot_mode(const u32 boot_device)
 void board_boot_order(u32 *spl_boot_list)
 {
 	spl_boot_list[0] = spl_boot_device();
+	// ???
+	spl_boot_list[1] = BOOT_DEVICE_UART;
+	// ???
 	/* ??? switch (spl_boot_list[0]) {
 	case BOOT_DEVICE_SPI:
 		spl_boot_list[1] = BOOT_DEVICE_MMC1;

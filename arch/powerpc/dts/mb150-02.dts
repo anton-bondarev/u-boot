@@ -1,14 +1,14 @@
-#include <dt-bindings/gpio/gpio.h>
-#include "1888tx018-pinfunc.h"
+// ??? #include <dt-bindings/gpio/gpio.h>
+// ??? #include "1888tx018-pinfunc.h"
 
 /dts-v1/;
 /
-	{
-	compatible = "rcm,1888tx018";
+{
+	compatible = "rcm,1888bm18";
 	#address-cells = <1>;
 	#size-cells = <1>;
 
-	lsif0clock: lsif0clock@100M {
+	/* ??? lsif0clock: lsif0clock@100M {
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
 		clock-frequency = <100000000>;
@@ -19,7 +19,7 @@
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
 		clock-frequency = <100000000>;
-	};
+	};*/
 
     config {
            u-boot,spl-payload-offset = <0x40000>; // ???
@@ -27,35 +27,30 @@
 
 	chosen {
 		stdout-path = "uart0";
-		// ??? spd0-path = "spd0";
-		// ??? spd1-path = "spd1";
 	};
 
 	aliases {
 		// ??? spi0 = &spi0;
 		// ??? mmc0 = &mmc0;
 		uart0 = &uart0;
-		// ??? spd0 = &spd0;
-		// ??? spd1 = &spd1;
 	};
 
 	lsif {
 		u-boot,dm-pre-reloc;
 		compatible = "simple-bus";
-		// ??? reg = <0x3C060000 0x1000>;
-		// ??? reg-names = "ctrlreg";
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		uart0: uart0@C0029000 {  /* console */
+		// console
+		uart0: uart0@C0029000 {
 			compatible = "arm,pl011", "arm,primecell";
 			reg = <0xD0029000 0x1000>;
 			clock = <100000000>;
-			// ??? pinctrl-names = "default";
-			// ??? pinctrl-0 = <&pinctrl_uart0_default>;
+			skip-init; // the UART speed is configured by RUMBOOT and it depens on the board switches
 			u-boot,dm-pre-reloc;
 		};
 	};
+};
 
 // ???	sram_nor_arbiter0: sram_nor_arbiter {
 // ???		compatible = "rcm,sram-nor-arbiter";
@@ -561,7 +556,6 @@
 // ???			/*u-boot,dm-pre-reloc;*/
 // ???	    };	
 // ???	};
-};
 
 
 /* SRAM-NOR */

@@ -15,7 +15,7 @@ config SYS_CONFIG_NAME
 
 config SYS_TEXT_BASE
 	hex "Entry point for u-boot startup"
-	default 0x4D000040
+	default 0x40000040
 
 # // ???
 config SPL_TEXT_BASE
@@ -26,6 +26,7 @@ config PPC_DCR
     bool "Enable cotrol via DCR bus"
 	default y
 
+# // ??? name
 config SYS_DDR_BASE
 	hex "Base address DDR RAM memory"
     default 0x40000000
@@ -72,6 +73,7 @@ config ENV_SECT_SIZE
 	default 0x40000 if ENV_IS_IN_FLASH
 	default 0x10000 if ENV_IS_IN_SPI_FLASH
 
+# // ???
 config PPC32
 	bool "Use in version>2020.04 for usb driver"
 	default y
