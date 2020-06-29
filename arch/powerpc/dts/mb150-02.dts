@@ -42,7 +42,7 @@
 		#size-cells = <1>;
 
 		// console
-		uart0: uart0@C0029000 {
+		uart0: uart0@D0029000 {
 			compatible = "arm,pl011", "arm,primecell";
 			reg = <0xD0029000 0x1000>;
 			clock = <100000000>;

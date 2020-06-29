@@ -154,7 +154,7 @@ int __weak timer_init(void)
 /* Returns time in milliseconds */
 ulong get_timer(ulong base)
 {
-	return 100; // ??? mcurrent() - base;
+	return mcurrent() - base;
 }
 
 #ifdef CONFIG_CMD_USB_MASS_STORAGE

@@ -76,8 +76,6 @@ static ulong xmodem_read_fit(struct spl_load_info *load, ulong offset,
 	return size;
 }
 
-void usleep(uint32_t usec); // ????
-
 int spl_xmodem_load_image(struct spl_image_info *spl_image,
 			  struct spl_boot_device *bootdev)
 {
@@ -92,24 +90,16 @@ int spl_xmodem_load_image(struct spl_image_info *spl_image,
 
 	info.mode = xyzModem_xmodem;
 
-	// ???
-	// ??? printf("*** Prived\n"); // ???
-	// ??? usleep(1000000);
-
 	ret = xyzModem_stream_open(&info, &err);
 	if (ret) {
 		printf("spl: xmodem err - %s\n", xyzModem_error(err));
 		return ret;
 	}
 
-	// ??? printf("*** Prived\n"); // ???
-	// ??? printf("%c", (char)0x06); // ???
-
 	res = xyzModem_stream_read(buf, BUF_SIZE, &err);
 	if (res <= 0)
 		goto end_stream;
 
-	// ??? printf("*\n"); /// ???
 	if (IS_ENABLED(CONFIG_SPL_LOAD_FIT_FULL) &&
 	    image_get_magic((struct image_header *)buf) == FDT_MAGIC) {
 		addr = CONFIG_SYS_LOAD_ADDR;

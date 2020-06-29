@@ -222,11 +222,4 @@ _fix_fpu:
 __doublezero:
     .double 0.0
 
-// ???? .section ".text.start_secondary","ax",@progbits
-// ???? .global _start_secondary
-// ???? _start_secondary:
-// ????     load_const_link sp, CONFIG_SPL_STACK
-// ????     bl _fix_fpu
-// ???? 	bl	process_spintable    
-
 #endif
