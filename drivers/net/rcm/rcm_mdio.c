@@ -76,7 +76,7 @@ static int rcm_mdio_reset(struct udevice *mdio_dev)
 	dev_dbg(mdio_dev, DBGPREFIX "reset\n");
 
 	/* put to reset state */
-	iowrite32(0 << ETH_RST_N, &priv->regs->eth_rst_n);
+//	iowrite32(0 << ETH_RST_N, &priv->regs->eth_rst_n);
 
 	/* remove reset state */
 	iowrite32(1 << ETH_RST_N, &priv->regs->eth_rst_n);
