@@ -7,9 +7,6 @@
 // ???
 #include <asm/io.h>
 
-// ???
-#define _DEBUG 1
-
 #define DCR_PLB6_BC_BASE        0x80000200
 #define DCR_EM2_PLB6MCIF2_BASE  0x80050000
 #define DCR_EM2_EMI_BASE        0x80060000

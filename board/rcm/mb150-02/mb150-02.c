@@ -114,6 +114,8 @@ int dram_init(void)
 #else
 	gd->ram_size = get_physical_mem_size();
 #endif*/
+	gd->ram_size = CONFIG_SYS_DDR_SIZE; // ????
+
 	return 0;
 }
 
@@ -157,23 +159,7 @@ ulong get_timer(ulong base)
 	return mcurrent() - base;
 }
 
-#ifdef CONFIG_CMD_USB_MASS_STORAGE
-
-int board_usb_init(int index, enum usb_init_type init)
-{
-	if (init == USB_INIT_DEVICE)
-	{
-		struct udevice *dev;
-		debug("board_usb_init called\n");
-		int ret = uclass_get_device(UCLASS_USB, 0, &dev);
-		if (ret)
-			debug("unable to find USB device in FDT\n");
-	}
-	return 0;
-}
-
-#endif
-
+// ????
 #if defined(CONFIG_SYS_DRAM_TEST)
 
 int testdramfromto(uint *pstart, uint *pend)

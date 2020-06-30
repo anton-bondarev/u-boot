@@ -23,13 +23,13 @@
 /* memory map for 1888bm18
  *	0x40000000  0x40     - U-Boot header (64B)
  *	0x40000040  0xB00000 - U-Boot binary image (11MB - 64B)
- *	0x40B00000  0x200000 - U-Boot RAM (2MB)
- *	0x40D00000  0x200000 - U-Boot heap (2MB)
+ *	0x40B00000  0x400000 - U-Boot RAM + heap (4MB)
  *	0x40F00000  0x100000 - U-Boot stack (1MB)
  *	0x41000000 0x1000000 - Kernel load space (16MB)
  *
  *	0x80000000   0x20000 - IM0 used by rumboot
  *	0x80020000   0x20000 - IM1 <- SPL
+ *	0x80040000   0x20000 - IM2 rumboot & SPL stack
  */
 
 #define CONFIG_SYS_UBOOT_BASE CONFIG_SYS_TEXT_BASE
@@ -43,7 +43,7 @@
 
 #ifndef CONFIG_SPL_BUILD
 #define CONFIG_SYS_INIT_RAM_ADDR 0x40B00000
-#define CONFIG_SYS_INIT_RAM_SIZE 0x200000
+#define CONFIG_SYS_INIT_RAM_SIZE 0x400000
 #define CONFIG_SYS_MONITOR_LEN SZ_256K /* ??? SZ_11M*/
 // ??? #define CONFIG_SYS_MONITOR_BASE CONFIG_SYS_TEXT_BASE
 #else
@@ -111,26 +111,25 @@
 #define CONFIG_SERVERIP 192.168.0.1
 #define CONFIG_NETMASK 255.255.255.0
 #define CONFIG_HOSTNAME "bm18"
-// /?? #define CONFIG_LOADADDR 50000000
+#define CONFIG_LOADADDR 40100000
 // ??? see below
 #define CONFIG_EXTRA_ENV_SETTINGS \
         "baudrate=115200\0" \
         "bootfile=bm18/uImage\0" \
-        "bootm_low=08000000\0" \
-        "bootm_size=04000000\0" \
-        "fdt_addr_r=50f00000\0" \
-        "fileaddr=50f00000\0" \
-        "kernel=run setmem; run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
-        "kernelsd=run setmem; run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
-        "loadfdt=tftp ${fdt_addr_r} tx018/tx018.dtb\0" \
-        "loadfdtsd=ext4load mmc 0:2 ${fdt_addr_r} /boot/uImage-tx018.dtb\0" \
+        "bootm_low=40100000\0" \
+        "bootm_size=01000000\0" \
+        "fdt_addr_r=401F8000\0" \
+        "kernel=run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
+        "kernelsd=run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
+        "loadfdt=tftp ${fdt_addr_r} bm18/bm18.dtb\0" \
+        "loadfdtsd=ext4load mmc 0:2 ${fdt_addr_r} /boot/uImage-bm18.dtb\0" \
         "loadkernel=tftp ${loadaddr} ${bootfile}\0" \
-        "loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage-tx018.bin\0" \
+        "loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage-bm18.bin\0" \
         "loadsd=run loadfdtsd; run loadkernelsd\0" \
-        "setmem=mmap drop all; mmap drop 0 1m; mmap set 0 256m 00000000; mmap set ${loadaddr} 16m 10000000\0" \
         "tftptimeout=1000\0" \
         "tftptimeoutcountmax=100\0" \
         "sramnortest=sramtest run rand; nortest run\0"
+// ??? up sramnortest
 
 #define CONFIG_PL01X_SERIAL
 // ??? #define CONFIG_BAUDRATE 1000000

@@ -5,6 +5,7 @@
 /
 {
 	compatible = "rcm,1888bm18";
+	model = "RCM MB150-02";
 	#address-cells = <1>;
 	#size-cells = <1>;
 

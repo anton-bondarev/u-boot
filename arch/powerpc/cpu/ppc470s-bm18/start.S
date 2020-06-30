@@ -22,14 +22,14 @@
 _start:
 
 // setup stack
-// ??? #ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_SPL_BUILD
 // ??? #ifdef CONFIG_SPL_STACK /// ??? no symbol
 // ???     load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
 // ??? #endif
 // ???     bl _fix_fpu // ???? maybe need
-// ??? #else
-// ???     load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
-// ??? #endif
+#else
+     load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
+#endif
 
 clear_bss:
     /*
@@ -76,7 +76,7 @@ clear_bss:
 // ???     b mmm
     // ???
 
-	bl	board_init_r    // ??? it is in board_init_f ????
+	bl	board_init_r    // ??? it is in board_init_f for SPL (but not for Main core)????
 // ???
 mmm:
 	b mmm // ???
