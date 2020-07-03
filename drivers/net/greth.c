@@ -116,7 +116,7 @@ typedef struct {
 
 static inline void greth_write_bd(volatile u32 *bd, u32 val)
 {
-	writel(cpu_to_be32(val), bd);
+	__raw_writel(cpu_to_be32(val), bd);
 #ifdef CONFIG_ARM
 	flush_cache((unsigned long)bd, sizeof(val));
 #endif
@@ -127,7 +127,7 @@ static inline u32 greth_read_bd(volatile u32 *bd)
 #ifdef CONFIG_ARM
 	greth_invalidate_dcache((unsigned long)bd, sizeof(u32));
 #endif
-	return be32_to_cpu(readl(bd));
+	return be32_to_cpu(__raw_readl(bd));
 }
 
 /* Read MII register 'addr' from core 'regs' */
