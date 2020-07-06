@@ -46,6 +46,7 @@ static phys_size_t ddr_em1_size = 0;
 
 #if defined(CONFIG_OF_LIBFDT)
 
+// ????
 int arch_fixup_fdt(void *blob)
 {
 	int num_banks = 0;

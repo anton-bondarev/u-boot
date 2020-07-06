@@ -21,11 +21,11 @@
  */
 // ???
 /* memory map for 1888bm18
- *	0x40000000  0x40     - U-Boot header (64B)
- *	0x40000040  0xB00000 - U-Boot binary image (11MB - 64B)
- *	0x40B00000  0x400000 - U-Boot RAM + heap (4MB)
- *	0x40F00000  0x100000 - U-Boot stack (1MB)
- *	0x41000000 0x1000000 - Kernel load space (16MB)
+ *	0x20000000  0x40     - U-Boot header (64B)
+ *	0x20000040  0xB00000 - U-Boot binary image (11MB - 64B)
+ *	0x20B00000  0x400000 - U-Boot RAM + heap (4MB)
+ *	0x20F00000  0x100000 - U-Boot stack (1MB)
+ *	0x21000000 0x1000000 - Kernel load space (16MB)
  *
  *	0x80000000   0x20000 - IM0 used by rumboot
  *	0x80020000   0x20000 - IM1 <- SPL
@@ -42,7 +42,7 @@
 #define CONFIG_SYS_SPL_MALLOC_START (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_SIZE)
 
 #ifndef CONFIG_SPL_BUILD
-#define CONFIG_SYS_INIT_RAM_ADDR 0x40B00000
+#define CONFIG_SYS_INIT_RAM_ADDR 0x20B00000
 #define CONFIG_SYS_INIT_RAM_SIZE 0x400000
 #define CONFIG_SYS_MONITOR_LEN SZ_256K /* ??? SZ_11M*/
 // ??? #define CONFIG_SYS_MONITOR_BASE CONFIG_SYS_TEXT_BASE
@@ -64,7 +64,7 @@
 #ifndef CONFIG_MAX_MEM_MAPPED // ???
 #define CONFIG_MAX_MEM_MAPPED   ((phys_size_t)256 << 20) // ???
 #endif
-#define CONFIG_SYS_DDR_BASE 0x40000000
+// ??? in Kconfig <-- #define CONFIG_SYS_DDR_BASE 0x20000000
 #define CONFIG_SYS_SDRAM_BASE CONFIG_SYS_DDR_BASE
 // ??? #define CONFIG_SYS_DDR_SIZE     SZ_2G
 #define CONFIG_SYS_DDR_SIZE SZ_32M
@@ -83,12 +83,12 @@
 #define CONFIG_DIMM_SLOTS_PER_CTLR      2
 
 #define CONFIG_USE_STDINT 1
-#define CONFIG_SPL_SPI_LOAD
-#define CONFIG_SPL_EDCL_LOAD
+// ??? #define CONFIG_SPL_SPI_LOAD
+// ??? #define CONFIG_SPL_EDCL_LOAD
 
-#define BOOT_DEVICE_NAND 10
-#define BOOT_DEVICE_SPI 11
-#define BOOT_DEVICE_EDCL 12 // ??? del
+// ??? #define BOOT_DEVICE_NAND 10
+// ??? #define BOOT_DEVICE_SPI 11
+// ??? #define BOOT_DEVICE_EDCL 12 // ??? del
 #define BOOT_DEVICE_UART 13
 
 #define BOOT_ROM_HOST_MODE 0xfffc04d8
@@ -111,14 +111,14 @@
 #define CONFIG_SERVERIP 192.168.0.1
 #define CONFIG_NETMASK 255.255.255.0
 #define CONFIG_HOSTNAME "bm18"
-#define CONFIG_LOADADDR 40100000
+#define CONFIG_LOADADDR 21000000
 // ??? see below
 #define CONFIG_EXTRA_ENV_SETTINGS \
         "baudrate=115200\0" \
         "bootfile=bm18/uImage\0" \
-        "bootm_low=40100000\0" \
+        "bootm_low=21000000\0" \
         "bootm_size=01000000\0" \
-        "fdt_addr_r=401F8000\0" \
+        "fdt_addr_r=21FF8000\0" \
         "kernel=run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
         "kernelsd=run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
         "loadfdt=tftp ${fdt_addr_r} bm18/bm18.dtb\0" \
@@ -131,10 +131,11 @@
         "sramnortest=sramtest run rand; nortest run\0"
 // ??? up sramnortest
 
-#define CONFIG_PL01X_SERIAL
+// ??? #define CONFIG_PL01X_SERIAL
 // ??? #define CONFIG_BAUDRATE 1000000
 /*#define CONFIG_DEBUG_UART_SKIP_INIT 1*/
 
+// ???
 #define CONFIG_SYS_PBSIZE 1024
 
 // ????
@@ -143,23 +144,27 @@
 
 // ??? #define CONFIG_USB_MUSB_PIO_ONLY
 
+// ???
 #ifndef CONFIG_TFTP_BLOCKSIZE
 #define CONFIG_TFTP_BLOCKSIZE		1466
 #endif
 #define CONFIG_TFTP_TSIZE
 
-#define CONFIG_SYS_BOOTM_LEN 0x1000000
+// ???
+// ??? #define CONFIG_SYS_BOOTM_LEN 0x1000000
 
 // ??? #define CONFIG_SPD_EEPROM
 
+// ??? here
 #ifndef CONFIG_MTD_PARTITIONS
 #define CONFIG_MTD_PARTITIONS
 #endif
 
+// ??? here
 #define CONFIG_SYS_MAX_NAND_DEVICE 8
 #define CONFIG_SYS_NAND_MAX_CHIPS 8
 
-#define CONFIG_CMD_UBIFS
+// ??? #define CONFIG_CMD_UBIFS
 /*
 #ifndef CONFIG_NAND
 #define CONFIG_NAND 
@@ -170,10 +175,11 @@
 #define CONFIG_CMD_NAND
 #endif
 */
-#ifndef CONFIG_CMD_UBI
+/* ??? #ifndef CONFIG_CMD_UBI
 #define CONFIG_CMD_UBI
-#endif
+#endif*/
 
+// ??? here
 #ifndef CONFIG_RBTREE
 #define CONFIG_RBTREE
 #endif
@@ -182,16 +188,16 @@
 /*#define CONFIG_MTD_DEVICE*/
 /*#endif*/
 
-#ifndef CONFIG_CMD_MTDPARTS
+/* ??? #ifndef CONFIG_CMD_MTDPARTS
 #define CONFIG_CMD_MTDPARTS
-#endif
+#endif*/
 
 #ifndef CONFIG_LZO
 #define CONFIG_LZO
 #endif
 
-#define CONFIG_MTD_UBI_WL_THRESHOLD 4096
-#define CONFIG_MTD_UBI_BEB_LIMIT 20
+// ??? #define CONFIG_MTD_UBI_WL_THRESHOLD 4096
+// ??? #define CONFIG_MTD_UBI_BEB_LIMIT 20
 
 #define CONFIG_SYS_MMC_ENV_DEV 0
 
@@ -216,12 +222,12 @@
     #define CONFIG_ENV_SECT_SIZE            0x10000
 #endif
 */
-#ifdef CONFIG_SPL_NAND_SUPPORT
+/* ??? #ifdef CONFIG_SPL_NAND_SUPPORT
     #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x880000
     #define CONFIG_SYS_NAND_U_BOOT_SIZE     0x160000
-#endif
+#endif*/
 
-#define CONFIG_SYS_NAND_BASE_LIST           {1}; /*v2020.01: it's dummy!!!but need...*/
+// ??? #define CONFIG_SYS_NAND_BASE_LIST           {1}; /*v2020.01: it's dummy!!!but need...*/
 
 // ???
 // #ifdef CONFIG_MTD_RCM_NOR

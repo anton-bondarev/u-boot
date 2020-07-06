@@ -790,10 +790,10 @@ bool emi_init(void)
 
 
 	// ???tlb47x_inval(0x00000000, TLBSID_256M); // ???
-	tlb47x_inval(0x40000000, TLBSID_256M); // ???
-	tlb47x_map(0x0020000000, 0x40000000, TLBSID_256M, TLB_MODE_RWX); // ???
+	tlb47x_inval(0x20000000, TLBSID_256M); // ???
+	tlb47x_map(0x0020000000, 0x20000000, TLBSID_256M, TLB_MODE_RWX); // ???
 
-	uint32_t base_addr = 0x40000000; // ???
+	uint32_t base_addr = 0x20000000; // ???
 	uint32_t length = 4096; // ??? 32 * 1024 * 1024;
 	// ??? uint32_t length = 32 * 1024 * 1024;
 	int i;
