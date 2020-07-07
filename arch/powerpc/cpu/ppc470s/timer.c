@@ -1,4 +1,6 @@
+#include <common.h>
+
 unsigned long get_tbclk(void)
 {
-	return CONFIG_SYS_HZ;
+	return TIMER_TICKS_PER_US * 1000000;
 }

@@ -23,11 +23,15 @@ _start:
 // setup stack
 #ifdef CONFIG_SPL_BUILD
 #ifdef CONFIG_SPL_STACK
-    load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
+	load_const_link sp, CONFIG_SPL_STACK
 #endif
-    bl _fix_fpu
 #else
-    load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
+	load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
+#endif
+
+// fix FPU issue
+#ifdef CONFIG_SPL_BUILD
+	bl _fix_fpu
 #endif
 
 clear_bss:
@@ -199,9 +203,16 @@ __doublezero:
 .section ".text.start_secondary","ax",@progbits
 .global _start_secondary
 _start_secondary:
-    load_const_link sp, CONFIG_SPL_STACK
-    bl _fix_fpu
-	bl	process_spintable    
-
+#ifdef CONFIG_SPL_BUILD
+#ifdef RCM_PPC_SPL_STACK_SECONDARY
+	load_const_link sp, RCM_PPC_SPL_STACK_SECONDARY
+#endif
 #endif
 
+#ifdef CONFIG_SPL_BUILD
+	bl _fix_fpu
+#endif
+
+	bl process_spintable
+
+#endif

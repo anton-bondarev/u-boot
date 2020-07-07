@@ -52,4 +52,4 @@ SECTIONS
 
 ENTRY(_start)
 
-ASSERT(_end <= RCM_1888TX018_SPL_ADDR_LIMIT, "SPL size too big");
+ASSERT(_end <= RCM_PPC_SPL_ADDR_LIMIT, "SPL size too big");
