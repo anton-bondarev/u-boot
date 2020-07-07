@@ -13,8 +13,19 @@
 #include <spi_flash.h>
 #include <asm/io.h>
 #include <asm/tlb47x.h>
+#include "boot.h"
 
 DECLARE_GLOBAL_DATA_PTR;
+
+extern void _start(void);
+extern void _start_secondary(void);
+
+static const __attribute__((used)) __attribute__((section(".header")))
+struct rumboot_header hdr = {
+	.magic = RUMBOOT_HEADER_MAGIC,
+	.entry_point_0 = (uint32_t)&_start,
+	.entry_point_1 = (uint32_t)&_start_secondary,
+};
 
 void ddr_init (int slowdown);
 int testdramfromto(uint *pstart, uint *pend);
