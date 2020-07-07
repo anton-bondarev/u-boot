@@ -16,7 +16,7 @@ DECLARE_GLOBAL_DATA_PTR;
 static int spl_edcl_load_image(struct spl_image_info *spl_image,
 			      struct spl_boot_device *bootdev)
 {
-#ifdef CONFIG_TARGET_1888TX018
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18)
 	volatile struct image_header *hdr = (volatile struct image_header*)(CONFIG_SYS_TEXT_BASE - sizeof(struct image_header));
 	hdr->ih_magic = 0;
 	printf("Enter HOST mode for EDCL loading\n");
@@ -53,7 +53,7 @@ static int spl_edcl_load_image(struct spl_image_info *spl_image,
 	return 0;
 }
 
-#ifdef CONFIG_TARGET_1888TX018
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18)
 SPL_LOAD_IMAGE_METHOD("EDCL", 0, BOOT_DEVICE_EDCL, spl_edcl_load_image);
 #else
 SPL_LOAD_IMAGE_METHOD("EDCL", 0, BOOT_DEVICE_XIP, spl_edcl_load_image);
