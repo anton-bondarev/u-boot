@@ -6,6 +6,7 @@
 #include "rcm_dimm_params.h"
 #include <fdt_support.h>
 #include <env.h>
+#include <asm/tlb47x.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -316,5 +317,23 @@ int bi_dram_drop_all(void)
 		gd->bd->bi_dram[i].size = 0;
 	}
 #endif
+	return 0;
+}
+
+int add_code_guard(void)
+{
+	const uint32_t code_start = CONFIG_SYS_TEXT_BASE & ~0xFFFFFF;
+	const uint32_t data_start = CONFIG_SYS_INIT_RAM_ADDR & ~0xFFFFFF;
+	const uint32_t stack_start = (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE) & ~0xFFFFF;
+
+	// code
+	tlb47x_map(code_start - CONFIG_SYS_DDR_BASE, code_start, TLBSID_16M, TLB_MODE_RX);
+	// data
+	tlb47x_map(data_start - CONFIG_SYS_DDR_BASE, data_start, TLBSID_16M, TLB_MODE_RW);
+	// initial stack
+	tlb47x_map(stack_start - CONFIG_SYS_DDR_BASE, stack_start, TLBSID_1M, TLB_MODE_RW);
+	// invalidate original page
+	tlb47x_inval(CONFIG_SYS_DDR_BASE, TLBSID_256M);
+
 	return 0;
 }
