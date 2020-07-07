@@ -13,8 +13,14 @@ config TARGET_1888TX018
 	select SUPPORT_SPL
 	select CREATE_ARCH_SYMLINK
 
+config TARGET_1888BM18
+	bool "Support 1888BM18"
+	select SUPPORT_SPL
+	select CREATE_ARCH_SYMLINK
+
 endchoice
 
 source "board/rcm/mb115-01/Kconfig"
+# ??? source "board/rcm/mb150-02/Kconfig"
 
 endmenu
