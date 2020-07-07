@@ -58,7 +58,7 @@ static inline uint get_svr(void)
 	defined(CONFIG_MPC86xx)	|| \
 	defined(CONFIG_MPC83xx) || \
 	defined(CONFIG_TARGET_1888TX018) || \
-	defined(CONFIG_TARGET_1888BM18) /* ??? */
+	defined(CONFIG_TARGET_1888BM18)
 unsigned char	in8(unsigned int);
 void		out8(unsigned int, unsigned char);
 unsigned short	in16(unsigned int);

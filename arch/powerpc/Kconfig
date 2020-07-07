@@ -40,10 +40,6 @@ config MPC8xx
 config PPC470S
 	bool "PPC470S"
 
-# ???
-config PPC470S_BM18
-	bool "PPC470S_BM18"
-
 endchoice
 
 config HIGH_BATS
@@ -57,6 +53,5 @@ source "arch/powerpc/cpu/mpc85xx/Kconfig"
 source "arch/powerpc/cpu/mpc86xx/Kconfig"
 source "arch/powerpc/cpu/mpc8xx/Kconfig"
 source "arch/powerpc/cpu/ppc470s/Kconfig"
-source "arch/powerpc/cpu/ppc470s-bm18/Kconfig"
 
 endmenu

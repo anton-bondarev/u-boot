@@ -21,7 +21,6 @@
 #define SMP_MB
 #endif /* CONFIG_SMP */
 
-// ??? #ifndef CONFIG_TARGET_1888TX018
 #if !defined(CONFIG_TARGET_1888TX018) && !defined(CONFIG_TARGET_1888BM18)
 #define __INLINE_BITOPS	1
 #else

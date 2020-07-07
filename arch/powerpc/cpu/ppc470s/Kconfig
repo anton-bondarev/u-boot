@@ -21,6 +21,6 @@ config TARGET_1888BM18
 endchoice
 
 source "board/rcm/mb115-01/Kconfig"
-# ??? source "board/rcm/mb150-02/Kconfig"
+source "board/rcm/mb150-02/Kconfig"
 
 endmenu

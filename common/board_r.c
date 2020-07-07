@@ -136,7 +136,7 @@ static int initr_reloc_global_data(void)
 {
 #ifdef __ARM__
 	monitor_flash_len = _end - __image_copy_start;
-#elif defined(CONFIG_PPC470S) || defined(CONFIG_PPC470S_BM18) // ??? CONFIG_PPC470S_BM18
+#elif defined(CONFIG_PPC470S)
 	monitor_flash_len = (ulong) (_end - __image_copy_start);
 #elif defined(CONFIG_NDS32) || defined(CONFIG_RISCV)
 	monitor_flash_len = (ulong)&_end - (ulong)&_start;
@@ -889,8 +889,7 @@ void board_init_r(gd_t *new_gd, ulong dest_addr)
 	int i;
 #endif
 
-// ??? #if !defined(CONFIG_X86) && !defined(CONFIG_ARM) && !defined(CONFIG_ARM64) && !defined(CONFIG_PPC470S)
-#if !defined(CONFIG_X86) && !defined(CONFIG_ARM) && !defined(CONFIG_ARM64) && !defined(CONFIG_PPC470S) && !defined(CONFIG_PPC470S_BM18)
+#if !defined(CONFIG_X86) && !defined(CONFIG_ARM) && !defined(CONFIG_ARM64) && !defined(CONFIG_PPC470S)
 	gd = new_gd;
 #endif
 	gd->flags &= ~GD_FLG_LOG_READY;

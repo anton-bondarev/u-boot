@@ -3,23 +3,6 @@
 
 #include <linux/sizes.h>
 
-// ???
-/* memory map for 1888tx018 
- *      0x00040000 - 0x18 bytes romboot header
- *      0x00040018 - Start of SPL
- *      0x00076000 - Start of SPL heap 
- *      0x00078000 - End of SPL heap
- *      0x00080000 - initial stack pointer for main core
- *      
- *      0x40000000 - Start of DDR
- *      0x4D000000 - Start of U-Boot header (8Mb for U-boot itself)
- *      0x4D000040 - Start of U-Boot binary
- *      0x4E000000 - Start of U-Boot RAM (heap - 16Mb)
- *      0x4F000000 - End of U-Boot RAM (heap)
- *      0x4F100000 - Initial stack (1Mb)
- *
- */
-// ???
 /* memory map for 1888bm18
  *	0x20000000  0x40     - U-Boot header (64B)
  *	0x20000040  0xB00000 - U-Boot binary image (11MB - 64B)
@@ -32,32 +15,29 @@
  *	0x80040000   0x20000 - IM2 rumboot & SPL stack
  */
 
-#define CONFIG_SYS_UBOOT_BASE CONFIG_SYS_TEXT_BASE
-#define CONFIG_SYS_UBOOT_START CONFIG_SYS_TEXT_BASE
-
 #define RCM_1888BM18_IM1_START CONFIG_SPL_TEXT_BASE
 #define RCM_1888BM18_IM1_SIZE (0x20000)
 
 #define CONFIG_SYS_SPL_MALLOC_SIZE 0x2000
 #define CONFIG_SYS_SPL_MALLOC_START (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_SIZE)
 
-#ifndef CONFIG_SPL_BUILD
+#define RCM_1888TX018_SPL_FDT_MAX_LEN 0x1000
+#define RCM_PPC_SPL_ADDR_LIMIT (CONFIG_SYS_SPL_MALLOC_START - RCM_1888TX018_SPL_FDT_MAX_LEN)
+
+
+#define CONFIG_SYS_UBOOT_BASE CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_UBOOT_START CONFIG_SYS_TEXT_BASE
+
+
+#ifdef CONFIG_SPL_BUILD
+#define CONFIG_SYS_INIT_RAM_SIZE CONFIG_SYS_SPL_MALLOC_START // actually it is a fake value for prevent compilation errors
+#define CONFIG_SYS_INIT_RAM_ADDR (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_START) 
+#else
 #define CONFIG_SYS_INIT_RAM_ADDR 0x20B00000
 #define CONFIG_SYS_INIT_RAM_SIZE 0x400000
-#define CONFIG_SYS_MONITOR_LEN SZ_256K /* ??? SZ_11M*/
-// ??? #define CONFIG_SYS_MONITOR_BASE CONFIG_SYS_TEXT_BASE
-#else
-#define CONFIG_SYS_INIT_RAM_SIZE CONFIG_SYS_MALLOC_F_LEN
-#define CONFIG_SYS_INIT_RAM_ADDR (CONFIG_SYS_SPL_MALLOC_START - CONFIG_SYS_INIT_RAM_SIZE) 
 #endif
 
-// ??? name
-#define RCM_1888TX018_SPL_FDT_MAX_LEN 0x1000
-#define RCM_1888TX018_SPL_ADDR_LIMIT (CONFIG_SYS_INIT_RAM_ADDR - RCM_1888TX018_SPL_FDT_MAX_LEN)
-
-// ???
-/* #define CONFIG_SPL_FRAMEWORK */
-
+#define CONFIG_SYS_MONITOR_LEN SZ_256K
 #define CONFIG_SYS_MALLOC_LEN SZ_2M
 
 #define CONFIG_VERY_BIG_RAM
@@ -70,7 +50,6 @@
 #define CONFIG_SYS_DDR_SIZE SZ_32M
 #define CONFIG_SYS_LOAD_ADDR CONFIG_SYS_TEXT_BASE
 
-// ???
 #define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
 /*#define CONFIG_SYS_DRAM_TEST*/
@@ -91,6 +70,7 @@
 // ??? #define BOOT_DEVICE_EDCL 12 // ??? del
 #define BOOT_DEVICE_UART 13
 
+// ???
 #define BOOT_ROM_HOST_MODE 0xfffc04d8
 #define BOOT_ROM_MAIN 0xfffc0594
 
