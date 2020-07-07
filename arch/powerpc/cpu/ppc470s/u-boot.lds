@@ -3,8 +3,8 @@
 OUTPUT_ARCH(powerpc)
 
 MEMORY {
-    code (rx): org = CONFIG_SYS_TEXT_BASE, len = 16m    
-    data (rw): org = CONFIG_SYS_INIT_RAM_ADDR, len = 16m    
+	code (rx): org = CONFIG_SYS_TEXT_BASE, len = CONFIG_SYS_INIT_RAM_ADDR - CONFIG_SYS_TEXT_BASE
+	data (rw): org = CONFIG_SYS_INIT_RAM_ADDR, len = CONFIG_SYS_INIT_RAM_SIZE
 }
 
 SECTIONS
