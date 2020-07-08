@@ -64,8 +64,3 @@ void tlb47x_map_nocache(uint64_t physical, uint32_t logical, tlb_size_id size, t
 {
     tlb47x_map_internal(physical, logical, 0x2, size, smode, TLB_MODE_NONE);    
 }
-
-ulong board_get_usable_ram_top(ulong total_size)
-{
-    return CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - CONFIG_SYS_MALLOC_F_LEN - sizeof( gd_t );
-}

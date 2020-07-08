@@ -3,8 +3,9 @@
 
 #include <linux/sizes.h>
 
-/* memory map for 1888tx018:
+/* Memory map for 1888tx018:
  * 
+ * SPL:
  *	0x00040000 0x18    - romboot header
  *	0x00040018 0x35FE0 - start of SPL (code/data/FDT)
  *	0x00075FE0 0x2000  - heap
@@ -12,13 +13,11 @@
  *	0x0007BFE0 0x4000  - core 1 initial pointer
  *	0x0007FFE0 0x20    - spin table
  *
- *      0x40000000 - Start of DDR
- *      0x4D000000 - Start of U-Boot header (8Mb for U-boot itself)
- *      0x4D000040 - Start of U-Boot binary
- *      0x4E000000 - Start of U-Boot RAM (heap - 16Mb)
- *      0x4F000000 - End of U-Boot RAM (heap)
- *      0x4F100000 - Initial stack (1Mb)
- *
+ * Main bootloader:
+ *	0x4D000000 0x40     - U-Boot header
+ *	0x4D000040 0xFFFFC0 - code
+ *	0x4E000000 0xF00000 - data, heap etc.
+ *	0x4EF00000 0x100000 - initial stack
  */
 
 #define RCM_1888TX018_IM0_START CONFIG_SPL_TEXT_BASE
@@ -49,6 +48,9 @@
 #define CONFIG_SYS_INIT_RAM_SIZE 0x01000000
 #endif
 
+#define RCM_PPC_STACK_SIZE 0x100000
+#define RCM_PPC_STACK (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE) // bottom of the stack
+
 #define CONFIG_SYS_MONITOR_LEN SZ_256K
 #define CONFIG_SYS_MALLOC_LEN (4 * 1024 * 1024)
 
@@ -61,8 +63,8 @@
 #define CONFIG_SYS_DDR_SIZE     SZ_2G
 #define CONFIG_SYS_LOAD_ADDR    CONFIG_SYS_TEXT_BASE
 
-#define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)
-#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
+#define CONFIG_SYS_MEMTEST_START (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - RCM_PPC_STACK_SIZE) // top of the internal stack
+#define CONFIG_SYS_MEMTEST_END (CONFIG_SYS_MEMTEST_START + SZ_256K - 1)
 /*#define CONFIG_SYS_DRAM_TEST*/
 
 #define CONFIG_SYS_MAX_FLASH_BANKS      2       // if NOR via LSIF need 1!!! (little window)+correct mtdpart
