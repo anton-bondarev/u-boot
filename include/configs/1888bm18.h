@@ -61,7 +61,7 @@
 #define CONFIG_CHIP_SELECTS_PER_CTRL    2
 #define CONFIG_DIMM_SLOTS_PER_CTLR      2
 
-#define CONFIG_USE_STDINT 1
+// ??? #define CONFIG_USE_STDINT 1
 // ??? #define CONFIG_SPL_SPI_LOAD
 // ??? #define CONFIG_SPL_EDCL_LOAD
 

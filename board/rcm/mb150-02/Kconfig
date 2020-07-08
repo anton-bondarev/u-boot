@@ -29,10 +29,6 @@ config SYS_DDR_BASE
 	hex "Base address DDR RAM memory"
     default 0x20000000
 
-config USE_STDINT
-    bool "Enable using stdint types"
-    default y
-
 config ENV_SPI_MAX_HZ
 	int "Spi bus maximal frequency"
 	depends on ENV_IS_IN_SPI_FLASH
