@@ -1,8 +1,6 @@
 #ifndef BOOTHEADER_H
 #define BOOTHEADER_H
 
-// ??? duplication with mb143-05
-
 /**
  *
  * \defgroup bootheader Boot image handling
