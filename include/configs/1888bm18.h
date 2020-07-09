@@ -89,150 +89,28 @@
 #define CONFIG_NETMASK 255.255.255.0
 #define CONFIG_HOSTNAME "bm18"
 #define CONFIG_LOADADDR 20200000
-// ??? see below
 #define CONFIG_EXTRA_ENV_SETTINGS \
-        "baudrate=115200\0" \
-        "bootfile=bm18/uImage\0" \
-        "bootm_low=20200000\0" \
-        "bootm_size=01E00000\0" \
-        "fdt_addr_r=21FF8000\0" \
-        "kernel=run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
-        "kernelsd=run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
-        "loadfdt=tftp ${fdt_addr_r} bm18/bm18.dtb\0" \
-        "loadfdtsd=ext4load mmc 0:2 ${fdt_addr_r} /boot/uImage-bm18.dtb\0" \
-        "loadkernel=tftp ${loadaddr} ${bootfile}\0" \
-        "loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage-bm18.bin\0" \
-        "loadsd=run loadfdtsd; run loadkernelsd\0" \
-        "tftptimeout=1000\0" \
-        "tftptimeoutcountmax=100\0" \
-        "sramnortest=sramtest run rand; nortest run\0"
-// ??? up sramnortest
+	"baudrate=115200\0" \
+	"bootfile=bm18/uImage\0" \
+	"bootm_low=20200000\0" \
+	"bootm_size=01E00000\0" \
+	"fdt_addr_r=21FF8000\0" \
+	"kernel=run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
+	"kernelsd=run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
+	"loadfdt=tftp ${fdt_addr_r} bm18/bm18.dtb\0" \
+	"loadfdtsd=ext4load mmc 0:2 ${fdt_addr_r} /boot/uImage-bm18.dtb\0" \
+	"loadkernel=tftp ${loadaddr} ${bootfile}\0" \
+	"loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage-bm18.bin\0" \
+	"loadsd=run loadfdtsd; run loadkernelsd\0" \
+	"tftptimeout=1000\0" \
+	"tftptimeoutcountmax=100\0"
 
-// ??? #define CONFIG_PL01X_SERIAL
-// ??? #define CONFIG_BAUDRATE 1000000
-/*#define CONFIG_DEBUG_UART_SKIP_INIT 1*/
-
-// ???
 #define CONFIG_SYS_PBSIZE 1024
 
-// ????
-/* todo - count by freq values */
-#define TIMER_TICKS_PER_US  200
+#define TIMER_TICKS_PER_US 200
 
-// ??? #define CONFIG_USB_MUSB_PIO_ONLY
-
-// ???
-#ifndef CONFIG_TFTP_BLOCKSIZE
-#define CONFIG_TFTP_BLOCKSIZE		1466
-#endif
 #define CONFIG_TFTP_TSIZE
-
-// ???
-// ??? #define CONFIG_SYS_BOOTM_LEN 0x1000000
-
-// ??? #define CONFIG_SPD_EEPROM
-
-// ??? here
-#ifndef CONFIG_MTD_PARTITIONS
-#define CONFIG_MTD_PARTITIONS
-#endif
-
-// ??? here
-#define CONFIG_SYS_MAX_NAND_DEVICE 8
-#define CONFIG_SYS_NAND_MAX_CHIPS 8
-
-// ??? #define CONFIG_CMD_UBIFS
-/*
-#ifndef CONFIG_NAND
-#define CONFIG_NAND 
-#endif
-*/
-/*
-#ifndef CONFIG_CMD_NAND
-#define CONFIG_CMD_NAND
-#endif
-*/
-/* ??? #ifndef CONFIG_CMD_UBI
-#define CONFIG_CMD_UBI
-#endif*/
-
-// ??? here
-#ifndef CONFIG_RBTREE
-#define CONFIG_RBTREE
-#endif
-
-/*#ifndef CONFIG_MTD_DEVICE*/
-/*#define CONFIG_MTD_DEVICE*/
-/*#endif*/
-
-/* ??? #ifndef CONFIG_CMD_MTDPARTS
-#define CONFIG_CMD_MTDPARTS
-#endif*/
-
-#ifndef CONFIG_LZO
-#define CONFIG_LZO
-#endif
-
-// ??? #define CONFIG_MTD_UBI_WL_THRESHOLD 4096
-// ??? #define CONFIG_MTD_UBI_BEB_LIMIT 20
 
 #define CONFIG_SYS_MMC_ENV_DEV 0
 
-/* in board/rcm/mb115-01/Kconfig now
-#ifdef CONFIG_ENV_IS_IN_NAND 
-    #define CONFIG_ENV_OFFSET               0x40000
-    #define CONFIG_ENV_SIZE                 0x4000
-    #define CONFIG_ENV_SECT_SIZE            0x20000 
-#elif defined CONFIG_ENV_IS_IN_FLASH
-    #define CONFIG_ENV_OFFSET               0x1040000
-    #define CONFIG_ENV_SIZE                 0x4000
-    #define CONFIG_ENV_SECT_SIZE            0x40000
-    #define CONFIG_SPL_ENV_SUPPORT
-    #define CONFIG_TPL_ENV_SUPPORT
-#elif defined CONFIG_ENV_IS_IN_MMC
-    #define CONFIG_ENV_OFFSET               0x50000
-    #define CONFIG_ENV_SIZE                 0x4000
-    #define CONFIG_ENV_SECT_SIZE            0x10000
-#else
-    #define CONFIG_ENV_OFFSET               0x140000
-    #define CONFIG_ENV_SIZE                 0x4000
-    #define CONFIG_ENV_SECT_SIZE            0x10000
-#endif
-*/
-/* ??? #ifdef CONFIG_SPL_NAND_SUPPORT
-    #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x880000
-    #define CONFIG_SYS_NAND_U_BOOT_SIZE     0x160000
-#endif*/
-
-// ??? #define CONFIG_SYS_NAND_BASE_LIST           {1}; /*v2020.01: it's dummy!!!but need...*/
-
-// ???
-// #ifdef CONFIG_MTD_RCM_NOR
-//     /* #define CONFIG_CFI_FLASH */
-//     #define CONFIG_FLASH_CFI_DRIVER
-//     #define CONFIG_FLASH_CFI_MTD
-//     #define CONFIG_SYS_FLASH_CFI
-//     #define CONFIG_SYS_FLASH_CFI_WIDTH      FLASH_CFI_16BIT
-//     #define CONFIG_SYS_FLASH_EMPTY_INFO     /* flinfo show E and/or RO */
-//     #define CONFIG_FLASH_SHOW_PROGRESS      100
-//     #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
-//     #define CONFIG_SYS_WRITE_SWAPPED_DATA
-//     #ifndef CONFIG_PPC_DCR
-//         #define CONFIG_PPC_DCR
-//     #endif
-
-//     #define CONFIG_SYS_FLASH_BASE0          0x20000000      /* base address 0 for work via MCIF and LSIF */
-//     #define CONFIG_SYS_FLASH_BASE1          0x10000000      /* base address 1 for work via MCIF only */
-//     #define CONFIG_SYS_FLASH_BANKS_LIST     {CONFIG_SYS_FLASH_BASE0,CONFIG_SYS_FLASH_BASE1}
-//     #define CONFIG_SYS_FLASH_BASE           CONFIG_SYS_FLASH_BASE0
-//     #define CONFIG_SYS_MONITOR_BASE         0x40000000      /* CONFIG_SYS_FLASH_BASE */
-
-//     #ifdef CONFIG_SYS_UBOOT_BASE
-//         #undef CONFIG_SYS_UBOOT_BASE
-//     	#define CONFIG_SYS_UBOOT_BASE       0x20040000 
-//     #endif
-
-// #endif
-
-#endif /* __1888BM18_H */
-
+#endif // __1888BM18_H
