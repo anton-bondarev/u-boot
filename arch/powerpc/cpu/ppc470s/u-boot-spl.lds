@@ -6,6 +6,7 @@ SECTIONS
 	. = CONFIG_SPL_TEXT_BASE;
 	.text :
 	{
+		spl_header = .;
 		KEEP(*(.header))
 		KEEP(*(.text.start))
 		KEEP(*(.text.start_secondary))
