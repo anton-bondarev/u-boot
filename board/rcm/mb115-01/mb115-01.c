@@ -253,19 +253,21 @@ int dram_init_banksize(void)		// clon of weak procedure from file common/board_f
 
 void board_lmb_reserve(struct lmb *lmb)
 {
-#ifdef CONFIG_NR_DRAM_BANKS
-	int i;
-	lmb_init(lmb);
-	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
-		if (gd->bd->bi_dram[i].size) {
-			lmb_add(lmb, gd->bd->bi_dram[i].start,
-				gd->bd->bi_dram[i].size);
-		}
-	}
-	lmb_reserve( lmb,
-				 CONFIG_SYS_TEXT_BASE,
-				 (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000) - CONFIG_SYS_TEXT_BASE );
-#endif
+// #ifdef CONFIG_NR_DRAM_BANKS
+// 	int i;
+// 	lmb_init(lmb); // !!! clear all previous settings
+// 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
+// 		if (gd->bd->bi_dram[i].size) {
+// 			lmb_add(lmb, gd->bd->bi_dram[i].start,
+// 				gd->bd->bi_dram[i].size);
+// 		}
+// 	}
+// 	lmb_reserve( lmb,
+// 				 CONFIG_SYS_TEXT_BASE,
+// 				 (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE) - CONFIG_SYS_TEXT_BASE );
+// #endif
+
+	lmb_reserve(lmb, CONFIG_SYS_TEXT_BASE, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - CONFIG_SYS_TEXT_BASE);
 }
 
 void bi_dram_print_info( void ) {

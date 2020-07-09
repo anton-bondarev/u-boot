@@ -33,7 +33,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-static ulong get_sp (void);
+// static ulong get_sp (void);
 extern void ft_fixup_num_cores(void *blob);
 static void set_clocks_in_mhz (bd_t *kbd);
 
@@ -112,53 +112,55 @@ static void boot_jump_linux(bootm_headers_t *images)
 	return ;
 }
 
-void arch_lmb_reserve(struct lmb *lmb)
-{
-	phys_size_t bootm_size;
-	ulong size, sp, bootmap_base;
-
-	bootmap_base = env_get_bootm_low();
-	bootm_size = env_get_bootm_size();
-
-#ifdef DEBUG
-	if (((u64)bootmap_base + bootm_size) >
-	    (CONFIG_SYS_SDRAM_BASE + (u64)gd->ram_size))
-		puts("WARNING: bootm_low + bootm_size exceed total memory\n");
-	if ((bootmap_base + bootm_size) > get_effective_memsize())
-		puts("WARNING: bootm_low + bootm_size exceed eff. memory\n");
-#endif
-
-	size = min(bootm_size, get_effective_memsize());
-	size = min(size, (ulong)CONFIG_SYS_LINUX_LOWMEM_MAX_SIZE);
-
-	if (size < bootm_size) {
-		ulong base = bootmap_base + size;
-		printf("WARNING: adjusting available memory to %lx\n", size);
-		lmb_reserve(lmb, base, bootm_size - size);
-	}
-
-	/*
-	 * Booting a (Linux) kernel image
-	 *
-	 * Allocate space for command line and board info - the
-	 * address should be as high as possible within the reach of
-	 * the kernel (see CONFIG_SYS_BOOTMAPSZ settings), but in unused
-	 * memory, which means far enough below the current stack
-	 * pointer.
-	 */
-	sp = get_sp();
-	debug ("## Current stack ends at 0x%08lx\n", sp);
-
-	/* adjust sp by 4K to be safe */
-	sp -= 4096;
-	lmb_reserve(lmb, sp, (CONFIG_SYS_SDRAM_BASE + get_effective_memsize() - sp));
-
-#ifdef CONFIG_MP
-	cpu_mp_lmb_reserve(lmb);
-#endif
-
-	return ;
-}
+// The function is commented because all the work is done in the board_lmb_reserve function
+//
+// void arch_lmb_reserve(struct lmb *lmb)
+// {
+// 	phys_size_t bootm_size;
+// 	ulong size, sp, bootmap_base;
+// 
+// 	bootmap_base = env_get_bootm_low();
+// 	bootm_size = env_get_bootm_size();
+// 
+// #ifdef DEBUG
+// 	if (((u64)bootmap_base + bootm_size) >
+// 	    (CONFIG_SYS_SDRAM_BASE + (u64)gd->ram_size))
+// 		puts("WARNING: bootm_low + bootm_size exceed total memory\n");
+// 	if ((bootmap_base + bootm_size) > get_effective_memsize())
+// 		puts("WARNING: bootm_low + bootm_size exceed eff. memory\n");
+// #endif
+// 
+// 	size = min(bootm_size, get_effective_memsize());
+// 	size = min(size, (ulong)CONFIG_SYS_LINUX_LOWMEM_MAX_SIZE);
+// 
+// 	if (size < bootm_size) {
+// 		ulong base = bootmap_base + size;
+// 		printf("WARNING: adjusting available memory to %lx\n", size);
+// 		lmb_reserve(lmb, base, bootm_size - size);
+// 	}
+// 
+// 	/*
+// 	 * Booting a (Linux) kernel image
+// 	 *
+// 	 * Allocate space for command line and board info - the
+// 	 * address should be as high as possible within the reach of
+// 	 * the kernel (see CONFIG_SYS_BOOTMAPSZ settings), but in unused
+// 	 * memory, which means far enough below the current stack
+// 	 * pointer.
+// 	 */
+// 	sp = get_sp();
+// 	debug ("## Current stack ends at 0x%08lx\n", sp);
+// 
+// 	/* adjust sp by 4K to be safe */
+// 	sp -= 4096;
+// 	lmb_reserve(lmb, sp, (CONFIG_SYS_SDRAM_BASE + get_effective_memsize() - sp));
+// 
+// #ifdef CONFIG_MP
+// 	cpu_mp_lmb_reserve(lmb);
+// #endif
+// 
+// 	return ;
+// }
 
 static void boot_prep_linux(bootm_headers_t *images)
 {
@@ -259,13 +261,13 @@ int do_bootm_linux(int flag, int argc, char * const argv[], bootm_headers_t *ima
 	return 0;
 }
 
-static ulong get_sp (void)
-{
-	ulong sp;
-
-	asm( "mr %0,1": "=r"(sp) : );
-	return sp;
-}
+// static ulong get_sp (void)
+// {
+// 	ulong sp;
+// 
+// 	asm( "mr %0,1": "=r"(sp) : );
+// 	return sp;
+// }
 
 static void set_clocks_in_mhz (bd_t *kbd)
 {
