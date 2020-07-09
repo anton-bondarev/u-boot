@@ -12,10 +12,10 @@
  *
  * Main bootloader:
  *	0x20000000 0x40      - U-Boot header
- *	0x20000040 0xAFFFC0  - U-Boot binary image
- *	0x20B00000 0x400000  - U-Boot RAM + heap
- *	0x20F00000 0x100000  - U-Boot stack
- *	0x21000000 0x1000000 - Kernel load space
+ *	0x20000040 0x0FFFC0  - code
+ *	0x20100000 0x80000   - data, heap etc.
+ *	0x20180000 0x80000   - initial stack
+ *	0x20200000 0x1E00000 - kernel load space
  */
 
 #define RCM_1888BM18_IM1_START CONFIG_SPL_TEXT_BASE
@@ -35,15 +35,15 @@
 #define CONFIG_SYS_INIT_RAM_ADDR CONFIG_SYS_SPL_MALLOC_START // actually it is a fake value for prevent compilation errors
 #define CONFIG_SYS_INIT_RAM_SIZE (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_START) 
 #else
-#define CONFIG_SYS_INIT_RAM_ADDR 0x20B00000
-#define CONFIG_SYS_INIT_RAM_SIZE 0x500000
+#define CONFIG_SYS_INIT_RAM_ADDR 0x20100000
+#define CONFIG_SYS_INIT_RAM_SIZE 0x100000
 #endif
 
-#define RCM_PPC_STACK_SIZE 0x100000
+#define RCM_PPC_STACK_SIZE 0x80000
 #define RCM_PPC_STACK (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE) // bottom of the stack
 
 #define CONFIG_SYS_MONITOR_LEN SZ_256K
-#define CONFIG_SYS_MALLOC_LEN SZ_2M
+#define CONFIG_SYS_MALLOC_LEN SZ_256K
 
 #ifndef CONFIG_MAX_MEM_MAPPED
 #define CONFIG_MAX_MEM_MAPPED ((phys_size_t)256 << 20)
@@ -91,13 +91,13 @@
 #define CONFIG_SERVERIP 192.168.0.1
 #define CONFIG_NETMASK 255.255.255.0
 #define CONFIG_HOSTNAME "bm18"
-#define CONFIG_LOADADDR 21000000
+#define CONFIG_LOADADDR 20200000
 // ??? see below
 #define CONFIG_EXTRA_ENV_SETTINGS \
         "baudrate=115200\0" \
         "bootfile=bm18/uImage\0" \
-        "bootm_low=21000000\0" \
-        "bootm_size=01000000\0" \
+        "bootm_low=20200000\0" \
+        "bootm_size=01E00000\0" \
         "fdt_addr_r=21FF8000\0" \
         "kernel=run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
         "kernelsd=run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
