@@ -3,16 +3,19 @@
 
 #include <linux/sizes.h>
 
-/* memory map for 1888bm18
- *	0x20000000  0x40     - U-Boot header (64B)
- *	0x20000040  0xB00000 - U-Boot binary image (11MB - 64B)
- *	0x20B00000  0x400000 - U-Boot RAM + heap (4MB)
- *	0x20F00000  0x100000 - U-Boot stack (1MB)
- *	0x21000000 0x1000000 - Kernel load space (16MB)
+/* Memory map for 1888bm18:
  *
- *	0x80000000   0x20000 - IM0 used by rumboot
- *	0x80020000   0x20000 - IM1 <- SPL
- *	0x80040000   0x20000 - IM2 rumboot & SPL stack
+ * SPL:
+ *	0x80000000 0x20000 - IM0 used by rumboot
+ *	0x80020000 0x20000 - IM1 <- SPL
+ *	0x80040000 0x20000 - IM2 rumboot & SPL stack
+ *
+ * Main bootloader:
+ *	0x20000000 0x40      - U-Boot header
+ *	0x20000040 0xAFFFC0  - U-Boot binary image
+ *	0x20B00000 0x400000  - U-Boot RAM + heap
+ *	0x20F00000 0x100000  - U-Boot stack
+ *	0x21000000 0x1000000 - Kernel load space
  */
 
 #define RCM_1888BM18_IM1_START CONFIG_SPL_TEXT_BASE
@@ -28,30 +31,32 @@
 #define CONFIG_SYS_UBOOT_BASE CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_UBOOT_START CONFIG_SYS_TEXT_BASE
 
-
 #ifdef CONFIG_SPL_BUILD
-#define CONFIG_SYS_INIT_RAM_SIZE CONFIG_SYS_SPL_MALLOC_START // actually it is a fake value for prevent compilation errors
-#define CONFIG_SYS_INIT_RAM_ADDR (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_START) 
+#define CONFIG_SYS_INIT_RAM_ADDR CONFIG_SYS_SPL_MALLOC_START // actually it is a fake value for prevent compilation errors
+#define CONFIG_SYS_INIT_RAM_SIZE (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_START) 
 #else
 #define CONFIG_SYS_INIT_RAM_ADDR 0x20B00000
-#define CONFIG_SYS_INIT_RAM_SIZE 0x400000
+#define CONFIG_SYS_INIT_RAM_SIZE 0x500000
 #endif
+
+#define RCM_PPC_STACK_SIZE 0x100000
+#define RCM_PPC_STACK (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE) // bottom of the stack
 
 #define CONFIG_SYS_MONITOR_LEN SZ_256K
 #define CONFIG_SYS_MALLOC_LEN SZ_2M
 
-#define CONFIG_VERY_BIG_RAM
-#ifndef CONFIG_MAX_MEM_MAPPED // ???
-#define CONFIG_MAX_MEM_MAPPED   ((phys_size_t)256 << 20) // ???
+#ifndef CONFIG_MAX_MEM_MAPPED
+#define CONFIG_MAX_MEM_MAPPED ((phys_size_t)256 << 20)
 #endif
-// ??? in Kconfig <-- #define CONFIG_SYS_DDR_BASE 0x20000000
-#define CONFIG_SYS_SDRAM_BASE CONFIG_SYS_DDR_BASE
-// ??? #define CONFIG_SYS_DDR_SIZE     SZ_2G
-#define CONFIG_SYS_DDR_SIZE SZ_32M
+
+// CONFIG_SYS_SDRAM_BASE is set in Kconfig
+#define CONFIG_SYS_SDRAM_SIZE SZ_32M
+#define CONFIG_SYS_DDR_BASE CONFIG_SYS_SDRAM_BASE
+#define CONFIG_SYS_DDR_SIZE CONFIG_SYS_SDRAM_SIZE
 #define CONFIG_SYS_LOAD_ADDR CONFIG_SYS_TEXT_BASE
 
-#define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)
-#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
+#define CONFIG_SYS_MEMTEST_START (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - RCM_PPC_STACK_SIZE) // top of the internal stack
+#define CONFIG_SYS_MEMTEST_END (CONFIG_SYS_MEMTEST_START + SZ_256K - 1)
 /*#define CONFIG_SYS_DRAM_TEST*/
 
 #define CONFIG_SYS_MAX_FLASH_BANKS      2       // if NOR via LSIF need 1!!! (little window)+correct mtdpart
@@ -61,7 +66,6 @@
 #define CONFIG_CHIP_SELECTS_PER_CTRL    2
 #define CONFIG_DIMM_SLOTS_PER_CTLR      2
 
-// ??? #define CONFIG_USE_STDINT 1
 // ??? #define CONFIG_SPL_SPI_LOAD
 // ??? #define CONFIG_SPL_EDCL_LOAD
 
@@ -69,10 +73,6 @@
 // ??? #define BOOT_DEVICE_SPI 11
 // ??? #define BOOT_DEVICE_EDCL 12 // ??? del
 #define BOOT_DEVICE_UART 13
-
-// ???
-#define BOOT_ROM_HOST_MODE 0xfffc04d8
-#define BOOT_ROM_MAIN 0xfffc0594
 
 #define CONFIG_SYS_SPI_U_BOOT_OFFS      0x40000
 #define CONFIG_SYS_SPI_CLK 100000000
