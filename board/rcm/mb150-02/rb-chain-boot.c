@@ -5,7 +5,7 @@
  *
  *  Copyright (C) 2020 Alexey Spirkov <dev@alsp.net>
  */
-//#define DEBUG
+#define DEBUG
 
 #include <version.h>
 #include <common.h>
@@ -32,6 +32,8 @@ static size_t round_up_to_align(size_t value, size_t align)
 	return value;
 }
 
+static char buf[BUF_SIZE]; // must be in IM1 not in the stack (which is in IM2) because IM2 does not mapped to AXI DMA
+
 static int rumboot_load_image(struct spl_image_info *spl_image,
 			      struct spl_boot_device *bootdev)
 {
@@ -57,7 +59,6 @@ static int rumboot_load_image(struct spl_image_info *spl_image,
 	bool once_again;
 	unsigned int add_offset = src->offset;
 	do {
-		char buf[BUF_SIZE];
 		once_again = false;
 		debug("rb: Using %x offset for chain boot\n", add_offset);
 		if (BUF_SIZE ==
@@ -71,7 +72,7 @@ static int rumboot_load_image(struct spl_image_info *spl_image,
 				once_again = true;
                 // bug in rumboot adds aditional src->plugin->align block to the image length
                 // after possible bug fix this place should be changed
-				add_offset += src->plugin->align + 
+				add_offset += /* src->plugin->align + */
 					round_up_to_align(hdr0->datalen,
 							  src->plugin->align);
 				debug("Found rumboot image - try next one\n");
