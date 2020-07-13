@@ -64,26 +64,3 @@ void tlb47x_map_nocache(uint64_t physical, uint32_t logical, tlb_size_id size, t
 {
     tlb47x_map_internal(physical, logical, 0x2, size, smode, TLB_MODE_NONE);    
 }
-
-int add_code_guard(void)
-{
-    const uint32_t code_start = CONFIG_SYS_TEXT_BASE & ~0xFFFFFF;
-    const uint32_t data_start = CONFIG_SYS_INIT_RAM_ADDR & ~0xFFFFFF;
-    const uint32_t stack_start = (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE) & ~0xFFFFF;
-
-    // code
-    tlb47x_map(code_start - CONFIG_SYS_DDR_BASE, code_start, TLBSID_16M, TLB_MODE_RX);
-    // data
-    tlb47x_map(data_start - CONFIG_SYS_DDR_BASE, data_start, TLBSID_16M, TLB_MODE_RW);   
-    // initial stack
-    tlb47x_map(stack_start - CONFIG_SYS_DDR_BASE, stack_start, TLBSID_1M, TLB_MODE_RW);
-    // invalidate original page
-    tlb47x_inval(CONFIG_SYS_DDR_BASE, TLBSID_256M);
-
-    return 0;
-}
-
-ulong board_get_usable_ram_top(ulong total_size)
-{
-    return CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - CONFIG_SYS_MALLOC_F_LEN - sizeof( gd_t );
-}

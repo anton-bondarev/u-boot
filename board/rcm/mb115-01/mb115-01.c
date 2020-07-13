@@ -6,6 +6,7 @@
 #include "rcm_dimm_params.h"
 #include <fdt_support.h>
 #include <env.h>
+#include <asm/tlb47x.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -252,19 +253,21 @@ int dram_init_banksize(void)		// clon of weak procedure from file common/board_f
 
 void board_lmb_reserve(struct lmb *lmb)
 {
-#ifdef CONFIG_NR_DRAM_BANKS
-	int i;
-	lmb_init(lmb);
-	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
-		if (gd->bd->bi_dram[i].size) {
-			lmb_add(lmb, gd->bd->bi_dram[i].start,
-				gd->bd->bi_dram[i].size);
-		}
-	}
-	lmb_reserve( lmb,
-				 CONFIG_SYS_TEXT_BASE,
-				 (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000) - CONFIG_SYS_TEXT_BASE );
-#endif
+// #ifdef CONFIG_NR_DRAM_BANKS
+// 	int i;
+// 	lmb_init(lmb); // !!! clear all previous settings
+// 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
+// 		if (gd->bd->bi_dram[i].size) {
+// 			lmb_add(lmb, gd->bd->bi_dram[i].start,
+// 				gd->bd->bi_dram[i].size);
+// 		}
+// 	}
+// 	lmb_reserve( lmb,
+// 				 CONFIG_SYS_TEXT_BASE,
+// 				 (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE) - CONFIG_SYS_TEXT_BASE );
+// #endif
+
+	lmb_reserve(lmb, CONFIG_SYS_TEXT_BASE, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - CONFIG_SYS_TEXT_BASE);
 }
 
 void bi_dram_print_info( void ) {
@@ -317,4 +320,24 @@ int bi_dram_drop_all(void)
 	}
 #endif
 	return 0;
+}
+
+int add_code_guard(void)
+{
+	const uint32_t code_start = CONFIG_SYS_TEXT_BASE & ~0xFFFFFF;
+	const uint32_t data_start = CONFIG_SYS_INIT_RAM_ADDR & ~0xFFFFFF;
+
+	// code
+	tlb47x_map(code_start - CONFIG_SYS_DDR_BASE, code_start, TLBSID_16M, TLB_MODE_RX);
+	// data
+	tlb47x_map(data_start - CONFIG_SYS_DDR_BASE, data_start, TLBSID_16M, TLB_MODE_RW);
+	// invalidate original page
+	tlb47x_inval(CONFIG_SYS_DDR_BASE, TLBSID_256M);
+
+	return 0;
+}
+
+ulong board_get_usable_ram_top(ulong total_size)
+{
+	return CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - RCM_PPC_STACK_SIZE;
 }

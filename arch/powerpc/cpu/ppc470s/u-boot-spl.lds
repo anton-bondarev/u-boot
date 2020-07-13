@@ -3,19 +3,15 @@
 OUTPUT_ARCH(powerpc)
 SECTIONS
 {
-    . = CONFIG_SPL_TEXT_BASE;
-    .text :
-    {
-       LONG(0xdeadc0de);                              /* magic */
-       LONG(0);                                       /* length filled by rumboot-packimage */
-       LONG(_start);                                  /* entry 0 */
-       LONG(_start_secondary);                        /* entry 1 */
-       LONG(0);                                       /* checksum1 filled by rumboot-packimage */
-       LONG(0);                                       /* checksum2 filled by rumboot-packimage */
-       KEEP(*(.text.start))
-       KEEP(*(.text.start_secondary))
-    *(.text)
-    }
+	. = CONFIG_SPL_TEXT_BASE;
+	.text :
+	{
+		spl_header = .;
+		KEEP(*(.header))
+		KEEP(*(.text.start))
+		KEEP(*(.text.start_secondary))
+		*(.text)
+	}
 
     .bss :
     {
@@ -57,4 +53,4 @@ SECTIONS
 
 ENTRY(_start)
 
-ASSERT(_end <= RCM_1888TX018_SPL_ADDR_LIMIT, "SPL size too big");
+ASSERT(_end <= RCM_PPC_SPL_ADDR_LIMIT, "SPL size too big");

@@ -19,7 +19,7 @@ typedef struct { int counter; } atomic_t;
 extern void atomic_clear_mask(unsigned long mask, unsigned long *addr);
 extern void atomic_set_mask(unsigned long mask, unsigned long *addr);
 
-#ifndef CONFIG_TARGET_1888TX018
+#if !defined(CONFIG_TARGET_1888TX018) && !defined(CONFIG_TARGET_1888BM18)
 
 static __inline__ int atomic_add_return(int a, atomic_t *v)
 {

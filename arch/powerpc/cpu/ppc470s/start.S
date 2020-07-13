@@ -7,6 +7,7 @@
 #include <asm/cache.h>
 #include <asm/mmu.h>
 #include <asm/u-boot.h>
+#include <asm/arch/ppc470s_regs.h>
 
 
 .macro  load_const_link rD, constant
@@ -23,11 +24,15 @@ _start:
 // setup stack
 #ifdef CONFIG_SPL_BUILD
 #ifdef CONFIG_SPL_STACK
-    load_const_link sp, RCM_1888TX018_SPL_STACK_SECONDARY
+	load_const_link sp, CONFIG_SPL_STACK
 #endif
-    bl _fix_fpu
 #else
-    load_const_link sp, CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE + 0x100000
+	load_const_link sp, RCM_PPC_STACK
+#endif
+
+// fix FPU issue
+#ifdef CONFIG_SPL_BUILD
+	bl _fix_fpu
 #endif
 
 clear_bss:
@@ -98,9 +103,13 @@ trap_init:
 // all traps  initiated by romboot
     blr
 
-		
+// for TID=0, TS=0
 .global _invalidate_tlb_entry
 _invalidate_tlb_entry:
+	// set TID=0, TS=0
+	li r12, 0
+	mtspr SPR_MMUCR, r12
+
 	tlbsx. r4, r0, r3      // [r3] - EA, [r4] - Way, Index
 	bne    ite_end         // branch if not found
 	oris   r4, r4, 0x8000  // r4[0]=1, r4[4]=0
@@ -111,20 +120,22 @@ ite_end:
 	isync
 	msync
 	blr
-	
-	
+
+// for TID=0, TS=0
 .global _write_tlb_entry
 _write_tlb_entry:
-	addis r6, r0, 0x0000  // zero [r6]
-	tlbwe r3, r6, 0
-	tlbwe r4, r6, 1
-	tlbwe r5, r6, 2
-        
+	// set TID=0, TS=0
+	li r12, 0
+	mtspr SPR_MMUCR, r12
+
+	tlbwe r3, r12, 0
+	tlbwe r4, r12, 1
+	tlbwe r5, r12, 2
+
 	isync
 	msync
 	blr
-		
-		
+
 .global _read_tlb_entry
 _read_tlb_entry:
 	tlbsx. r5, r0, r3  // [r3] - EA, [r5] - Way, Index
@@ -146,62 +157,67 @@ rte_nf:
 
 
 #ifdef CONFIG_SPL_BUILD
-
 _fix_fpu:
-    mfmsr r0
-    ori r0, r0, 0x2000
-    mtmsr r0
+    mfmsr r3
+    ori r3, r3, 0x2000
+    mtmsr r3
     isync
-    load_const_link  r0,__doublezero
-    lfs f0,0(r0)
-    lfs f1,0(r0)
-    lfs f2,0(r0)
-    lfs f3,0(r0)
-    lfs f4,0(r0)
-    lfs f5,0(r0)
-    lfs f6,0(r0)
-    lfs f7,0(r0)
-    lfs f8,0(r0)
-    lfs f9,0(r0)
-    lfs f10,0(r0)
-    lfs f11,0(r0)
-    lfs f12,0(r0)
-    lfs f13,0(r0)
-    lfs f14,0(r0)
-    lfs f15,0(r0)
-    lfs f16,0(r0)
-    lfs f17,0(r0)
-    lfs f18,0(r0)
-    lfs f19,0(r0)
-    lfs f20,0(r0)
-    lfs f21,0(r0)
-    lfs f22,0(r0)
-    lfs f23,0(r0)
-    lfs f24,0(r0)
-    lfs f25,0(r0)
-    lfs f26,0(r0)
-    lfs f27,0(r0)
-    lfs f28,0(r0)
-    lfs f29,0(r0)
-    lfs f30,0(r0)
-    lfs f31,0(r0)
+    load_const_link  r3,__doublezero
+    lfs f0,0(r3)
+    lfs f1,0(r3)
+    lfs f2,0(r3)
+    lfs f3,0(r3)
+    lfs f4,0(r3)
+    lfs f5,0(r3)
+    lfs f6,0(r3)
+    lfs f7,0(r3)
+    lfs f8,0(r3)
+    lfs f9,0(r3)
+    lfs f10,0(r3)
+    lfs f11,0(r3)
+    lfs f12,0(r3)
+    lfs f13,0(r3)
+    lfs f14,0(r3)
+    lfs f15,0(r3)
+    lfs f16,0(r3)
+    lfs f17,0(r3)
+    lfs f18,0(r3)
+    lfs f19,0(r3)
+    lfs f20,0(r3)
+    lfs f21,0(r3)
+    lfs f22,0(r3)
+    lfs f23,0(r3)
+    lfs f24,0(r3)
+    lfs f25,0(r3)
+    lfs f26,0(r3)
+    lfs f27,0(r3)
+    lfs f28,0(r3)
+    lfs f29,0(r3)
+    lfs f30,0(r3)
+    lfs f31,0(r3)
  
-    load_const_link r3, ~0x2000
-    mfmsr r0
-    and r0, r0, r3
-    mtmsr r0
+    load_const_link r4, ~0x2000
+    mfmsr r3
+    and r3, r3, r4
+    mtmsr r3
  
     blr
  
 __doublezero:
     .double 0.0
+#endif // CONFIG_SPL_BUILD
 
+#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_TARGET_1888TX018
 .section ".text.start_secondary","ax",@progbits
 .global _start_secondary
 _start_secondary:
-    load_const_link sp, CONFIG_SPL_STACK
-    bl _fix_fpu
-	bl	process_spintable    
-
+#ifdef RCM_PPC_SPL_STACK_SECONDARY
+	load_const_link sp, RCM_PPC_SPL_STACK_SECONDARY
 #endif
 
+	bl _fix_fpu
+	bl process_spintable
+
+#endif // CONFIG_TARGET_1888TX018
+#endif // CONFIG_SPL_BUILD

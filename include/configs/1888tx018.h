@@ -3,68 +3,56 @@
 
 #include <linux/sizes.h>
 
-/* memory map for 1888tx018 
- *      0x00040000 - 0x18 bytes romboot header
- *      0x00040018 - Start of SPL
- *      0x00076000 - Start of SPL heap 
- *      0x00078000 - End of SPL heap
- *      0x00080000 - initial stack pointer for main core
- *      
- *      0x40000000 - Start of DDR
- *      0x4D000000 - Start of U-Boot header (8Mb for U-boot itself)
- *      0x4D000040 - Start of U-Boot binary
- *      0x4E000000 - Start of U-Boot RAM (heap - 16Mb)
- *      0x4F000000 - End of U-Boot RAM (heap)
- *      0x4F100000 - Initial stack (1Mb)
+/* Memory map for 1888tx018:
+ * 
+ * SPL:
+ *	0x00040000 0x18    - romboot header
+ *	0x00040018 0x35FE0 - start of SPL (code/data/FDT)
+ *	0x00075FE0 0x2000  - heap
+ *	0x00077FE0 0x4000  - core 0 initial pointer
+ *	0x0007BFE0 0x4000  - core 1 initial pointer
+ *	0x0007FFE0 0x20    - spin table
  *
+ * Main bootloader:
+ *	0x4D000000 0x40     - U-Boot header
+ *	0x4D000040 0xFFFFC0 - code
+ *	0x4E000000 0xF00000 - data, heap etc.
+ *	0x4EF00000 0x100000 - initial stack
  */
 
-/* need to define CONFIG_SPL_TEXT_BASE first because of u-boot scripts */
-/* now is in Kconfig for board #define CONFIG_SPL_TEXT_BASE	0x40000 */
-#define CONFIG_SYS_UBOOT_BASE	CONFIG_SYS_TEXT_BASE
-#define CONFIG_SYS_UBOOT_START  CONFIG_SYS_TEXT_BASE
-
-#define RCM_1888TX018_IM0_START           CONFIG_SPL_TEXT_BASE
-#define RCM_1888TX018_IM0_SIZE            (0x40000)
-
-#define RCM_1888TX018_SPL_STACK_SIZE 0x4000
-#define CONFIG_SYS_SPL_MALLOC_SIZE  0x2000
-
-/* stack for first processor 0x0043C000 */
-#define CONFIG_SPL_STACK        (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_STACK_SIZE)
+#define RCM_1888TX018_IM0_START CONFIG_SPL_TEXT_BASE
+#define RCM_1888TX018_IM0_SIZE 0x40000
 
 #define RCM_1888TX018_SPL_SPINTABLE_SIZE 32
+#define RCM_PPC_SPL_SPINTABLE (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_SPINTABLE_SIZE)
 
-#define RCM_1888TX018_SPL_SPINTABLE (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - RCM_1888TX018_SPL_SPINTABLE_SIZE)
+#define RCM_PPC_SPL_STACK_SIZE 0x4000
+#define RCM_PPC_SPL_STACK_SECONDARY RCM_PPC_SPL_SPINTABLE // bottom of the stack
+#define CONFIG_SPL_STACK (RCM_PPC_SPL_STACK_SECONDARY - RCM_PPC_SPL_STACK_SIZE) // bottom of the stack
 
-/* stack for second processor 0x043FFFE0 */
-#define RCM_1888TX018_SPL_STACK_SECONDARY   (RCM_1888TX018_SPL_SPINTABLE)
-
-
-/* dual stack size for second CPU */
-#define CONFIG_SYS_SPL_MALLOC_START ((CONFIG_SPL_STACK - RCM_1888TX018_SPL_STACK_SIZE*2) \
-                                    - CONFIG_SYS_SPL_MALLOC_SIZE)
-
-#ifndef CONFIG_SPL_BUILD
-/*		Start address of memory area that can be used for
-		initial data and stack; */        
-#define CONFIG_SYS_INIT_RAM_ADDR		0x4E000000
-/*      16 Megabyte for U-boot           */
-#define CONFIG_SYS_INIT_RAM_SIZE		0x01000000
-
-#define CONFIG_SYS_MONITOR_LEN  SZ_256K
-#else
-#define CONFIG_SYS_INIT_RAM_SIZE		CONFIG_SYS_MALLOC_F_LEN
-#define CONFIG_SYS_INIT_RAM_ADDR		(CONFIG_SYS_SPL_MALLOC_START - CONFIG_SYS_INIT_RAM_SIZE) 
-#endif
+#define CONFIG_SYS_SPL_MALLOC_SIZE 0x2000
+#define CONFIG_SYS_SPL_MALLOC_START (CONFIG_SPL_STACK - RCM_PPC_SPL_STACK_SIZE - CONFIG_SYS_SPL_MALLOC_SIZE)
 
 #define RCM_1888TX018_SPL_FDT_MAX_LEN 0x1000
-#define RCM_1888TX018_SPL_ADDR_LIMIT (CONFIG_SYS_INIT_RAM_ADDR - RCM_1888TX018_SPL_FDT_MAX_LEN)
+#define RCM_PPC_SPL_ADDR_LIMIT (CONFIG_SYS_SPL_MALLOC_START - RCM_1888TX018_SPL_FDT_MAX_LEN)
 
 
-/* #define CONFIG_SPL_FRAMEWORK */
+#define CONFIG_SYS_UBOOT_BASE CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_UBOOT_START CONFIG_SYS_TEXT_BASE
 
-#define CONFIG_SYS_MALLOC_LEN   (2*2*1024*1024)
+#ifdef CONFIG_SPL_BUILD
+#define CONFIG_SYS_INIT_RAM_ADDR CONFIG_SYS_SPL_MALLOC_START // actually it is a fake value for prevent compilation errors
+#define CONFIG_SYS_INIT_RAM_SIZE (RCM_1888TX018_IM0_START + RCM_1888TX018_IM0_SIZE - CONFIG_SYS_SPL_MALLOC_START)
+#else
+#define CONFIG_SYS_INIT_RAM_ADDR 0x4E000000
+#define CONFIG_SYS_INIT_RAM_SIZE 0x01000000
+#endif
+
+#define RCM_PPC_STACK_SIZE 0x100000
+#define RCM_PPC_STACK (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE) // bottom of the stack
+
+#define CONFIG_SYS_MONITOR_LEN SZ_256K
+#define CONFIG_SYS_MALLOC_LEN (4 * 1024 * 1024)
 
 #define CONFIG_VERY_BIG_RAM
 #ifndef CONFIG_MAX_MEM_MAPPED
@@ -75,8 +63,8 @@
 #define CONFIG_SYS_DDR_SIZE     SZ_2G
 #define CONFIG_SYS_LOAD_ADDR    CONFIG_SYS_TEXT_BASE
 
-#define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE)
-#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_DDR_BASE + (CONFIG_MAX_MEM_MAPPED - 1))
+#define CONFIG_SYS_MEMTEST_START (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_RAM_SIZE - RCM_PPC_STACK_SIZE) // top of the internal stack
+#define CONFIG_SYS_MEMTEST_END (CONFIG_SYS_MEMTEST_START + SZ_256K - 1)
 /*#define CONFIG_SYS_DRAM_TEST*/
 
 #define CONFIG_SYS_MAX_FLASH_BANKS      2       // if NOR via LSIF need 1!!! (little window)+correct mtdpart
@@ -86,16 +74,12 @@
 #define CONFIG_CHIP_SELECTS_PER_CTRL    2
 #define CONFIG_DIMM_SLOTS_PER_CTLR      2
 
-#define CONFIG_USE_STDINT 1
 #define CONFIG_SPL_SPI_LOAD
 #define CONFIG_SPL_EDCL_LOAD
 
 #define BOOT_DEVICE_NAND 10
 #define BOOT_DEVICE_SPI 11
 #define BOOT_DEVICE_EDCL 12
-
-#define BOOT_ROM_HOST_MODE 0xfffc04d8
-#define BOOT_ROM_MAIN 0xfffc0594
 
 #define CONFIG_SYS_SPI_U_BOOT_OFFS      0x40000
 #define CONFIG_SYS_SPI_CLK 100000000
@@ -253,4 +237,3 @@
 #endif
 
 #endif /* __1888TX018_H */
-

@@ -649,10 +649,10 @@ int greth_set_hwaddr(struct udevice *dev)
 static int greth_probe(struct udevice *dev)
 {
 
-	debug("%08x, %08x\n",
-		*((volatile uint32_t*)(0x3C03F030)),
-		*((volatile uint32_t*)(0x3C03F034))
-	);
+	// debug("%08x, %08x\n",
+	// 	*((volatile uint32_t*)(0x3C03F030)),
+	// 	*((volatile uint32_t*)(0x3C03F034))
+	// );
 
 	//struct eth_pdata *pdata = dev_get_platdata(dev);
 	greth_priv *greth = dev_get_priv(dev);

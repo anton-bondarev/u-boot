@@ -156,9 +156,6 @@ do_irqinfo(cmd_tbl_t *cmdtp, bd_t *bd, int flag, int argc, char * const argv[])
 
 #endif
 
-typedef void (*voidcall)(void);
-static voidcall bootrom_main = (voidcall)BOOT_ROM_MAIN;
-
 __attribute__( ( always_inline ) ) static inline uint32_t __get_LR(void) 
 { 
   register uint32_t result; 
@@ -217,16 +214,23 @@ __attribute__( ( always_inline ) ) static inline uint32_t __get_R3(void)
   return(result); 
 } 
 
+static void wait_and_reset(void)
+{
+	int i;
+	printf("Reset after 10 seconds...\n");
+	for (i = 0; i < 10; ++i)
+		udelay(1000 * 1000);
+	do_reset(NULL, 0, 0, NULL);
+}
 
 #define DEFINE_INT_HANDLER(handler) \
-void irq_handler__##handler (void) 	\
-{					\
-  tlb47x_map(0, CONFIG_SYS_DDR_BASE, TLBSID_256M, TLB_MODE_RWX); \
+void irq_handler__##handler (void) \
+{ \
 	printf("\n\n !!! Interrupt happens (" #handler ")\n"); \
-    printf("\tR1:\t0x%08X\n\tR3:\t0x%08X\n\tLR:\t0x%08X\n\tSRR0:\t0x%08X\n\tSRR1:\t0x%08X\n\tCSRR0:\t0x%08X\n\tCSRR1:\t0x%08X\n\n", \
-                             __get_R1(), __get_R3(), __get_LR(), __get_SRR0(), __get_SRR1(), __get_CSRR0(), __get_CSRR1()); \
-	bootrom_main();\
-}					
+	printf("\tR1:\t0x%08X\n\tR3:\t0x%08X\n\tLR:\t0x%08X\n\tSRR0:\t0x%08X\n\tSRR1:\t0x%08X\n\tCSRR0:\t0x%08X\n\tCSRR1:\t0x%08X\n\n", \
+		__get_R1(), __get_R3(), __get_LR(), __get_SRR0(), __get_SRR1(), __get_CSRR0(), __get_CSRR1()); \
+	wait_and_reset(); \
+}
 
 
 DEFINE_INT_HANDLER(Critical_input)
