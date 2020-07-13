@@ -5,7 +5,7 @@
  *
  *  Copyright (C) 2020 Alexey Spirkov <dev@alsp.net>
  */
-#define DEBUG
+// #define DEBUG
 
 #include <version.h>
 #include <common.h>
