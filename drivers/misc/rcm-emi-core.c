@@ -7,13 +7,14 @@
  * SPDX-License-Identifier: GPL-2.0+
  */
 
-#define DEBUG
+// #define DEBUG
 
 #include <common.h>
 #include <dm.h>
 #include <dm/device-internal.h>
 #include <asm/dcr.h>
 #include <asm/io.h>
+#include <asm/tlb47x.h>
 #include <rcm-emi.h>
 #include <dt-bindings/memory/rcm-emi.h>
 
@@ -93,9 +94,32 @@ static void dump_platdata(struct rcm_emi_platdata *otp)
 
 // init hardware only once (in SPL if SPL enabled)
 #if (defined(CONFIG_SPL_RCM_EMI_CORE) && defined(CONFIG_SPL_BUILD)) || (!defined(CONFIG_SPL_RCM_EMI_CORE) && !defined(CONFIG_SPL_BUILD))
+
+static void fill_for_ecc(uint32_t base, uint32_t size)
+{
+	printf("Filling memory region 0x%08x-0x%08x for ECC", base, base + size);
+
+	base &= ~(0xFFFFF); // align by 1 MB
+	size &= ~(0xFFFFF); // align by 1 MB
+
+	while (size) {
+		tlb47x_map(base, 0, TLBSID_1M, TLB_MODE_RW); // map 1 MB
+		memset(0, 0, 0x100000); // fill 1 MB
+		tlb47x_inval(0, TLBSID_1M); // unmap 1 MB
+
+		base += 0x100000;
+		size -= 0x100000;
+
+		printf(".");
+	}
+
+	printf("\n");
+}
+
 static int init(struct udevice *udev)
 {
 	struct rcm_emi_platdata *otp = dev_get_platdata(udev);
+	uint32_t mask;
 	int i;
 
 	for (i = 0; i < RCM_EMI_BANK_NUMBER; ++i) {
@@ -110,8 +134,22 @@ static int init(struct udevice *udev)
 
 	mb();
 
+	for (i = 0; i < RCM_EMI_BANK_NUMBER; ++i) {
+		mask = RCM_EMI_HSTSR_HEN_0 << i;
+		if ((otp->emi_hstsr & mask) != 0) {
+			switch (otp->emi_ss[i] & RCM_EMI_SSx_BTYP_MASK) {
+			case RCM_EMI_SSx_BTYP_SRAM:
+			case RCM_EMI_SSx_BTYP_SSRAM:
+			case RCM_EMI_SSx_BTYP_SDRAM:
+				fill_for_ecc(BASE_ADDRESSES[i], otp->bank_sizes[i]);
+				break;
+			}
+		}
+	}
+
 	return 0;
 }
+
 #endif // (defined(CONFIG_SPL_RCM_EMI_CORE) && defined(CONFIG_SPL_BUILD)) || (!defined(CONFIG_SPL_RCM_EMI_CORE) && !defined(CONFIG_SPL_BUILD))
 
 static void rcm_emi_fill_memory_config(struct udevice *udev)

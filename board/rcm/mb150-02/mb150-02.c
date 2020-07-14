@@ -34,7 +34,7 @@ int arch_fixup_fdt(void *blob)
 int power_init_board(void)
 {
 #ifdef CONFIG_RCM_EMI_CORE
-	// ??? rcm_emi_init();
+	rcm_emi_init();
 #endif
 	return 0;
 }

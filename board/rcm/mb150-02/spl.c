@@ -11,8 +11,8 @@
 #include <spl.h>
 #include <asm/tlb47x.h>
 #include <rcm-emi.h>
+#include "plb6mcif2-bridge.h"
 #include "boot.h"
-#include "emi-temp.h" // ???
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -51,17 +51,53 @@ u32 spl_boot_device(void)
 	// return BOOT_DEVICE_EDCL;
 }
 
+#ifdef CONFIG_SPL_RCM_EMI_CORE
+static bool test_mem(uint32_t base, uint32_t size)
+{
+	volatile uint32_t *start = (volatile uint32_t*)base;
+	uint32_t count = size / 4;
+	volatile uint32_t *p;
+	uint32_t i;
+
+	p = start;
+	for (i = 0; i < count; ++i) {
+		*p = (uint32_t)p;
+		++p;
+	}
+
+	p = start;
+	for (i = 0; i < count; ++i) {
+		if (*p != (uint32_t)p)
+			return false;
+		++p;
+	}
+
+	return true;
+}
+#endif // CONFIG_SPL_RCM_EMI_CORE
+
 void spl_board_init(void)
 {
-	// ???
-	if (!emi_init()) {
-		printf("Error in the EMI initialization - resetting...\n");
-		udelay(5 * 1000 * 1000);
-		do_reset(0, 0, 0, 0);
-	}
 #ifdef CONFIG_SPL_RCM_EMI_CORE
-	// ??? rcm_emi_init();
-#endif
+	const struct rcm_emi_memory_type_config *memory_type_config;
+	uint32_t base;
+	plb6mcif2_init();
+	rcm_emi_init();
+
+	// map first 256 MB of SDRAM
+	memory_type_config = &rmc_emi_get_memory_config()->memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SDRAM];
+	if (memory_type_config->bank_number != 0) {
+		base = memory_type_config->ranges[0].base;
+		tlb47x_inval(base, TLBSID_256M);
+		tlb47x_map(base, base, TLBSID_256M, TLB_MODE_RWX);
+		printf("Testing SDRAM...\n");
+		if (!test_mem(base, 0x10000)) {
+			printf("The test has been failed. Resetting...");
+			udelay(5 * 1000 * 1000);
+			do_reset(NULL, 0, 0, NULL);
+		}
+	}
+#endif // CONFIG_SPL_RCM_EMI_CORE
 }
 
 void board_boot_order(u32 *spl_boot_list)
