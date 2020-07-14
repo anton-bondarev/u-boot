@@ -41,7 +41,8 @@ int power_init_board(void)
 
 int dram_init(void)
 {
-	gd->ram_size = CONFIG_SYS_SDRAM_SIZE; // ??? make through DT
+	const struct rcm_emi_memory_type_config *sdram_config = &rmc_emi_get_memory_config()->memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SDRAM];
+	gd->ram_size = sdram_config->ranges[0].size;
 
 	return 0;
 }
