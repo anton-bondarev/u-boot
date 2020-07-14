@@ -514,7 +514,7 @@ void emi_init_impl (uint32_t const emi_dcr_base, uint32_t const plb6mcif2_dcr_ba
            TRAS_9
        }
     };
-    // ??? emi_set_bank_cfg(emi_dcr_base, emi_b0_sram0, &b0_cfg);
+    emi_set_bank_cfg(emi_dcr_base, emi_b0_sram0, &b0_cfg);
 
     //init bank1 - SDRAM
     //setting parameters by comment:
@@ -545,14 +545,14 @@ void emi_init_impl (uint32_t const emi_dcr_base, uint32_t const plb6mcif2_dcr_ba
            TRAS_5
        }
     };
-    // ??? emi_set_bank_cfg(emi_dcr_base, emi_b1_sdram, &b1_cfg);
+    emi_set_bank_cfg(emi_dcr_base, emi_b1_sdram, &b1_cfg);
 
     static const emi_rfc_cfg emi_rfc =
     {
             TRFC_7,
             0b11110011110011,//RP
     };
-    // ??? emi_set_rfc(emi_dcr_base, &emi_rfc);
+    emi_set_rfc(emi_dcr_base, &emi_rfc);
 
     //init bank2 - SSRAM
     static emi_bank_cfg const b2_cfg =
@@ -581,7 +581,7 @@ void emi_init_impl (uint32_t const emi_dcr_base, uint32_t const plb6mcif2_dcr_ba
            TRAS_9
        }
     };
-    // ??? emi_set_bank_cfg(emi_dcr_base, emi_b2_ssram, &b2_cfg);
+    emi_set_bank_cfg(emi_dcr_base, emi_b2_ssram, &b2_cfg);
 
     //init bank3 - PIPELINED
     static emi_bank_cfg const b3_cfg =
@@ -610,7 +610,7 @@ void emi_init_impl (uint32_t const emi_dcr_base, uint32_t const plb6mcif2_dcr_ba
            TRAS_9
        }
     };
-    // ??? emi_set_bank_cfg(emi_dcr_base, emi_b3_pipelined, &b3_cfg);
+    emi_set_bank_cfg(emi_dcr_base, emi_b3_pipelined, &b3_cfg);
 
     //init bank4 - SRAM1
     static emi_bank_cfg const b4_cfg =
@@ -639,7 +639,7 @@ void emi_init_impl (uint32_t const emi_dcr_base, uint32_t const plb6mcif2_dcr_ba
            TRAS_9
        }
     };
-    // ??? emi_set_bank_cfg(emi_dcr_base, emi_b4_sram1, &b4_cfg);
+    emi_set_bank_cfg(emi_dcr_base, emi_b4_sram1, &b4_cfg);
 
     //init bank5 - NOR
      static emi_bank_cfg const b5_cfg =
@@ -668,10 +668,10 @@ void emi_init_impl (uint32_t const emi_dcr_base, uint32_t const plb6mcif2_dcr_ba
             TRAS_9
         }
     };
-    // ??? emi_set_bank_cfg(emi_dcr_base, emi_b5_nor, &b5_cfg);
-    // ??? dcr_write(DCR_EM2_EMI_BASE + EMI_FLCNTRL, 0x17);
-    // ??? emi_set_ecc (emi_dcr_base, emi_bank_all, emi_ecc_off);
-    // ??? dcr_write(emi_dcr_base + EMI_BUSEN, 0x01);
+    emi_set_bank_cfg(emi_dcr_base, emi_b5_nor, &b5_cfg);
+    dcr_write(DCR_EM2_EMI_BASE + EMI_FLCNTRL, 0x17);
+    emi_set_ecc (emi_dcr_base, emi_bank_all, emi_ecc_off);
+    dcr_write(emi_dcr_base + EMI_BUSEN, 0x01);
 
     /* Current config */
     /* ??? bank_config_cache[0] = &b0_cfg;
@@ -680,7 +680,7 @@ void emi_init_impl (uint32_t const emi_dcr_base, uint32_t const plb6mcif2_dcr_ba
     bank_config_cache[3] = &b3_cfg;
     bank_config_cache[4] = &b4_cfg;
     bank_config_cache[5] = &b5_cfg;*/
-    // ??? msync();
+    msync();
 }
 
 typedef int(*enable_icache_type)(void);
@@ -793,13 +793,15 @@ bool emi_init(void)
 	dcr_write(0x80000604, 0x1);
 
 	emi_init_impl (DCR_EM2_EMI_BASE, DCR_EM2_PLB6MCIF2_BASE, 0x00);
-	// ??? dcr_write((DCR_EM2_EMI_BASE + 0xc), 0x9622);
-	// ???? dcr_write((DCR_EM2_EMI_BASE + 0x34), 0x2);
+	dcr_write((DCR_EM2_EMI_BASE + 0xc), 0x9622);
+	dcr_write((DCR_EM2_EMI_BASE + 0x34), 0x2);
 
 
 	// ???tlb47x_inval(0x00000000, TLBSID_256M); // ???
 	tlb47x_inval(0x20000000, TLBSID_256M); // ???
 	tlb47x_map(0x0020000000, 0x20000000, TLBSID_256M, TLB_MODE_RWX); // ???
+
+	// ??? return true; // ???
 
 	uint32_t base_addr = 0x20000000; // ???
 	uint32_t length = 4096; // ??? 32 * 1024 * 1024;

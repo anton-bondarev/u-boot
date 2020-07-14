@@ -53,15 +53,15 @@ u32 spl_boot_device(void)
 
 void spl_board_init(void)
 {
-#ifdef CONFIG_SPL_RCM_EMI_CORE
-	rcm_emi_init();
-#endif
 	// ???
 	if (!emi_init()) {
 		printf("Error in the EMI initialization - resetting...\n");
 		udelay(5 * 1000 * 1000);
 		do_reset(0, 0, 0, 0);
 	}
+#ifdef CONFIG_SPL_RCM_EMI_CORE
+	// ??? rcm_emi_init();
+#endif
 }
 
 void board_boot_order(u32 *spl_boot_list)

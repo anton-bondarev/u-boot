@@ -142,6 +142,7 @@ static int rcm_emi_probe(struct udevice *udev)
 // init hardware only once (in SPL if SPL enabled)
 #if (defined(CONFIG_SPL_RCM_EMI_CORE) && defined(CONFIG_SPL_BUILD)) || (!defined(CONFIG_SPL_RCM_EMI_CORE) && !defined(CONFIG_SPL_BUILD))
 	int ret;
+	debug("RCM EMI driver initializing...\n");
 	ret = init(udev);
 	if (ret != 0) {
 		debug("RCM EMI driver initialization error\n");
