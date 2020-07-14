@@ -113,4 +113,6 @@
 
 #define CONFIG_SYS_MMC_ENV_DEV 0
 
+#define CONFIG_SPL_PANIC_ON_RAW_IMAGE // to prevent loading a U-Boot image without the header
+
 #endif // __1888BM18_H

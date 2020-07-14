@@ -455,6 +455,7 @@ static int spl_common_init(bool setup_malloc)
 		}
 	}
 	if (CONFIG_IS_ENABLED(DM)) {
+		printf("*** DM init\n"); // ???
 		bootstage_start(BOOTSTATE_ID_ACCUM_DM_SPL,
 				spl_phase() == PHASE_TPL ? "dm tpl" : "dm_spl");
 		/* With CONFIG_SPL_OF_PLATDATA, bring in all devices */

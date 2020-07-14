@@ -1,3 +1,5 @@
+#include <dt-bindings/memory/rcm-emi.h>
+
 /dts-v1/;
 /
 {
@@ -17,6 +19,84 @@
 	aliases {
 		mmc0 = &mmc0;
 		uart0 = &uart0;
+	};
+
+	extmem {
+		u-boot,dm-pre-reloc;
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		emi0: emi0@0 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,emi";
+			dcr-reg = <0x80060000 0x1000>;
+			emi-ss = <
+				(	/* BANK 0 */
+					0
+				)
+				(	/* BANK 1 */
+					RCM_EMI_SSx_BTYP_SDRAM |
+					RCM_EMI_SSx_PTYP_NO_PAGES |
+					RCM_EMI_SSx_SRDY_EXT_RDY_NOT_USE |
+					RCM_EMI_SSx_TWR_0 |
+					RCM_EMI_SSx_SST_FLOW_THROUGH |
+					RCM_EMI_SSx_TSSOE_1 |
+					RCM_EMI_SSx_TSOE_1 |
+					RCM_EMI_SSx_TCYC_8 |
+					RCM_EMI_SSx_RDY(0) |
+					RCM_EMI_SSx_TDEL_0
+				) 
+				(	/* BANK 2 */
+					0
+				)
+				(	/* BANK 3 */
+					0
+				)
+				(	/* BANK 4 */
+					0
+				)
+				(	/* BANK 5 */
+					0
+				)
+			>;
+			emi-sd = <
+				(	/* BANK 0 */
+					0
+				)
+				(	/* BANK 1 */
+					RCM_EMI_SDx_CSP_512 |
+					RCM_EMI_SDx_SDS_8M |
+					RCM_EMI_SDx_CL_3 |
+					RCM_EMI_SDx_TRDL_2 |
+					RCM_EMI_SDx_SI_CPU_INIT |
+					RCM_EMI_SDx_T_RCD_3 |
+					RCM_EMI_SDx_T_RAS_5
+				)
+				(	/* BANK 2 */
+					0
+				)
+				(	/* BANK 3 */
+					0
+				)
+				(	/* BANK 4 */
+					0
+				)
+				(	/* BANK 5 */
+					0
+				)
+			>;
+			bank-sizes = <
+				(0) /* BANK 0 */
+				(0x2000000) /* BANK 1 - 32MB */
+				(0) /* BANK 2 */
+				(0) /* BANK 3 */
+				(0) /* BANK 4 */
+				(0) /* BANK 5 */
+			>;
+			emi-frc = <(RCM_EMI_RFC_TRFC_7 | RCM_EMI_RFC_RP(15603))>;
+			emi-hstsr = <RCM_EMI_HSTSR_HEN_1>;
+		};
 	};
 
 	lsif {
@@ -47,7 +127,6 @@
 			#gpio-cells = <2>;
 			reg = <0xD0028000 0x1000>;
 			gpio-controller;
-			u-boot,dm-pre-reloc;
 		};
 
 		gpio1: gpio1@D0038000 {
@@ -57,7 +136,6 @@
 			#gpio-cells = <2>;
 			reg = <0xD0038000 0x1000>;
 			gpio-controller;
-			u-boot,dm-pre-reloc;
 		};
 
 		greth0: greth0@D002A000 {

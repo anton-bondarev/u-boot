@@ -10,6 +10,7 @@
 #include <common.h>
 #include <spl.h>
 #include <asm/tlb47x.h>
+#include <rcm-emi.h>
 #include "boot.h"
 #include "emi-temp.h" // ???
 
@@ -52,6 +53,9 @@ u32 spl_boot_device(void)
 
 void spl_board_init(void)
 {
+#ifdef CONFIG_SPL_RCM_EMI_CORE
+	rcm_emi_init();
+#endif
 	// ???
 	if (!emi_init()) {
 		printf("Error in the EMI initialization - resetting...\n");

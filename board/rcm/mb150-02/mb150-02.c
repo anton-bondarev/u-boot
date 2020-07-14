@@ -1,11 +1,18 @@
-#undef DEBUG
+/*
+ * RCM MB150-02 board code
+ *
+ * Copyright (C) 2020 MIR
+ *	Mikhail.Petrov@mir.dev
+ *
+ * SPDX-License-Identifier: GPL-2.0+
+ */
+
 #include <common.h>
 #include <usb.h>
 #include <dm.h>
-#include "ddr_spd.h"
-#include "rcm_dimm_params.h"
 #include <fdt_support.h>
 #include <env.h>
+#include <rcm-emi.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -23,6 +30,14 @@ int arch_fixup_fdt(void *blob)
 	return fdt_fixup_memory_banks(blob, base, size, 1);
 }
 #endif // CONFIG_OF_LIBFDT
+
+int power_init_board(void)
+{
+#ifdef CONFIG_RCM_EMI_CORE
+	rcm_emi_init();
+#endif
+	return 0;
+}
 
 int dram_init(void)
 {
