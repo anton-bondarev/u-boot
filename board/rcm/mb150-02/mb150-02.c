@@ -31,18 +31,13 @@ int arch_fixup_fdt(void *blob)
 }
 #endif // CONFIG_OF_LIBFDT
 
-int power_init_board(void)
+int dram_init(void)
 {
 #ifdef CONFIG_RCM_EMI_CORE
 	rcm_emi_init();
-#endif
-	return 0;
-}
-
-int dram_init(void)
-{
 	const struct rcm_emi_memory_type_config *sdram_config = &rmc_emi_get_memory_config()->memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SDRAM];
 	gd->ram_size = sdram_config->ranges[0].size;
+#endif
 
 	return 0;
 }
