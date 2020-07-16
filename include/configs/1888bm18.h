@@ -11,11 +11,11 @@
  *	0x80040000 0x20000 - IM2 rumboot & SPL stack
  *
  * Main bootloader:
- *	0x20000000 0x40      - U-Boot header
- *	0x20000040 0x0FFFC0  - code
- *	0x20100000 0x80000   - data, heap etc.
- *	0x20180000 0x80000   - initial stack
- *	0x20200000 0x1E00000 - kernel load space
+ *	0x20000000 0x1E00000 - kernel load space
+ *	0x21E00000 0x40      - U-Boot header
+ *	0x21E00040 0x0FFFC0  - code
+ *	0x21F00000 0x80000   - data, heap etc.
+ *	0x21F80000 0x80000   - initial stack
  */
 
 #define RCM_1888BM18_IM1_START CONFIG_SPL_TEXT_BASE
@@ -35,7 +35,7 @@
 #define CONFIG_SYS_INIT_RAM_ADDR CONFIG_SYS_SPL_MALLOC_START // actually it is a fake value for prevent compilation errors
 #define CONFIG_SYS_INIT_RAM_SIZE (RCM_1888BM18_IM1_START + RCM_1888BM18_IM1_SIZE - CONFIG_SYS_SPL_MALLOC_START) 
 #else
-#define CONFIG_SYS_INIT_RAM_ADDR 0x20100000
+#define CONFIG_SYS_INIT_RAM_ADDR 0x21F00000
 #define CONFIG_SYS_INIT_RAM_SIZE 0x100000
 #endif
 
@@ -86,13 +86,13 @@
 #define CONFIG_SERVERIP 192.168.0.1
 #define CONFIG_NETMASK 255.255.255.0
 #define CONFIG_HOSTNAME "bm18"
-#define CONFIG_LOADADDR 20200000
+#define CONFIG_LOADADDR 21000000
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"baudrate=115200\0" \
 	"bootfile=bm18/uImage\0" \
-	"bootm_low=20200000\0" \
+	"bootm_low=20000000\0" \
 	"bootm_size=01E00000\0" \
-	"fdt_addr_r=21FF8000\0" \
+	"fdt_addr_r=21DF8000\0" \
 	"kernel=run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
 	"kernelsd=run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
 	"loadfdt=tftp ${fdt_addr_r} bm18/bm18.dtb\0" \
