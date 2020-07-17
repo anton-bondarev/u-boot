@@ -481,4 +481,16 @@ config K3_AVS0
 	  optimized voltage from the efuse, so that it can be programmed
 	  to the PMIC on board.
 
+config RCM_EMI_CORE
+	bool "RCM EMI core driver"
+	depends on TARGET_1888BM18
+	help
+	  This driver enables RCM EMI controller for SRAM, NOR, SSRAM, SDRAM.
+
+config SPL_RCM_EMI_CORE
+	bool "RCM EMI core driver in SPL"
+	depends on SPL && TARGET_1888BM18
+	help
+	  This driver enables RCM EMI controller for SRAM, NOR, SSRAM, SDRAM.
+
 endmenu
