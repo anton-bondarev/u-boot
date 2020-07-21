@@ -355,6 +355,7 @@
 		    reg = <0x3C069000 0x1000>;
 
 			pinctrl {
+					u-boot,dm-pre-reloc;
 					compatible = "rcm,pl061-pinctrl";
 					pinctrl_uart0_default: uart0_default {
 						u-boot,dm-pre-reloc;

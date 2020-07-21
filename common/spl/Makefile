@@ -12,6 +12,7 @@ obj-$(CONFIG_$(SPL_TPL_)BOOTROM_SUPPORT) += spl_bootrom.o
 obj-$(CONFIG_$(SPL_TPL_)LOAD_FIT) += spl_fit.o
 obj-$(CONFIG_$(SPL_TPL_)NOR_SUPPORT) += spl_nor.o
 obj-$(CONFIG_$(SPL_TPL_)XIP_SUPPORT) += spl_xip.o
+obj-$(CONFIG_$(SPL_TPL_)XMODEM_SUPPORT) += spl_xmodem.o
 obj-$(CONFIG_$(SPL_TPL_)YMODEM_SUPPORT) += spl_ymodem.o
 ifndef CONFIG_SPL_UBI
 obj-$(CONFIG_$(SPL_TPL_)NAND_SUPPORT) += spl_nand.o
@@ -32,4 +33,5 @@ obj-$(CONFIG_$(SPL_TPL_)SPI_LOAD) += spl_spi.o
 obj-$(CONFIG_$(SPL_TPL_)RAM_SUPPORT) += spl_ram.o
 obj-$(CONFIG_$(SPL_TPL_)USB_SDP_SUPPORT) += spl_sdp.o
 obj-$(CONFIG_$(SPL_TPL_)EDCL_LOAD) += spl_edcl.o
+obj-$(CONFIG_$(SPL_TPL_)XMODEM_EDCL_LOAD) += spl_xmodem_edcl.o
 endif

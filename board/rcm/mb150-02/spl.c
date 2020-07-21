@@ -47,8 +47,7 @@ void board_init_f(ulong dummy)
 
 u32 spl_boot_device(void)
 {
-	return BOOT_DEVICE_UART;
-	// return BOOT_DEVICE_EDCL;
+	return BOOT_DEVICE_XMODEM_EDCL;
 }
 
 #ifdef CONFIG_SPL_RCM_EMI_CORE
