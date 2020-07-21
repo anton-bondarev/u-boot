@@ -63,9 +63,6 @@ static int spl_xmodem_edcl_load_image(struct spl_image_info *spl_image, struct s
 		} while ((chr != 'X') && (chr != 'E'));
 
 		if ((chr == 'X') && (xmodem_loader != NULL)) {
-#ifdef CONFIG_TARGET_1888BM18
-		printf("CC"); // ????
-#endif
 			ret = xmodem_loader->load_image(spl_image, NULL);
 			if (ret == 0)
 				break;

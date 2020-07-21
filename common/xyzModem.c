@@ -62,7 +62,7 @@ typedef int cyg_int32;
 static int
 CYGACC_COMM_IF_GETC_TIMEOUT (char chan, char *c)
 {
-#ifndef CONFIG_TARGET_1888BM18
+#if !defined(CONFIG_TARGET_1888TX018) && !defined(CONFIG_TARGET_1888BM18)
   ulong now = get_timer(0);
   WATCHDOG_RESET();
   while (!tstc ())
@@ -76,8 +76,8 @@ CYGACC_COMM_IF_GETC_TIMEOUT (char chan, char *c)
       return 1;
     }
   return 0;
-#else // !CONFIG_TARGET_1888BM18
-  // for perfomance reason for this target
+#else // !defined(CONFIG_TARGET_1888TX018) && !defined(CONFIG_TARGET_1888BM18)
+  // for perfomance reason for these targets
   *c = getc();
   return 1;
 #endif
