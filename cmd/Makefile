@@ -12,6 +12,7 @@ obj-y += version.o
 
 # command
 obj-$(CONFIG_CMD_RCM_SRAM_NOR_TEST) += rcm_sram_nor_test.o
+obj-$(CONFIG_CMD_RCM_NAND_TEST) += rcm_nand_test.o
 obj-$(CONFIG_CMD_AES) += aes.o
 obj-$(CONFIG_CMD_AB_SELECT) += ab_select.o
 obj-$(CONFIG_CMD_ADC) += adc.o

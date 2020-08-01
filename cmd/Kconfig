@@ -2193,5 +2193,17 @@ config CMD_RCM_SRAM_NOR_TEST_AUTO
 	help
 	  Enable autorun tests for static RAM and NOR flash tests for the board MB115"
 
+config CMD_RCM_NAND_TEST
+	bool "NAND flash tests for the board MB115"
+	depends on MTD_RCM_NAND
+	help
+	  Enable tests for NAND controller of the board MB115.
+
+config CMD_RCM_NAND_TEST_AUTO
+	bool "Autorun tests"
+	depends on CMD_RCM_NAND_TEST
+	default n
+	help
+	  Enable autorun tests for NAND flash tests for the board MB115"
 
 endmenu
