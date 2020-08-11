@@ -2,7 +2,7 @@ if TARGET_1888BM18
 
 config SYS_BOARD
 	string "Name of board"
-	default "mb150-02"
+	default "mt150-02"
 
 config SYS_VENDOR
 	string "Vendor of board"
