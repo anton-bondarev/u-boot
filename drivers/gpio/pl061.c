@@ -43,14 +43,24 @@ static int pl061_direction_output(struct udevice *dev, unsigned pin,
 {
 	struct pl061_platdata *plat = dev_get_platdata(dev);
 	struct pl061_regs *const regs = plat->regs;
-	debug("pl061_direction_output set for %d\n", pin);
+	debug("pl061_direction_output set for %d value %i\n", pin, val);
 
 	if (val)
 		setbits(8, &regs->data, 1 << pin);
 	else
 		clrbits(8, &regs->data, 1 << pin);
+
 	/* change the data first, then the direction. to avoid glitch */
 	setbits(8, &regs->dir, 1 << pin);
+
+	/* Copied from the pl061 Linux kernel driver:
+	 * gpio value is set again, because pl061 doesn't allow to set value of
+	 * a gpio pin before configuring it in OUT mode.
+	 */
+	if (val)
+		setbits(8, &regs->data, 1 << pin);
+	else
+		clrbits(8, &regs->data, 1 << pin);
 
 	return 0;
 }
@@ -62,7 +72,7 @@ static int pl061_get_value(struct udevice *dev, unsigned pin)
 
 	debug("pl061_get_value for %d == %d\n", pin, readb(&regs->data) & (1 << pin));
 
-	return readb(&regs->data) & (1 << pin);
+	return (readb(&regs->data) & (1 << pin)) != 0;
 }
 
 
@@ -105,6 +115,7 @@ static int pl061_probe(struct udevice *dev)
 
 	struct pl061_regs *const regs = plat->regs;
 	uc_priv->gpio_count = plat->gpio_count;
+	uc_priv->bank_name = plat->bank_name;
 
 	if( (readb(&regs->pid0) == 0x61) && 
 		(readb(&regs->pid1) == 0x10) && 
@@ -136,10 +147,8 @@ static int pl061_ofdata_to_platdata(struct udevice *dev)
 				 sizeof(struct pl061_regs),
 				 MAP_NOCACHE);
 	plat->gpio_count = 8;
-	//	plat->gpio_count = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),
-//		"altr,gpio-bank-width", 32);
-//	plat->bank_name = fdt_getprop(gd->fdt_blob, dev_of_offset(dev),
-//		"gpio-bank-name", NULL);
+	plat->bank_name = fdt_getprop(gd->fdt_blob, dev_of_offset(dev),
+		"gpio-bank-name", NULL);
 
 	return 0;
 }

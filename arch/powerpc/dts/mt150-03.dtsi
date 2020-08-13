@@ -1,0 +1,27 @@
+/*
+ * Device Tree Source for RCM MT150.03 extention board (Ethernet)
+ *
+ * Copyright (C) 2020 MIR
+ *	Mikhail.Petrov@mir.dev
+ *
+ * SPDX-License-Identifier: GPL-2.0+
+ */
+/ {
+	plb {
+		lsif {
+			greth0: greth0@D002A000 {
+				// status = "disabled";
+				compatible = "rcm,greth";
+				reg = <0xD002A000 0x1000>;
+				mac-address = [ EC 17 66 77 06 80 ];
+			};
+
+			greth1: greth1@D003A000 {
+				status = "disabled";
+				compatible = "rcm,greth";
+				reg = <0xD003A000 0x1000>;
+				mac-address = [ EC 17 66 77 06 81 ];
+			};
+		};
+	};
+};

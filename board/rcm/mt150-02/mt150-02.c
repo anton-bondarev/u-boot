@@ -1,5 +1,5 @@
 /*
- * RCM MB150-02 board code
+ * RCM MT150-02 board code
  *
  * Copyright (C) 2020 MIR
  *	Mikhail.Petrov@mir.dev

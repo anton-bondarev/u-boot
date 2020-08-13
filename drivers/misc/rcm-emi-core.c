@@ -59,14 +59,19 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define RCM_EMI_DRIVER_NAME "rcm-emi"
 
+struct rcm_emi_platdata_bank
+{
+	uint32_t ss;
+	uint32_t sd;
+	bool ecc;
+	uint32_t size;
+};
+
 struct rcm_emi_platdata
 {
 	uint32_t dcr_base;
-	uint32_t emi_ss[RCM_EMI_BANK_NUMBER];
-	uint32_t emi_sd[RCM_EMI_BANK_NUMBER];
-	uint32_t bank_sizes[RCM_EMI_BANK_NUMBER];
+	struct rcm_emi_platdata_bank banks[RCM_EMI_BANK_NUMBER];
 	uint32_t emi_frc;
-	uint32_t emi_hstsr;
 };
 
 static const uint32_t BASE_ADDRESSES[RCM_EMI_BANK_NUMBER] = {
@@ -82,13 +87,13 @@ static void dump_platdata(struct rcm_emi_platdata *otp)
 
 	debug("dcr_base = 0x%08x\n", otp->dcr_base);
 
-	debug("bank   emi_ss     emi_sd      size\n");
+	debug("bank     ss         sd     ecc    size\n");
 	for (i = 0; i < RCM_EMI_BANK_NUMBER; ++i) {
-		debug(" %u   0x%08x 0x%08x 0x%08x\n", i, otp->emi_ss[i], otp->emi_sd[i], otp->bank_sizes[i]);
+		struct rcm_emi_platdata_bank *bank = &otp->banks[i];
+		debug(" %u   0x%08x 0x%08x  %u  0x%08x\n", i, bank->ss, bank->sd, (int)bank->ecc, bank->size);
 	}
 
 	debug("emi_frc = 0x%08x\n", otp->emi_frc);
-	debug("emi_hstsr = 0x%08x\n", otp->emi_hstsr);
 }
 #endif // DEBUG
 
@@ -119,29 +124,30 @@ static void fill_for_ecc(uint32_t base, uint32_t size)
 static int init(struct udevice *udev)
 {
 	struct rcm_emi_platdata *otp = dev_get_platdata(udev);
-	uint32_t mask;
+	uint32_t hstsr = 0;
 	int i;
 
 	for (i = 0; i < RCM_EMI_BANK_NUMBER; ++i) {
-		dcr_write(otp->dcr_base + RCM_EMI_SS0 + (RCM_EMI_SS1 - RCM_EMI_SS0) * i, otp->emi_ss[i]);
-		dcr_write(otp->dcr_base + RCM_EMI_SD0 + (RCM_EMI_SD1 - RCM_EMI_SD0) * i, otp->emi_sd[i]);
+		dcr_write(otp->dcr_base + RCM_EMI_SS0 + (RCM_EMI_SS1 - RCM_EMI_SS0) * i, otp->banks[i].ss);
+		dcr_write(otp->dcr_base + RCM_EMI_SD0 + (RCM_EMI_SD1 - RCM_EMI_SD0) * i, otp->banks[i].sd);
+		if (otp->banks[i].ecc)
+			hstsr |= (1 << i);
 	}
 
 	dcr_write(otp->dcr_base + RCM_EMI_RFC, otp->emi_frc);
 	dcr_write(otp->dcr_base + RCM_EMI_FLCNTRL, 0x17);
-	dcr_write(otp->dcr_base + RCM_EMI_HSTSR, otp->emi_hstsr);
+	dcr_write(otp->dcr_base + RCM_EMI_HSTSR, hstsr);
 	dcr_write(otp->dcr_base + RCM_EMI_BUSEN, 0x01);
 
 	mb();
 
 	for (i = 0; i < RCM_EMI_BANK_NUMBER; ++i) {
-		mask = RCM_EMI_HSTSR_HEN_0 << i;
-		if ((otp->emi_hstsr & mask) != 0) {
-			switch (otp->emi_ss[i] & RCM_EMI_SSx_BTYP_MASK) {
+		if (otp->banks[i].ecc) {
+			switch (otp->banks[i].ss & RCM_EMI_SSx_BTYP_MASK) {
 			case RCM_EMI_SSx_BTYP_SRAM:
 			case RCM_EMI_SSx_BTYP_SSRAM:
 			case RCM_EMI_SSx_BTYP_SDRAM:
-				fill_for_ecc(BASE_ADDRESSES[i], otp->bank_sizes[i]);
+				fill_for_ecc(BASE_ADDRESSES[i], otp->banks[i].size);
 				break;
 			}
 		}
@@ -161,10 +167,15 @@ static void rcm_emi_fill_memory_config(struct udevice *udev)
 	for (i = 0; i < RCM_EMI_BANK_NUMBER; ++i) {
 		struct rcm_emi_memory_range range;
 		range.base = BASE_ADDRESSES[i];
-		range.size = otp->bank_sizes[i];
+		range.size = otp->banks[i].size;
 
-		switch (otp->emi_ss[i] & RCM_EMI_SSx_BTYP_MASK)
+		switch (otp->banks[i].ss & RCM_EMI_SSx_BTYP_MASK)
 		{
+		case RCM_EMI_SSx_BTYP_SRAM:
+		case RCM_EMI_SSx_BTYP_SSRAM:
+			index = memory_config.memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SRAM].bank_number++;
+			memory_config.memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SRAM].ranges[index] = range;
+			break;
 		case RCM_EMI_SSx_BTYP_SDRAM:
 			index = memory_config.memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SDRAM].bank_number++;
 			memory_config.memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SDRAM].ranges[index] = range;
@@ -198,29 +209,35 @@ static int rcm_emi_probe(struct udevice *udev)
 static int rcm_emi_ofdata_to_platdata(struct udevice *dev)
 {
 	struct rcm_emi_platdata *otp = dev_get_platdata(dev);
+	char prop_name[128];
+	int i;
 	int ret;
 
 	ret = dev_read_u32(dev, "dcr-reg", &otp->dcr_base);
 	if (ret != 0)
 		return ret;
 
-	ret = dev_read_u32_array(dev, "emi-ss", otp->emi_ss, RCM_EMI_BANK_NUMBER);
-	if (ret != 0)
-		return ret;
+	for (i = 0; i < RCM_EMI_BANK_NUMBER; ++i) {
+		sprintf(prop_name, "bank-%u-ss", i);
+		ret = dev_read_u32(dev, prop_name, &otp->banks[i].ss);
+		if (ret != 0)
+			continue;
 
-	ret = dev_read_u32_array(dev, "emi-sd", otp->emi_sd, RCM_EMI_BANK_NUMBER);
-	if (ret != 0)
-		return ret;
+		sprintf(prop_name, "bank-%u-sd", i);
+		ret = dev_read_u32(dev, prop_name, &otp->banks[i].sd);
+		if (ret != 0)
+			return ret;
 
-	ret = dev_read_u32_array(dev, "bank-sizes", otp->bank_sizes, RCM_EMI_BANK_NUMBER);
-	if (ret != 0)
-		return ret;
+		sprintf(prop_name, "bank-%u-ecc", i);
+		otp->banks[i].ecc = dev_read_bool(dev, prop_name);
+
+		sprintf(prop_name, "bank-%u-size", i);
+		ret = dev_read_u32(dev, prop_name, &otp->banks[i].size);
+		if (ret != 0)
+			return ret;
+	}
 
 	ret = dev_read_u32(dev, "emi-frc", &otp->emi_frc);
-	if (ret != 0)
-		return ret;
-
-	ret = dev_read_u32(dev, "emi-hstsr", &otp->emi_hstsr);
 	if (ret != 0)
 		return ret;
 
