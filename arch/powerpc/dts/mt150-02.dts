@@ -71,6 +71,7 @@
 				#gpio-cells = <2>;
 				reg = <0xD0028000 0x1000>;
 				gpio-controller;
+				gpio-bank-name = "gpio0";
 			};
 
 			gpio1: gpio1@D0038000 {
@@ -80,6 +81,7 @@
 				#gpio-cells = <2>;
 				reg = <0xD0038000 0x1000>;
 				gpio-controller;
+				gpio-bank-name = "gpio1";
 			};
 
 			mmc0: mmc0@D002C000 {
