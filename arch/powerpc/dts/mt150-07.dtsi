@@ -1,5 +1,5 @@
 /*
- * Device Tree Source for RCM MT115.07 extention board (SRAM)
+ * Device Tree Source for RCM MT150.07 extention board (SRAM)
  *
  * Copyright (C) 2020 MIR
  *	Mikhail.Petrov@mir.dev
@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: GPL-2.0+
  */
 / {
-	extmem {
+	plb {
 		emi0: emi@80060000 {
 			status = "okay";
 
@@ -19,7 +19,7 @@
 				| RCM_EMI_SSx_SST_FLOW_THROUGH
 				| RCM_EMI_SSx_TSSOE_1
 				| RCM_EMI_SSx_TSOE_1
-				| RCM_EMI_SSx_TCYC_2
+				| RCM_EMI_SSx_TCYC_3
 				| RCM_EMI_SSx_RDY(0)
 				| RCM_EMI_SSx_TDEL_0)>;
 			bank-0-sd = <(

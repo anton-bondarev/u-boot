@@ -1,5 +1,5 @@
 /*
- * Device Tree Source for RCM MT115.02 board
+ * Device Tree Source for RCM MT150.02 board
  *
  * Copyright (C) 2020 MIR
  *	Mikhail.Petrov@mir.dev
@@ -29,7 +29,7 @@
 		uart0 = &uart0;
 	};
 
-	extmem {
+	plb {
 		u-boot,dm-pre-reloc;
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -42,59 +42,59 @@
 			dcr-reg = <0x80060000 0x1000>;
 			emi-frc = <(RCM_EMI_RFC_TRFC_9 | RCM_EMI_RFC_RP(0))>;
 		};
-	};
 
-	lsif {
-		u-boot,dm-pre-reloc;
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		// console
-		uart0: uart0@D0029000 {
+		lsif {
 			u-boot,dm-pre-reloc;
-			compatible = "arm,pl011", "arm,primecell";
-			reg = <0xD0029000 0x1000>;
-			clock = <100000000>;
-			skip-init; // the UART speed is configured by RUMBOOT and it depens on the board switches
-		};
-
-		uart1: uart1@D0039000 {
-			compatible = "arm,pl011", "arm,primecell";
-			reg = <0xD0039000 0x1000>;
-			clock = <100000000>;
-		};
-
-		gpio0: gpio0@D0028000 {
-			compatible = "rcm,pl061";
+			compatible = "simple-bus";
 			#address-cells = <1>;
-			#size-cells = <0>;
-			#gpio-cells = <2>;
-			reg = <0xD0028000 0x1000>;
-			gpio-controller;
-		};
+			#size-cells = <1>;
 
-		gpio1: gpio1@D0038000 {
-			compatible = "rcm,pl061";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			#gpio-cells = <2>;
-			reg = <0xD0038000 0x1000>;
-			gpio-controller;
-		};
+			// console
+			uart0: uart0@D0029000 {
+				u-boot,dm-pre-reloc;
+				compatible = "arm,pl011", "arm,primecell";
+				reg = <0xD0029000 0x1000>;
+				clock = <100000000>;
+				skip-init; // the UART speed is configured by RUMBOOT and it depens on the board switches
+			};
 
-		mmc0: mmc0@D002C000 {
-			// status = "disabled";
-			compatible = "rcm,mmc-0.2";
-			reg = <0xD002C000 0x1000>;
-			carddetect-gpio = <&gpio0 3 0>;
-		};
+			uart1: uart1@D0039000 {
+				compatible = "arm,pl011", "arm,primecell";
+				reg = <0xD0039000 0x1000>;
+				clock = <100000000>;
+			};
 
-		mmc1: mmc1@D003C000 {
-			status = "disabled";
-			compatible = "rcm,mmc-0.2";
-			reg = <0xD003C000 0x1000>;
-			carddetect-gpio = <&gpio1 0 0>;
+			gpio0: gpio0@D0028000 {
+				compatible = "rcm,pl061";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				#gpio-cells = <2>;
+				reg = <0xD0028000 0x1000>;
+				gpio-controller;
+			};
+
+			gpio1: gpio1@D0038000 {
+				compatible = "rcm,pl061";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				#gpio-cells = <2>;
+				reg = <0xD0038000 0x1000>;
+				gpio-controller;
+			};
+
+			mmc0: mmc0@D002C000 {
+				// status = "disabled";
+				compatible = "rcm,mmc-0.2";
+				reg = <0xD002C000 0x1000>;
+				carddetect-gpio = <&gpio0 3 0>;
+			};
+
+			mmc1: mmc1@D003C000 {
+				status = "disabled";
+				compatible = "rcm,mmc-0.2";
+				reg = <0xD003C000 0x1000>;
+				carddetect-gpio = <&gpio1 0 0>;
+			};
 		};
 	};
 };

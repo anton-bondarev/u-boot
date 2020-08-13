@@ -1,5 +1,5 @@
 /*
- * Device Tree Source for RCM MT115.08 extention board (SDRAM)
+ * Device Tree Source for RCM MT150.08 extention board (SDRAM)
  *
  * Copyright (C) 2020 MIR
  *	Mikhail.Petrov@mir.dev
@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: GPL-2.0+
  */
 / {
-	extmem {
+	plb {
 		emi0: emi@80060000 {
 			status = "okay";
 

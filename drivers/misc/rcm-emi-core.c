@@ -171,6 +171,11 @@ static void rcm_emi_fill_memory_config(struct udevice *udev)
 
 		switch (otp->banks[i].ss & RCM_EMI_SSx_BTYP_MASK)
 		{
+		case RCM_EMI_SSx_BTYP_SRAM:
+		case RCM_EMI_SSx_BTYP_SSRAM:
+			index = memory_config.memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SRAM].bank_number++;
+			memory_config.memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SRAM].ranges[index] = range;
+			break;
 		case RCM_EMI_SSx_BTYP_SDRAM:
 			index = memory_config.memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SDRAM].bank_number++;
 			memory_config.memory_type_config[RCM_EMI_MEMORY_TYPE_ID_SDRAM].ranges[index] = range;
