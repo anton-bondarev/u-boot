@@ -109,7 +109,7 @@
 
 			spi0: spi@D002B000 {
 				status = "disabled";
-				compatible = "arm,pl022", "arm,primecell";
+				compatible = "arm,pl022-spi", "arm,primecell";
 				reg = <0 0xD002B000 0 0x1000>;
 				#address-cells = <1>;
 				#size-cells = <0>;
