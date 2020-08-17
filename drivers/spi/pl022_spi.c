@@ -76,7 +76,7 @@
 #define SSP_SR_MASK_RFF		(0x1 << 3) /* Receive FIFO full */
 #define SSP_SR_MASK_BSY		(0x1 << 4) /* Busy Flag */
 
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 #include <asm-generic/gpio.h>
 
 #define SSP_CR0_8BIT_MODE	(0x07)
@@ -105,13 +105,14 @@
 #define MAX_CS_COUNT 4
 #define SPI_BUF_LEN 1024
 
-#endif // CONFIG_TARGET_1888TX018
+#endif // defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
+
 struct pl022_spi_slave {
 	void *base;
 	unsigned int freq;
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 	struct gpio_desc cs_gpios[MAX_CS_COUNT];
-#endif // CONFIG_TARGET_1888TX018
+#endif
 #ifdef CONFIG_ARCH_RCM_ARM
 	struct udevice *bus;
 	unsigned int mode;
@@ -138,8 +139,7 @@ static int pl022_is_supported(struct pl022_spi_slave *ps)
 	return 0;
 }
 
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
-
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 static int pl022_setup_gpio(struct udevice *bus)
 {
 	int i;
@@ -166,7 +166,9 @@ static int pl022_setup_gpio(struct udevice *bus)
 
 	return 0;
 }
+#endif // defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
 static void pl022_setup_dma(void* base)
 {
 	debug("SPI ver is correct, setup of DMA\n");
@@ -202,14 +204,23 @@ static void pl022_setup_dma(void* base)
 	// disable GSPI DMA
 	//writel(0, ps->base + SSP_SPI_IRQ_MASK);
 }
+#endif // defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
 
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 static void spi_cs_activate(struct udevice *dev, uint cs)
 {
 	struct udevice *bus = dev_get_parent(dev);
 	struct pl022_spi_slave *priv = dev_get_priv(bus);
 
-	if (!dm_gpio_is_valid(&priv->cs_gpios[cs]))
-			return;
+	if (!dm_gpio_is_valid(&priv->cs_gpios[cs])) {
+#ifdef CONFIG_TARGET_1888BM18
+		u32 val = readl(priv->base + 0xCC);
+		val |= 0x2;
+		val &= ~0x1;
+		writel(val, priv->base + 0xCC);
+#endif
+		return;
+	}
 
 	dm_gpio_set_value(&priv->cs_gpios[cs], 0);
 
@@ -220,18 +231,23 @@ static void spi_cs_deactivate(struct udevice *dev, uint cs)
 	struct udevice *bus = dev_get_parent(dev);
 	struct pl022_spi_slave *priv = dev_get_priv(bus);
 
-	if (!dm_gpio_is_valid(&priv->cs_gpios[cs]))
-			return;
+	if (!dm_gpio_is_valid(&priv->cs_gpios[cs])) {
+#ifdef CONFIG_TARGET_1888BM18
+		u32 val = readl(priv->base + 0xCC);
+		val |= 0x3;
+		writel(val, priv->base + 0xCC);
+#endif
+		return;
+	}
 
 	dm_gpio_set_value(&priv->cs_gpios[cs], 1);
 }
+#endif // defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 
 static int pl022_spi_set_speed(struct udevice *bus, uint speed);
 static int pl022_spi_set_mode(struct udevice *bus, uint mode);
 static int pl022_spi_xfer_int(struct pl022_spi_slave *priv, unsigned int len,
 							  const void *dout, void *din);
-
-#endif // CONFIG_TARGET_1888TX018
 
 #ifdef CONFIG_ARCH_RCM_ARM
 __weak int sdcard_init(void)
@@ -248,7 +264,7 @@ static int pl022_spi_probe(struct udevice *bus)
 	ps->base = ioremap(plat->addr, plat->size);
 	ps->freq = plat->freq;
 
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BC048)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_TARGET_1888BC048)
 	int ret = pl022_setup_gpio(bus);
 	if (ret < 0)
 	{
@@ -272,7 +288,7 @@ static int pl022_spi_probe(struct udevice *bus)
 
 #if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
 	pl022_setup_dma(ps->base);
-#endif // CONFIG_TARGET_1888TX018
+#endif
 	return 0;
 }
 
@@ -400,10 +416,10 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	struct pl022_spi_slave *ps = dev_get_priv(bus);
 	u32		len;
 	u32		ret = 0;
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);
 	debug("pl022_spi_xfer %d, %d, 0x%x, 0x%x, 0x%x\n", bitlen, (int)flags, (int)dout, (int)ps->base, (int)slave_plat);
-#endif // CONFIG_TARGET_1888TX018
+#endif
 
 	if (bitlen == 0)
 		/* Finish any previously submitted transfers */
@@ -425,10 +441,10 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 	len = bitlen / 8;
 
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 	if (flags & SPI_XFER_BEGIN)
 		spi_cs_activate(dev, slave_plat->cs);
-#endif // CONFIG_TARGET_1888TX018
+#endif
 
 #ifdef CONFIG_ARCH_RCM_ARM
 	if (dout && (flags & SPI_XFER_BEGIN) && !(flags & SPI_XFER_END)) // sending cmd?
@@ -483,10 +499,10 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 #endif
 
 
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 	if (flags & SPI_XFER_END)
 		spi_cs_deactivate(dev, slave_plat->cs);
-#endif // CONFIG_TARGET_1888TX018
+#endif
 	return ret;
 }
 
@@ -596,7 +612,7 @@ static const struct udevice_id pl022_spi_ids[] = {
 	{ .compatible = "arm,pl022-spi" },
 #if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
 	{ .compatible = "rcm,pl022-spi" },
-#endif // CONFIG_TARGET_1888TX018
+#endif
 	{ }
 };
 #endif
