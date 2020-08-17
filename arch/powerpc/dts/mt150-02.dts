@@ -44,37 +44,6 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-			/* ??? spi1: spi1@0xD003B000 { // ??? 0
-				// status = "disabled";
-				// ??? compatible = "arm,pl022-spi", "arm,primecell";
-				compatible = "rcm,pl022-spi"; // ???
-				reg = <0 0xD003B000 0 0x1000>;
-				#address-cells = <1>;
-				#size-cells = <0>;
-				clocks = <&lsif_clock>;*/
-				// ??? num-cs = <1>; // ???
-				// ??? u-boot,dm-pre-reloc;
-
-			/* ??? compatible = "rcm,pl022-spi";
-			// ??? pinctrl-names = "default";
-			// ??? pinctrl-0 = <&pinctrl_spi0_default>;
-			// ??? clocks = <&lsif1clock>;
-		    reg = <0 0x3C061000 0 0x1000>;
-		    cs-gpios = <&gpio1 7 0>, <0>, <0>, <0>;
-		    spi-max-frequency = <12500000>;
-		    spi-mode = <0x07>;
-		    u-boot,dm-pre-reloc;*/
-
-
-				/* ???? spi_flash1: spi_flash@0 {
-					status = "disabled";
-					compatible = "st,m25p32", "spi-nor";
-					reg = <0>;
-					spi-max-frequency = <20000000>; // ????
-				};*/
-			// ??? };
-
-
 		emi0: emi@80060000 {
 			status = "disabled";
 			u-boot,dm-pre-reloc;

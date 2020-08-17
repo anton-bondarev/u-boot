@@ -111,6 +111,8 @@
 #define CONFIG_TFTP_TSIZE
 
 #define CONFIG_SYS_MMC_ENV_DEV 0
+#define CONFIG_ENV_SPI_BUS 0
+#define CONFIG_ENV_SPI_CS 0
 
 #define CONFIG_SPL_PANIC_ON_RAW_IMAGE // to prevent loading a U-Boot image without the header
 
