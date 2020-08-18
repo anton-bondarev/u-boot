@@ -147,6 +147,7 @@ static int do_nand_test_run( unsigned int block_first, unsigned int block_end )
 	static u_char buf_wr[MAX_PAGE_LEN], buf_rd[MAX_PAGE_LEN];
 	unsigned int bad_pages_total = 0;
 	uint32_t csw, csr;
+	unsigned int rd;
 	
 	mtd = do_nand_test_info( false, &bl_len, &bl_num, &pg_len, &pg_num );
 	if( mtd == NULL )
@@ -196,24 +197,34 @@ static int do_nand_test_run( unsigned int block_first, unsigned int block_end )
 			if( nand_rand_data_write( mtd, pg_off, pg_len, buf_wr, &csw ) )
 				return -1;
 
-			if( g_verbose )
-				printf( " read..." );
-			
-			if( nand_data_read( mtd, pg_off, pg_len, buf_rd, &csr ) )
-				return -1;
-
-			if( g_verbose )
-				printf( " compare..." );
-
-			if( memcmp( buf_wr, buf_rd, pg_len ) ) {
-				bad++;
-				bad_pages_total++;
+			for( rd = 0; ; rd++ ) {
 				if( g_verbose )
-					printf( "ERROR\n" );
-			}
-			else {
+					printf( " read..." );
+
+				if( nand_data_read( mtd, pg_off, pg_len, buf_rd, &csr ) )
+					return -1;
+
 				if( g_verbose )
-					printf( "OK (%08x-%08x)\n", csw, csr );
+					printf( " compare..." );
+
+				if( memcmp( buf_wr, buf_rd, pg_len ) ) {
+					if( rd > 0 ) {
+						bad++;
+						bad_pages_total++;
+						if( g_verbose )
+							printf( "ERROR\n" );
+						break;
+					}
+					else {
+						if( g_verbose )
+							printf( "RETRY\n" );
+					}
+				}
+				else {
+					if( g_verbose )
+						printf( "OK (%08x-%08x)\n", csw, csr );
+					break;
+				}
 			}
 
 			pg_off += pg_len;
