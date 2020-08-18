@@ -26,7 +26,16 @@
 
 	aliases {
 		mmc0 = &mmc0;
+		mmc1 = &mmc1;
 		uart0 = &uart0;
+		spi0 = &spi0;
+		spi1 = &spi1;
+	};
+
+	lsif_clock: lsif_clock {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
 	};
 
 	plb {
@@ -96,6 +105,26 @@
 				compatible = "rcm,mmc-0.2";
 				reg = <0xD003C000 0x1000>;
 				carddetect-gpio = <&gpio1 0 0>;
+			};
+
+			spi0: spi@D002B000 {
+				status = "disabled";
+				compatible = "arm,pl022-spi", "arm,primecell";
+				reg = <0 0xD002B000 0 0x1000>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				clocks = <&lsif_clock>;
+				cs-gpios = <0>, <0>, <0>, <0>;
+			};
+
+			spi1: spi@D003B000 {
+				status = "disabled";
+				compatible = "arm,pl022-spi", "arm,primecell";
+				reg = <0 0xD003B000 0 0x1000>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				clocks = <&lsif_clock>;
+				cs-gpios = <0>, <0>, <0>, <0>;
 			};
 		};
 	};
