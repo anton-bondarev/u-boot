@@ -82,6 +82,7 @@
 #define BOOT_DEVICE_SPI 11
 #define BOOT_DEVICE_UART 12 // needed for BOOT_DEVICE_XMODEM_EDCL
 #define BOOT_DEVICE_XMODEM_EDCL 13
+#define BOOT_DEVICE_FLASH_WRITER 14 // pseudo loader,for flash programming
 
 #define CONFIG_SYS_SPI_U_BOOT_OFFS      0x40000
 #define CONFIG_SYS_SPI_CLK 100000000

@@ -1,0 +1,4 @@
+
+config FLASHWRITER
+	bool "Flash devices writing"
+	default n

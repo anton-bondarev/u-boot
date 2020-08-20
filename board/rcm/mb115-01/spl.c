@@ -120,6 +120,7 @@ u32 spl_boot_mode(const u32 boot_device)
 
 void board_boot_order(u32 *spl_boot_list)
 {
+#ifndef CONFIG_FLASHWRITER
 	spl_boot_list[0] = spl_boot_device();
 	switch (spl_boot_list[0]) {
 	case BOOT_DEVICE_SPI:
@@ -135,6 +136,10 @@ void board_boot_order(u32 *spl_boot_list)
 		spl_boot_list[4] = BOOT_DEVICE_XMODEM_EDCL;
 		break;
 	}
+#else
+	spl_boot_list[0] = BOOT_DEVICE_FLASH_WRITER; // pseudo loader
+	spl_boot_list[1] = BOOT_DEVICE_XMODEM_EDCL;
+#endif
 }
 
 #define SPRN_DBCR0_44X 0x134
