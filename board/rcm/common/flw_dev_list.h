@@ -19,6 +19,10 @@ struct flw_dev_t
     unsigned int type;  // FLW_DEV_TYPE
     union               // зависит от типа устройства
     {
+        struct {
+            unsigned int par0;
+            unsigned int par1;
+        };
         struct
         {
             unsigned int bus;
@@ -26,8 +30,9 @@ struct flw_dev_t
         };
         struct
         {
-            /* data */
-        } mmc;
+            unsigned int slot;
+            unsigned int dummy_mmc;
+        };
         struct
         {
             /* data */
@@ -44,7 +49,7 @@ struct flw_dev_t
 
 void flash_dev_list_clear(void);
 
-void flash_dev_list_add(const char* name, unsigned int type, flw_erase erase, flw_write write, flw_read read);
+void flash_dev_list_add(const char* name, unsigned int type, unsigned int par0, unsigned int par1, flw_erase erase, flw_write write, flw_read read);
 
 void flash_dev_list_print(void);
 

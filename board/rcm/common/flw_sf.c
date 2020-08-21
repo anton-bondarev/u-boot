@@ -64,7 +64,7 @@ void flw_spi_flash_list_add(void)
             if (!flw_spi_flash_found(bus, cs)) {
                 name[2] = bus + '0';
                 name[3] = cs +'0';
-                flash_dev_list_add(name, FLWDT_SF, flw_spi_flash_erase, flw_spi_flash_write, flw_spi_flash_read);
+                flash_dev_list_add(name, FLWDT_SF, bus, cs, flw_spi_flash_erase, flw_spi_flash_write, flw_spi_flash_read);
             }
         }
     }

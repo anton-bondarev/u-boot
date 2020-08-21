@@ -9,9 +9,15 @@
     #error "CONFIG_SPL_SYS_MALLOC_SIMPLE must been on!" 
 #endif
 
+#ifndef CONFIG_SPL_MMC_WRITE
+    #error "CONFIG_SPL_MMC_WRITE must been on!" 
+#endif
+
 #define FLW_MAX_MMC_SLOT 3
 
-int flw_mmc_found(unsigned int slot, struct mmc** mmc);
+#define FLW_MMC_SECT_SIZE 512
+
+int flw_mmc_found(unsigned int slot, unsigned int info, struct mmc** mmc);
 
 int flw_mmc_erase(struct flw_dev_t* fd, unsigned int addr, unsigned int size);
 

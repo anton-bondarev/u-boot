@@ -2,13 +2,14 @@
 #include <common.h>
 #include <spl.h>
 #include <exports.h>
+#include <time.h>
 
 #include "flw_main.h"
 
 static void fill_buf(char* wr_buf, char* rd_buf, unsigned int len)
 {
     unsigned int i;
-    srand(1);
+    srand(wr_buf[0]|1);
     for (i=0; i<len; i++)
     {
         wr_buf[i] = rand();
@@ -96,7 +97,11 @@ static void cmd_dec(void)
 
         if (!strcmp(buf,"help"))
         {
-            puts("Usage: help exit list select bufptr rand print erase write read\n");
+            puts("Usage: help version exit list select bufptr rand print erase write read\n");
+        }
+        else if (!strcmp(buf,"version"))
+        {
+            puts(FLW_VERSION"\n");
         }
         else if (!strcmp(buf,"exit"))
         {
@@ -120,7 +125,7 @@ static void cmd_dec(void)
         }
         else if (!strcmp(buf, "bufptr"))
         {
-            printf("EDCL buffer %08x\n", (uint32_t)edcl_buf);
+            printf("EDCL buffer 0x%08x,0x%x\n", (uint32_t)edcl_buf, sizeof(edcl_buf));
         }
         else if (!strcmp(buf, "rand"))
         {
@@ -136,9 +141,9 @@ static void cmd_dec(void)
         }
         else
         {
-            int erase = !strncmp(buf,"erase", 5),   // "erase 1000 3000"
-                write = !strncmp(buf,"write", 5),   // "write 1000 3000"
-                read = !strncmp(buf,"read", 4);     // "read 1000 3000"
+            int erase = !strncmp(buf,"erase", 5),   // "erase <addr> <size>"
+                write = !strncmp(buf,"write", 5),   // "write <addr> <size>"
+                read = !strncmp(buf,"read", 4);     // "read <addr> <size>"
 
             if (erase || write || read)
             {
@@ -176,7 +181,7 @@ static void cmd_dec(void)
 
 static int flash_writer_pseudo_loader(struct spl_image_info *spl_image, struct spl_boot_device *bootdev)
 {
-    printf("Flashwriter running(help for information):\n");
+    printf("Flashwriter(%s) running(help for information):\n", FLW_VERSION);
     cmd_dec(); 
     return -1;
 }
