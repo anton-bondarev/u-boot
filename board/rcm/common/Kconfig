@@ -1,4 +1,6 @@
 
 config FLASHWRITER
 	bool "Flash devices writing"
+	select SPL_MMC_WRITE
+	select SPL_SYS_MALLOC_SIMPLE
 	default n
