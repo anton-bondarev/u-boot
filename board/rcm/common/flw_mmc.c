@@ -36,7 +36,7 @@ static int conv_addr_size(unsigned int* addr, unsigned int* size)
 {
     if( *addr % FLW_MMC_SECT_SIZE || *size % FLW_MMC_SECT_SIZE )
     {
-        puts("Erase address/length not multiple of block size\n");
+        puts("Erase/write address/length not multiple of block size\n");
         return -1;
     }
     *addr >>= 9; // /= 512

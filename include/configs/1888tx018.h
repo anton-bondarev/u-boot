@@ -214,13 +214,21 @@
 
 #ifdef CONFIG_MTD_RCM_NOR
     /* #define CONFIG_CFI_FLASH */
+#ifndef CONFIG_FLASH_CFI_DRIVER
     #define CONFIG_FLASH_CFI_DRIVER
+#endif
+#ifndef CONFIG_FLASH_CFI_MTD
     #define CONFIG_FLASH_CFI_MTD
+#endif
+#ifndef CONFIG_SYS_FLASH_CFI
     #define CONFIG_SYS_FLASH_CFI
+#endif
     #define CONFIG_SYS_FLASH_CFI_WIDTH      FLASH_CFI_16BIT
     #define CONFIG_SYS_FLASH_EMPTY_INFO     /* flinfo show E and/or RO */
     #define CONFIG_FLASH_SHOW_PROGRESS      100
+#ifndef CONFIG_SYS_FLASH_USE_BUFFER_WRITE
     #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
+#endif
     #define CONFIG_SYS_WRITE_SWAPPED_DATA
     #ifndef CONFIG_PPC_DCR
         #define CONFIG_PPC_DCR

@@ -112,6 +112,7 @@ static void cmd_dec(void)
             flash_dev_list_clear();
             flw_spi_flash_list_add();
             flw_mmc_list_add();
+            flw_nor_list_add();
             // other devices adding
             flash_dev_list_print();
         }
@@ -135,7 +136,7 @@ static void cmd_dec(void)
         else if (!strncmp(buf, "print", 5))
         {
             if(get_addr_size(buf, &addr, &size) || addr+size > sizeof(edcl_buf))
-                puts("Bad parameters");
+                puts("Bad parameters\n");
             else
                 print_buf(edcl_buf+addr, size);
         }
@@ -150,7 +151,7 @@ static void cmd_dec(void)
                 if (!seldev)
                     puts("Device no select!\n");
                 else if(get_addr_size(buf, &addr, &size))
-                    puts("Bad parameters");
+                    puts("Bad parameters\n");
                 else
                 {
                     if((write || read) && size > sizeof(edcl_buf)) {
@@ -172,7 +173,10 @@ static void cmd_dec(void)
                         printf("Read: address %x,size %x...", addr, size);
                         ret = seldev->read(seldev, addr, size, edcl_buf);
                     }
-                    puts( ret ? "error\n" : "completed\n");
+                    if (ret)
+                        printf("error %d\n", ret);
+                    else
+                        puts("completed\n");
                 }
             }
         }

@@ -39,8 +39,9 @@ struct flw_dev_t
         } nand;
         struct
         {
-            /* data */
-        } nor;
+            unsigned int bank;
+            unsigned int dummy_nor;
+        };
     };
     flw_erase erase;
     flw_write write;

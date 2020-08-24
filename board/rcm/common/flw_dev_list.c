@@ -34,7 +34,7 @@ void flash_dev_list_print(void)
     for (i=0; i<fdl.num; i++) {
         puts(fdl.dev[i].name);
 #ifdef DL_VERB_PRINT
-        printf(",%u,%u,%u,%x,%x,%x",
+        printf(",%u,%x,%x,%x,%x,%x",
                 fdl.dev[i].type, fdl.dev[i].par0, fdl.dev[i].par1,
                 (uint32_t)fdl.dev[i].erase, (uint32_t)fdl.dev[i].write, (uint32_t)fdl.dev[i].read);
 #endif
