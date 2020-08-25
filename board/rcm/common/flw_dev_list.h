@@ -9,9 +9,9 @@ enum FLW_DEV_TYPE {FLWDT_UNKNOWN=0, FLWDT_SF, FLWDT_MMC, FLWDT_NAND, FLWDT_NOR};
 
 struct flw_dev_t;
 
-typedef int (*flw_erase)(struct flw_dev_t* fd, unsigned int addr, unsigned int size);
-typedef int (*flw_write)(struct flw_dev_t* fd, unsigned int addr, unsigned int size, const char* data);
-typedef int (*flw_read)(struct flw_dev_t* fd, unsigned int addr, unsigned int size, char* data);
+typedef int (*flw_erase)(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
+typedef int (*flw_write)(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data);
+typedef int (*flw_read)(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data);
 
 struct flw_dev_t
 {

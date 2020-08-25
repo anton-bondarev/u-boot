@@ -16,7 +16,7 @@ int flw_spi_flash_found(unsigned int bus, unsigned int cs)
     return -1;
 }
 
-int flw_spi_flash_erase(struct flw_dev_t* fd, unsigned int addr, unsigned int size)
+int flw_spi_flash_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
 {
     int ret = -1;
     struct spi_flash* flash = spi_flash_probe(fd->bus, fd->cs, CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
@@ -28,7 +28,7 @@ int flw_spi_flash_erase(struct flw_dev_t* fd, unsigned int addr, unsigned int si
     return ret;
 }
 
-int flw_spi_flash_write(struct flw_dev_t* fd, unsigned int addr, unsigned int size, const char* data)
+int flw_spi_flash_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data)
 {
     int ret = -1;
     struct spi_flash* flash = spi_flash_probe(fd->bus, fd->cs, CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
@@ -40,7 +40,7 @@ int flw_spi_flash_write(struct flw_dev_t* fd, unsigned int addr, unsigned int si
     return ret;
 }
 
-int flw_spi_flash_read(struct flw_dev_t* fd, unsigned int addr, unsigned int size, char* data)
+int flw_spi_flash_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data)
 {
     int ret = -1;
     struct spi_flash* flash = spi_flash_probe(fd->bus, fd->cs, CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);

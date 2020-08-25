@@ -6,27 +6,31 @@
 
 #include "flw_main.h"
 
-static void fill_buf(char* wr_buf, char* rd_buf, unsigned int len)
+static void fill_buf(char* wr_buf, unsigned int len)
 {
     unsigned int i;
     srand(wr_buf[0]|1);
     for (i=0; i<len; i++)
-    {
         wr_buf[i] = rand();
-        if (rd_buf)
-            rd_buf[i] = ~wr_buf[i];
-    }
 }
 
-static int cmp_buf(char* wr_buf, char* rd_buf, unsigned int len)
+static int cmp_buf(char* buf0, char* buf1, unsigned int len)
 {
     unsigned int i;
     for (i=0; i<len; i++)
     {
-        if (wr_buf[i] != rd_buf[i])
+         if (buf0[i] != (char)(~buf1[i]) ) {
             return -1;
+        }
     }
     return 0;
+}
+
+static void buf_bitrev(char* buf, unsigned int len)
+{
+    unsigned int i;
+    for (i=0; i<len; i++)
+        buf[i] = ~buf[i];
 }
 
 static void print_buf(char* buf, unsigned int len)
@@ -52,7 +56,7 @@ static char* find_space(char* p)
     return NULL;
 }
 
-static int get_addr_size(char* p, unsigned int* addr, unsigned int* size)
+static int get_addr_size(char* p, unsigned long* addr, unsigned long* size)
 {
     if ((p = find_space(p)) == NULL)
         return -1;
@@ -84,10 +88,11 @@ static void get_cmd(char* buf, unsigned int len)
 
 static void cmd_dec(void)
 {
-    static char edcl_buf[4096];
+    static char edcl_buf0[EDCL_BUF_LEN], edcl_buf1[EDCL_BUF_LEN];
+    char* edcl_buf = edcl_buf0;
     char buf[256];
     struct flw_dev_t* seldev = NULL;
-    unsigned int addr, size;
+    unsigned long addr, size;
     int ret;
 
     while (1)
@@ -124,18 +129,41 @@ static void cmd_dec(void)
             else
                 printf("Device %s selected\n", seldev->name);
         }
+        else if (!strcmp(buf, "bufsel0"))
+        {
+            edcl_buf = edcl_buf0;
+            puts("selected\n");
+        }
+        else if (!strcmp(buf, "bufsel1"))
+        {
+            edcl_buf = edcl_buf1;
+            puts("selected\n");
+        }
+        else if (!strcmp(buf, "bufrev"))
+        {
+            buf_bitrev(edcl_buf, EDCL_BUF_LEN);
+            puts("completed\n");
+        }
+        else if (!strcmp(buf, "bufcmp"))
+        {
+            if (!cmp_buf(edcl_buf0, edcl_buf1, EDCL_BUF_LEN))
+                printf("buffers are identical\n");
+            else
+                printf("buffers are different\n");
+        }
         else if (!strcmp(buf, "bufptr"))
         {
-            printf("EDCL buffer 0x%08x,0x%x\n", (uint32_t)edcl_buf, sizeof(edcl_buf));
+            printf("EDCL buffer 0x%08x,0x%x\n", (uint32_t)edcl_buf, EDCL_BUF_LEN);
         }
         else if (!strcmp(buf, "rand"))
         {
-            fill_buf(edcl_buf, NULL, sizeof(edcl_buf));
-            print_buf(edcl_buf, sizeof(edcl_buf));
+            fill_buf(edcl_buf, EDCL_BUF_LEN);
+            //print_buf(edcl_buf, EDCL_BUF_LEN);
+            puts("completed\n");
         }
         else if (!strncmp(buf, "print", 5))
         {
-            if(get_addr_size(buf, &addr, &size) || addr+size > sizeof(edcl_buf))
+            if(get_addr_size(buf, &addr, &size) || addr+size > EDCL_BUF_LEN)
                 puts("Bad parameters\n");
             else
                 print_buf(edcl_buf+addr, size);
@@ -154,23 +182,23 @@ static void cmd_dec(void)
                     puts("Bad parameters\n");
                 else
                 {
-                    if((write || read) && size > sizeof(edcl_buf)) {
-                        size =sizeof(edcl_buf);
+                    if((write || read) && size > EDCL_BUF_LEN) {
+                        size = EDCL_BUF_LEN;
                         puts("truncate buffer size\n");
                     }
                     if (erase)
                     {
-                        printf("Erase: address %x,size %x...", addr, size);
+                        printf("Erase: address %lx,size %lx...", addr, size);
                         ret = seldev->erase(seldev, addr, size);
                     }
                     else if (write)
                     {
-                        printf("Write: address %x,size %x...", addr, size);
+                        printf("Write: address %lx,size %lx...", addr, size);
                         ret = seldev->write(seldev, addr, size, edcl_buf);
                     }
                     else// if (read)
                     {
-                        printf("Read: address %x,size %x...", addr, size);
+                        printf("Read: address %lx,size %lx...", addr, size);
                         ret = seldev->read(seldev, addr, size, edcl_buf);
                     }
                     if (ret)

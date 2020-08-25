@@ -32,7 +32,7 @@ int flw_mmc_found(unsigned int slot, unsigned int info, struct mmc** mmc)
     return -1;
 }
 
-static int conv_addr_size(unsigned int* addr, unsigned int* size)
+static int conv_addr_size(unsigned long* addr, unsigned long* size)
 {
     if( *addr % FLW_MMC_SECT_SIZE || *size % FLW_MMC_SECT_SIZE )
     {
@@ -54,7 +54,7 @@ static int check_protect(struct mmc* mmc)
     return 0;
 }
 
-int flw_mmc_erase(struct flw_dev_t* fd, unsigned int addr, unsigned int size)
+int flw_mmc_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
 {
     struct mmc* mmc;
     unsigned int erase_num;
@@ -76,7 +76,7 @@ int flw_mmc_erase(struct flw_dev_t* fd, unsigned int addr, unsigned int size)
     return -1;
 }
 
-int flw_mmc_write(struct flw_dev_t* fd, unsigned int addr, unsigned int size, const char* data)
+int flw_mmc_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data)
 {
     struct mmc* mmc;
     unsigned int write_num;
@@ -98,7 +98,7 @@ int flw_mmc_write(struct flw_dev_t* fd, unsigned int addr, unsigned int size, co
     return -1;
 }
 
-int flw_mmc_read(struct flw_dev_t* fd, unsigned int addr, unsigned int size, char* data)
+int flw_mmc_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data)
 {
     struct mmc* mmc;
     unsigned int read_num;

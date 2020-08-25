@@ -10,4 +10,7 @@
 
 #define FLW_VERSION "1.0.0"
 
+#define EDCL_BUF_LEN 4096
+
+
 #endif // FLW_MAIN_H

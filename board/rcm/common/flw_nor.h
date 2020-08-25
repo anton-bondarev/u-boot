@@ -10,11 +10,11 @@
 
 int flw_nor_found(unsigned int bank, unsigned int show_info, flash_info_t* info);
 
-int flw_nor_erase(struct flw_dev_t* fd, unsigned int addr, unsigned int size);
+int flw_nor_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
 
-int flw_nor_write(struct flw_dev_t* fd, unsigned int addr, unsigned int size, const char* data);
+int flw_nor_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data);
 
-int flw_nor_read(struct flw_dev_t* fd, unsigned int addr, unsigned int size, char* data);
+int flw_nor_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data);
 
 void flw_nor_list_add(void);
 
