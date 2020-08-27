@@ -7,6 +7,7 @@
 #include "flw_sf.h"
 #include "flw_mmc.h"
 #include "flw_nor.h"
+#include "flw_nand.h"
 
 #define FLW_VERSION "1.0.0"
 

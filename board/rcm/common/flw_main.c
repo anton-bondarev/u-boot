@@ -6,10 +6,15 @@
 
 #include "flw_main.h"
 
+static uint32_t get_sys_timer(void)
+{ // for 1888tx018 only
+    #define TMR_ADDR 0x000a2004
+    return *(uint32_t*)TMR_ADDR;
+}
+
 static void fill_buf(char* wr_buf, unsigned int len)
 {
     unsigned int i;
-    srand(wr_buf[0]|1);
     for (i=0; i<len; i++)
         wr_buf[i] = rand();
 }
@@ -20,6 +25,7 @@ static int cmp_buf(char* buf0, char* buf1, unsigned int len)
     for (i=0; i<len; i++)
     {
          if (buf0[i] != (char)(~buf1[i]) ) {
+            //printf("buffers  different %u:%02x-%02x\n", i, buf0[i], buf1[i]);
             return -1;
         }
     }
@@ -86,9 +92,10 @@ static void get_cmd(char* buf, unsigned int len)
     }
 }
 
+char edcl_buf0[EDCL_BUF_LEN], edcl_buf1[EDCL_BUF_LEN];
+
 static void cmd_dec(void)
 {
-    static char edcl_buf0[EDCL_BUF_LEN], edcl_buf1[EDCL_BUF_LEN];
     char* edcl_buf = edcl_buf0;
     char buf[256];
     struct flw_dev_t* seldev = NULL;
@@ -118,7 +125,7 @@ static void cmd_dec(void)
             flw_spi_flash_list_add();
             flw_mmc_list_add();
             flw_nor_list_add();
-            // other devices adding
+            flw_nand_list_add();
             flash_dev_list_print();
         }
         else if (!strncmp(buf, "select", 6)) // "select sf00"
@@ -214,6 +221,7 @@ static void cmd_dec(void)
 static int flash_writer_pseudo_loader(struct spl_image_info *spl_image, struct spl_boot_device *bootdev)
 {
     printf("Flashwriter(%s) running(help for information):\n", FLW_VERSION);
+    srand(get_sys_timer());
     cmd_dec(); 
     return -1;
 }
