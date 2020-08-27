@@ -52,6 +52,24 @@ static void print_buf(char* buf, unsigned int len)
     putc('\n');
 }
 
+static void load_buf(char* buf, unsigned int len)
+{
+    unsigned int i;
+    for (i=0; i<len; i++) {
+        buf[i] = getc();
+        putc(buf[i]);
+    }
+}
+
+static void send_buf(const char* buf, unsigned int len)
+{
+    unsigned int i;
+    for (i=0; i<len; i++) {
+        getc();
+        putc(buf[i]);
+    }
+}
+
 static char* find_space(char* p)
 {
     do
@@ -97,95 +115,115 @@ char edcl_buf0[EDCL_BUF_LEN], edcl_buf1[EDCL_BUF_LEN];
 static void cmd_dec(void)
 {
     char* edcl_buf = edcl_buf0;
-    char buf[256];
+    char cmd_buf[256];
     struct flw_dev_t* seldev = NULL;
     unsigned long addr, size;
     int ret;
 
     while (1)
     {
-        get_cmd(buf, sizeof(buf));
+        get_cmd(cmd_buf, sizeof(cmd_buf));
         putc('\n');
 
-        if (!strcmp(buf,"help"))
+        if (!strcmp(cmd_buf,"help"))
         {
             puts("Usage: help version exit list select bufptr rand print erase write read\n");
         }
-        else if (!strcmp(buf,"version"))
+        else if (!strcmp(cmd_buf,"version"))
         {
             puts(FLW_VERSION"\n");
         }
-        else if (!strcmp(buf,"exit"))
+        else if (!strcmp(cmd_buf,"exit"))
         {
             return;
         }
-        else if (!strcmp(buf,"list"))
+        else if (!strcmp(cmd_buf,"list"))
         {
             flash_dev_list_clear();
+#ifdef CONFIG_SPL_SPI_FLASH_SUPPORT
             flw_spi_flash_list_add();
+#endif
+#ifdef CONFIG_SPL_MMC_SUPPORT
             flw_mmc_list_add();
+#endif
+#ifdef CONFIG_SPL_NOR_SUPPORT
             flw_nor_list_add();
+#endif
+#ifdef CONFIG_SPL_NAND_SUPPORT
             flw_nand_list_add();
+#endif
             flash_dev_list_print();
         }
-        else if (!strncmp(buf, "select", 6)) // "select sf00"
+        else if (!strncmp(cmd_buf, "select", 6)) // "select sf00"
         {
-            seldev = flash_dev_list_find(buf+7);
+            seldev = flash_dev_list_find(cmd_buf+7);
             if (!seldev)
                 puts("Bad selection!\n");
             else
                 printf("Device %s selected\n", seldev->name);
         }
-        else if (!strcmp(buf, "bufsel0"))
+        else if (!strcmp(cmd_buf, "bufsel0"))
         {
             edcl_buf = edcl_buf0;
             puts("selected\n");
         }
-        else if (!strcmp(buf, "bufsel1"))
+        else if (!strcmp(cmd_buf, "bufsel1"))
         {
             edcl_buf = edcl_buf1;
             puts("selected\n");
         }
-        else if (!strcmp(buf, "bufrev"))
+        else if (!strcmp(cmd_buf, "bufrev"))
         {
             buf_bitrev(edcl_buf, EDCL_BUF_LEN);
             puts("completed\n");
         }
-        else if (!strcmp(buf, "bufcmp"))
+        else if (!strcmp(cmd_buf, "bufcmp"))
         {
             if (!cmp_buf(edcl_buf0, edcl_buf1, EDCL_BUF_LEN))
                 printf("buffers are identical\n");
             else
                 printf("buffers are different\n");
         }
-        else if (!strcmp(buf, "bufptr"))
+        else if (!strcmp(cmd_buf, "bufptr"))
         {
-            printf("EDCL buffer 0x%08x,0x%x\n", (uint32_t)edcl_buf, EDCL_BUF_LEN);
+            printf("EDCL buffer 0x%08x,0x%08x,0x%x\n", (uint32_t)edcl_buf[0], (uint32_t)edcl_buf[1], EDCL_BUF_LEN);
         }
-        else if (!strcmp(buf, "rand"))
+        else if (!strcmp(cmd_buf, "rand"))
         {
             fill_buf(edcl_buf, EDCL_BUF_LEN);
             //print_buf(edcl_buf, EDCL_BUF_LEN);
             puts("completed\n");
         }
-        else if (!strncmp(buf, "print", 5))
+        else if (!strncmp(cmd_buf, "print", 5))
         {
-            if(get_addr_size(buf, &addr, &size) || addr+size > EDCL_BUF_LEN)
+            if(get_addr_size(cmd_buf, &addr, &size) || addr+size > EDCL_BUF_LEN)
                 puts("Bad parameters\n");
             else
                 print_buf(edcl_buf+addr, size);
         }
+        else if (!strcmp(cmd_buf, "setbuf"))
+        {
+            puts("ready\n");
+            load_buf(edcl_buf, EDCL_BUF_LEN);
+            puts("completed\n");
+        }
+        else if (!strcmp(cmd_buf, "getbuf"))
+        {
+            puts("ready\n");
+            send_buf(edcl_buf, EDCL_BUF_LEN);
+            puts("completed\n");
+        }
         else
         {
-            int erase = !strncmp(buf,"erase", 5),   // "erase <addr> <size>"
-                write = !strncmp(buf,"write", 5),   // "write <addr> <size>"
-                read = !strncmp(buf,"read", 4);     // "read <addr> <size>"
+            int erase = !strncmp(cmd_buf,"erase", 5),   // "erase <addr> <size>"
+                write = !strncmp(cmd_buf,"write", 5),   // "write <addr> <size>"
+                read = !strncmp(cmd_buf,"read", 4);     // "read <addr> <size>"
 
             if (erase || write || read)
             {
                 if (!seldev)
                     puts("Device no select!\n");
-                else if(get_addr_size(buf, &addr, &size))
+                else if(get_addr_size(cmd_buf, &addr, &size))
                     puts("Bad parameters\n");
                 else
                 {

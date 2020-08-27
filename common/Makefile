@@ -143,5 +143,5 @@ obj-$(CONFIG_$(SPL_TPL_)YMODEM_SUPPORT) += xyzModem.o
 obj-$(CONFIG_AVB_VERIFY) += avb_verify.o
 
 ifdef CONFIG_FLASHWRITER
-obj-y += flash.o
+obj-$(CONFIG_MTD_NOR_FLASH) += flash.o
 endif

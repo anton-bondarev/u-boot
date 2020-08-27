@@ -1765,7 +1765,7 @@ static int nand_spl_erase_block( uint32_t offs, const struct rcm_spl_nand_chip* 
         return nand_spl_wait_irq( IRQ_ERASE );
 }
 
-#endif
+#endif // CONFIG_FLASHWRITER
 
 static int nand_spl_read_page_with_check( uint32_t offs, uint32_t size, void* dst, const struct rcm_spl_nand_chip* chip ) {
         int i;
@@ -1903,6 +1903,6 @@ int rcm_nand_flw_read_page(unsigned long addr, char* data) {
         return ret;
 }
 
-#endif // FLASHWRITER
+#endif // CONFIG_FLASHWRITER
 
 #endif // CONFIG_SPL_BUILD
