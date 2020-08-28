@@ -1,4 +1,3 @@
-
 config FLASHWRITER
 	bool "Flash devices programmer"
 	help
@@ -9,4 +8,5 @@ config FLASHWRITER
 			CONFIG_SPL_NAND_SUPPORT for NAND flash programming
 	select SPL_MMC_WRITE
 	select SPL_SYS_MALLOC_SIMPLE
+	select SPL_XMODEM_SUPPORT
 	default n

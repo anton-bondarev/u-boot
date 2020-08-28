@@ -52,12 +52,33 @@ static void print_buf(char* buf, unsigned int len)
     putc('\n');
 }
 
+static void delay(unsigned int value)
+{
+    unsigned int i;
+    for (i=0; i < value; i++) asm("nop\n");
+}
+
 static void load_buf(char* buf, unsigned int len)
 {
     unsigned int i;
     for (i=0; i<len; i++) {
         buf[i] = getc();
         putc(buf[i]);
+    }
+}
+
+static void load_buf_xmodem(char* buf, unsigned int len)
+{
+    int err, res;
+    connection_info_t info;
+    delay(0x800000);
+    res = xyzModem_stream_open(&info, &err);
+    if (!res) {
+        while ((res = xyzModem_stream_read( buf, 1024, &err )) > 0) {
+            buf += res;
+            len -= res;
+        }
+        xyzModem_stream_close(&err);
     }
 }
 
@@ -127,7 +148,7 @@ static void cmd_dec(void)
 
         if (!strcmp(cmd_buf,"help"))
         {
-            puts("Usage: help version exit list select bufptr rand print erase write read\n");
+            puts("Usage: help version exit list select bufptr rand print setbuf setbufx getbuf erase write read\n");
         }
         else if (!strcmp(cmd_buf,"version"))
         {
@@ -200,6 +221,12 @@ static void cmd_dec(void)
                 puts("Bad parameters\n");
             else
                 print_buf(edcl_buf+addr, size);
+        }
+        else if (!strcmp(cmd_buf, "setbufx"))
+        {
+            puts("ready\n");
+            load_buf_xmodem(edcl_buf, EDCL_BUF_LEN);
+            puts("completed\n");
         }
         else if (!strcmp(cmd_buf, "setbuf"))
         {

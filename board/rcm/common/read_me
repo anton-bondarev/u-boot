@@ -1,28 +1,110 @@
+Backend программатора сделан на основе u-boot spl и для платы TX-018 позволяет читать-писать
+SPI flash, MMC, NAND и NOR, автоматически определяя, какие из этих устройств подключены и доступны.
+Можно сборку SPL произвести с поддержкой всех этих устройств сразу, либо только выбранных,
+установив CONFIG_FLASHWRITER и, соответственно, один или несколько конфигов:
+CONFIG_SPL_SPI_FLASH_SUPPORT
+CONFIG_SPL_MMC_SUPPORT
+CONFIG_SPL_NOR_SUPPORT
+CONFIG_SPL_NAND_SUPPORT
+
+Имеется система команд для управления процессом программирования и получения служебной информации,
+а так-же два внутренних EDCL буфера. Пока один заполняется данными по EDCL, данные из второго
+записываются в устройство. Для любого устройства команды записи, чтения, стирания получают в
+качестве параметров адрес внутри устройства и количество данных. Сами данные будут взяты
+из текущего EDCL буфера (или туда положены,если чтение).
+
+Поскольку в дальнейшем предполагается использование программатора для других плат,исходники
+его находятся версии папке board/rcm/common.
+
+Flashwriter загружается и ждет команд:
+
+...
+failed to get resource for mcif_nor0
+Setup default NOR timings
+registered
+Trying to boot from Fashwriter
+Flashwriter(1.0.0) running(help for information):
+
+
 flashwriter-система команд
 
 help - справка
 
 version - номер версии
+    version
+    1.0.0
 
-exit - выход и продолжение загрузки(сейчас EDCL/XMODEM)
+exit - выход и продолжение загрузки с устройств (сейчас EDCL/XMODEM)
 
-list - список найденных устройств для прошивки, сейчас SPI flash и MMC
+list - список найденных устройств для прошивки, сейчас SPI flash и MMC,ответ:
+    list
+    Found SPI flash at bus 0, cs 0
+    Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
+    unrecognized JEDEC id bytes: ff, ff, ff
+    Failed to initialize SPI flash at bus 0, cs 1
+    unrecognized JEDEC id bytes: ff, ff, ff
+    Failed to initialize SPI flash at bus 0, cs 2
+    Found MMC at slot 0
+    Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
+    Not found MMC at slot 1
+    Not found MMC at slot 2
     Flash devices list:
     sf00
     mmc0
+    nand0
 
 select <устройство> - выбор устройства для работы
+    select nand0
+    Device nand0 selected
 
-bufptr - вывод адреса и размера буфера edcl,работающего с данными
-    EDCL buffer 0x00053bd8,0x1000
+bufptr - вывод адресов и размера буферов edcl,работающего с данными,ответ:
+    bufptr
+    EDCL buffer 0x0000002c,0x000000f1,0x1000
 
-rand - заполнение буфера случайными данными(для тестирования)
+bufsel0,bufsel1 - установка текущего буфера
+    bufsel1
+    selected
+    bufsel0
+    selected
 
-print <смещение> <длина> - вывод на экран данных буфера
+rand - заполнение текущего буфера случайными данными(только для тестирования)
+    rand
+    completed
+
+bufrev - побитная инверсия данных текущего буфера(только для тестирования)
+    bufrev
+    completed
+
+print <смещение> <длина> - вывод на экран данных текущего буфера
+    print 0 20
+    ff 90 fc 0c 7d 34 8b 8e a7 8d 93 5c 78 1a 42 cf
+    c0 76 91 57 f6 38 c3 2d 63 17 53 35 23 13 bd 02
+
+bufcmp - сравнение EDCL буферов с предварительной побитовой инверсией одного из них
+    bufcmp
+    buffers are different
 
 erase <адрес> <размер> - стереть область памяти выбранного устройства
+    erase 0 20000
+    Erase: address 0,size 20000...completed
 
 write <адрес> <размер> - записать область памяти выбранного устройства,данные берутся из EDCL буфера
+    write 0 1000
+    Write: address 0,size 1000...completed
 
 read <адрес> <размер> - прочитать область памяти выбранного устройства,данные кладутся в EDCL буфер
+    read 0 1000
+    Read: address 0,size 1000...completed
+
+ setbuf - запись данных в текущий буфер (ожидается поступление числа данных, равного размеру буфера)
+ сейчас проверок никаких нет (crc и.т.п)
+ 
+ getbuf - чтение данных из текущего буфера (стробируется хостом-ответ байтом буфера на принятый символ)
+ так-же без проверок
+
+ setbufx - выдача полного буфера на хост через xmodem, запуск отсрочен на некоторое время, чтобы
+хост успел поймать приглашение (0x0c)
+
+ 
+
 
