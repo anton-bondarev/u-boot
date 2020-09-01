@@ -12,6 +12,12 @@ static uint32_t get_sys_timer(void)
     return *(uint32_t*)TMR_ADDR;
 }
 
+static void delay(unsigned int value)
+{
+    unsigned int i;
+    for (i=0; i < value; i++) asm("nop\n");
+}
+
 static void fill_buf(char* wr_buf, unsigned int len)
 {
     unsigned int i;
@@ -47,23 +53,19 @@ static void print_buf(char* buf, unsigned int len)
     {
         if(i)
             printf( (i % STRLEN) ? " " : "\n");
+        if (!(i % STRLEN))
+            printf("%04x: ", i);
         printf("%02x", buf[i]);
     }
     putc('\n');
-}
-
-static void delay(unsigned int value)
-{
-    unsigned int i;
-    for (i=0; i < value; i++) asm("nop\n");
 }
 
 static void load_buf(char* buf, unsigned int len)
 {
     unsigned int i;
     for (i=0; i<len; i++) {
-        buf[i] = getc();
-        putc(buf[i]);
+        buf[i] = flw_getc();
+        flw_putc(buf[i]);
     }
 }
 
@@ -85,9 +87,9 @@ static void load_buf_xmodem(char* buf, unsigned int len)
 static void send_buf(const char* buf, unsigned int len)
 {
     unsigned int i;
+    flw_getc();
     for (i=0; i<len; i++) {
-        getc();
-        putc(buf[i]);
+        flw_putc(buf[i]);
     }
 }
 
@@ -131,7 +133,18 @@ static void get_cmd(char* buf, unsigned int len)
     }
 }
 
+static uint32_t virt_to_dma(void* ptr)
+{
+    return (uint32_t)ptr;
+}
+
+char* edcl_buf_sync = NULL;
 char edcl_buf0[EDCL_BUF_LEN], edcl_buf1[EDCL_BUF_LEN];
+
+static int prog_dev(struct flw_dev_t* seldev, char load, unsigned long addr, unsigned long size)
+{
+    return 0;
+}
 
 static void cmd_dec(void)
 {
@@ -148,7 +161,7 @@ static void cmd_dec(void)
 
         if (!strcmp(cmd_buf,"help"))
         {
-            puts("Usage: help version exit list select bufptr rand print setbuf setbufx getbuf erase write read\n");
+            puts("Usage: help version exit list select bufptr rand print setbuf setbufx getbuf erase write read program\n");
         }
         else if (!strcmp(cmd_buf,"version"))
         {
@@ -207,7 +220,7 @@ static void cmd_dec(void)
         }
         else if (!strcmp(cmd_buf, "bufptr"))
         {
-            printf("EDCL buffer 0x%08x,0x%08x,0x%x\n", (uint32_t)edcl_buf[0], (uint32_t)edcl_buf[1], EDCL_BUF_LEN);
+            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x\n", virt_to_dma(edcl_buf0), virt_to_dma(edcl_buf1), virt_to_dma(&edcl_buf_sync), EDCL_BUF_LEN);
         }
         else if (!strcmp(cmd_buf, "rand"))
         {
@@ -244,13 +257,15 @@ static void cmd_dec(void)
         {
             int erase = !strncmp(cmd_buf,"erase", 5),   // "erase <addr> <size>"
                 write = !strncmp(cmd_buf,"write", 5),   // "write <addr> <size>"
-                read = !strncmp(cmd_buf,"read", 4);     // "read <addr> <size>"
+                read = !strncmp(cmd_buf,"read", 4),     // "read <addr> <size>"
+                program = !strncmp(cmd_buf, "program", 7);  // "program <E,X> <addr> <size>"
 
-            if (erase || write || read)
+            if (erase || write || read || program)
             {
                 if (!seldev)
                     puts("Device no select!\n");
-                else if(get_addr_size(cmd_buf, &addr, &size))
+                else if (get_addr_size( program ? cmd_buf+8 : cmd_buf, &addr, &size) ||
+                        (program && ( cmd_buf[8] != 'E' && cmd_buf[8] != 'X' )))
                     puts("Bad parameters\n");
                 else
                 {
@@ -268,10 +283,14 @@ static void cmd_dec(void)
                         printf("Write: address %lx,size %lx...", addr, size);
                         ret = seldev->write(seldev, addr, size, edcl_buf);
                     }
-                    else// if (read)
+                    else if (read)
                     {
                         printf("Read: address %lx,size %lx...", addr, size);
                         ret = seldev->read(seldev, addr, size, edcl_buf);
+                    }
+                    else // if (program)
+                    {
+                        ret = prog_dev(seldev, cmd_buf[8], addr, size);
                     }
                     if (ret)
                         printf("error %d\n", ret);
