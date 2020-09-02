@@ -5,6 +5,7 @@
 #include <xyzModem.h>
 
 #include "flw_serial.h"
+#include "flw_xmodem.h"
 #include "flw_dev_list.h"
 #include "flw_sf.h"
 #include "flw_mmc.h"

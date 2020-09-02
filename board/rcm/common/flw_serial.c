@@ -3,22 +3,36 @@
 #include <common.h>
 #include <dm.h>
 
-void flw_putc(char ch)
+#include "flw_serial.h"
+
+int flw_putc(char ch)
 {
     int err;
     struct dm_serial_ops *ops = serial_get_ops(gd->cur_serial_dev);
-    do {
+
+    while (1) {
         err = ops->putc(gd->cur_serial_dev, ch);
-    } while (err == -EAGAIN);
+        if (err == -EAGAIN)
+            continue;
+
+        return err;
+    }
 }
 
-char flw_getc(void)
+int flw_getc(unsigned long tout)
 {
     int err;
     struct dm_serial_ops *ops = serial_get_ops(gd->cur_serial_dev);
 
-    do {
+    while (1) {
+        if (tout-- == 0)
+            return -EIO;
+
         err = ops->getc(gd->cur_serial_dev);
-	} while (err == -EAGAIN);
-	return err >= 0 ? err : 0;
+
+        if (err == -EAGAIN)
+            continue;
+
+        return err;
+    }
 }

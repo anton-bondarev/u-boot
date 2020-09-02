@@ -6,16 +6,12 @@
 
 #include "flw_main.h"
 
+static int last_xmodem_error; // for saving possible transactions error, if not error - packet szie
+
 static uint32_t get_sys_timer(void)
 { // for 1888tx018 only
     #define TMR_ADDR 0x000a2004
     return *(uint32_t*)TMR_ADDR;
-}
-
-static void delay(unsigned int value)
-{
-    unsigned int i;
-    for (i=0; i < value; i++) asm("nop\n");
 }
 
 static void fill_buf(char* wr_buf, unsigned int len)
@@ -64,33 +60,30 @@ static void load_buf(char* buf, unsigned int len)
 {
     unsigned int i;
     for (i=0; i<len; i++) {
-        buf[i] = flw_getc();
+        buf[i] = flw_getc(FLW_TOUT);
         flw_putc(buf[i]);
-    }
-}
-
-static void load_buf_xmodem(char* buf, unsigned int len)
-{
-    int err, res;
-    connection_info_t info;
-    delay(0x800000);
-    res = xyzModem_stream_open(&info, &err);
-    if (!res) {
-        while ((res = xyzModem_stream_read( buf, 1024, &err )) > 0) {
-            buf += res;
-            len -= res;
-        }
-        xyzModem_stream_close(&err);
     }
 }
 
 static void send_buf(const char* buf, unsigned int len)
 {
     unsigned int i;
-    flw_getc();
+    flw_getc(FLW_TOUT);
     for (i=0; i<len; i++) {
         flw_putc(buf[i]);
     }
+}
+
+static void load_buf_xmodem(char* buf, unsigned int len)
+{
+    flw_delay(0x800000l);
+    last_xmodem_error = xmodem_get(buf, len );
+}
+
+static void send_buf_xmodem(const char* buf, unsigned int len)
+{
+    flw_delay(0x800000l);
+    last_xmodem_error = xmodem_send((char*)buf, len );
 }
 
 static char* find_space(char* p)
@@ -161,7 +154,7 @@ static void cmd_dec(void)
 
         if (!strcmp(cmd_buf,"help"))
         {
-            puts("Usage: help version exit list select bufptr rand print setbuf setbufx getbuf erase write read program\n");
+            puts("Usage: help version exit list select bufptr rand print setbuf setbufx getbuf getbufx erase write read program lasterr\n");
         }
         else if (!strcmp(cmd_buf,"version"))
         {
@@ -247,11 +240,21 @@ static void cmd_dec(void)
             load_buf(edcl_buf, EDCL_BUF_LEN);
             puts("completed\n");
         }
+        else if (!strcmp(cmd_buf, "getbufx"))
+        {
+            puts("ready\n");
+            send_buf_xmodem(edcl_buf, EDCL_BUF_LEN);
+            puts("completed\n");
+        }
         else if (!strcmp(cmd_buf, "getbuf"))
         {
             puts("ready\n");
             send_buf(edcl_buf, EDCL_BUF_LEN);
             puts("completed\n");
+        }
+        else if (!strcmp(cmd_buf, "lasterr"))
+        {
+            printf("Last Xmodem error %d\n", last_xmodem_error);
         }
         else
         {

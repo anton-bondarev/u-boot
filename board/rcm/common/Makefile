@@ -6,6 +6,7 @@ obj-$(CONFIG_SPL_MMC_SUPPORT) += flw_mmc.o
 obj-$(CONFIG_SPL_NOR_SUPPORT) += flw_nor.o
 obj-$(CONFIG_SPL_NAND_SUPPORT) += flw_nand.o
 obj-y += flw_serial.o
+obj-y += flw_xmodem.o
 obj-y += flw_main.o
 endif
 endif
