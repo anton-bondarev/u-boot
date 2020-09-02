@@ -32,9 +32,9 @@
 
 size_t xmodem_get( char *to, size_t maxszs);
 
-size_t xmodem_get_async(size_t maxszs, void (*recv_cb)(size_t curpos, void *ptr, size_t length, void *arg), void *arg);
+size_t xmodem_get_async(size_t maxszs, size_t (*recv_cb)(size_t curpos, void *ptr, size_t length, void *arg), void *arg);
 
-int xmodem_tx_async(void (*transmit_cb)(size_t curpos, void *ptr, size_t length, void *arg), int srcsz, void *arg);
+int xmodem_tx_async(size_t (*transmit_cb)(size_t curpos, void *ptr, size_t length, void *arg), int srcsz, void *arg);
 
 int xmodem_send(void *ptr, size_t length);
 

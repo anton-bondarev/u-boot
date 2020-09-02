@@ -61,14 +61,16 @@ void xmodem_flush_input(void)
 	while(flw_getc(XMODEM_TIMEOUT_DELAY / 2) >= 0);
 }
 
-static void memcpy_cb(size_t curpos, void *data, size_t length, void *arg)
+static size_t memcpy_cb(size_t curpos, void *data, size_t length, void *arg)
 {
 	char *to = arg;
 	memcpy(&to[curpos], data, length);
+	// для калбека прошивальщика тут будем писать во флеш, если буфер заполнен и обнулим текущую позицию в буфере
+	return curpos + length; // вернем новую позицию в 4К буфере, в прошивальщике может быть 0,если буфер полностью заполнен, записан во флэш и требуется повторное его заполнение от начала
 }
 
 
-size_t xmodem_get_async(size_t maxszs, void (*recv_cb)(size_t curpos, void *ptr, size_t length, void *arg), void *arg)
+size_t xmodem_get_async(size_t maxszs, size_t (*recv_cb)(size_t curpos, void *ptr, size_t length, void *arg), void *arg)
 {
 	unsigned char xmbuf[XMODEM_BUFFER_SIZE+6];
 	unsigned char seqnum=1;
@@ -144,8 +146,7 @@ size_t xmodem_get_async(size_t maxszs, void (*recv_cb)(size_t curpos, void *ptr,
 			if(xmbuf[1] == seqnum)
 			{
 				// write/deliver data
-				recv_cb(pos, &xmbuf[3], pktsize, arg);
-				pos += pktsize;
+				pos = recv_cb(pos, &xmbuf[3], pktsize, arg);
 				totalbytes += pktsize;
 				seqnum++;
 				retry = XMODEM_RETRY_LIMIT;
@@ -187,10 +188,12 @@ size_t xmodem_get( char *to, size_t maxszs)
 	return xmodem_get_async(maxszs, memcpy_cb, to);
 }
 
-static void transmit_cb(size_t curpos, void *ptr, size_t length, void *arg)
+static size_t transmit_cb(size_t curpos, void *ptr, size_t length, void *arg)
 {
 	char *src = arg;
+// тут в калбеке прошивальщика прочитаем из флеша в буфер, если ранее считанный передали или еще не читали
 	memcpy(ptr, &src[curpos], length);
+	return curpos + length; // в прошивальщике может быть 0, если считанный из флэш буфер передан и требуется его считать снова
 }
 
 int xmodem_send(void *ptr, size_t length) {
@@ -198,7 +201,7 @@ int xmodem_send(void *ptr, size_t length) {
 	return ret;
 }
 
-int xmodem_tx_async(void (*transmit_cb)(size_t curpos, void *ptr, size_t length, void *arg), int srcsz, void *arg)
+int xmodem_tx_async(size_t (*transmit_cb)(size_t curpos, void *ptr, size_t length, void *arg), int srcsz, void *arg)
 {
 	unsigned char xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
 	int bufsz, crc = -1;
@@ -248,9 +251,8 @@ int xmodem_tx_async(void (*transmit_cb)(size_t curpos, void *ptr, size_t length,
 					xbuff[3] = CTRLZ;
 				}
 				else {
-					transmit_cb(curpos, &xbuff[3], c, arg);
-					curpos += c;
-					if (c < bufsz) xbuff[3+c] = CTRLZ; // todo: fill free area
+					curpos = transmit_cb(curpos, &xbuff[3], c, arg);
+					if (c < bufsz) xbuff[3+c] = CTRLZ; // fill free area?
 				}
 				if (crc) {
 					unsigned short ccrc = 0xFFFF;

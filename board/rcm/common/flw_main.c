@@ -6,7 +6,7 @@
 
 #include "flw_main.h"
 
-static int last_xmodem_error; // for saving possible transactions error, if not error - packet szie
+static int last_err; // for saving possible transactions error, if not error - packet szie
 
 static uint32_t get_sys_timer(void)
 { // for 1888tx018 only
@@ -74,16 +74,62 @@ static void send_buf(const char* buf, unsigned int len)
     }
 }
 
-static void load_buf_xmodem(char* buf, unsigned int len)
+#ifndef SIMPLE_BUFFER_ONLY
+static size_t write_data_cb(size_t curpos, void *data, size_t length, void *arg)
+{
+	struct prog_ctx_t* pc = arg;
+
+	memcpy(pc->src_ptr+curpos, data, length);
+
+    curpos += length;
+
+    if (curpos == EDCL_XMODEM_BUF_LEN) {
+        if (pc->dev) {
+            last_err = pc->dev->write(pc->dev, pc->dst_addr, EDCL_XMODEM_BUF_LEN, pc->src_ptr);
+            pc->dst_addr += EDCL_XMODEM_BUF_LEN;
+        }
+        curpos = 0;
+    }
+    return curpos;
+}
+#endif
+
+static int load_buf_xmodem(struct prog_ctx_t* pc)
 {
     flw_delay(0x800000l);
-    last_xmodem_error = xmodem_get(buf, len );
+#ifdef SIMPLE_BUFFER_ONLY
+    return xmodem_get(pc->src_ptr, pc->len );
+#else
+    return xmodem_get_async(pc->len, write_data_cb, pc);
+#endif
 }
 
-static void send_buf_xmodem(const char* buf, unsigned int len)
+#ifndef SIMPLE_BUFFER_ONLY
+static size_t read_data_cb(size_t curpos, void *ptr, size_t length, void *arg)
+{
+	struct prog_ctx_t* pc = arg;
+
+    if (curpos == EDCL_XMODEM_BUF_LEN) {
+        if (pc->dev) {
+            last_err = pc->dev->read(pc->dev, pc->dst_addr, EDCL_XMODEM_BUF_LEN, pc->src_ptr);
+            pc->dst_addr += EDCL_XMODEM_BUF_LEN;
+        }
+        curpos = 0;
+    }
+    memcpy(ptr, pc->src_ptr+curpos, length);
+
+    return curpos + length;
+}
+#endif
+
+static int send_buf_xmodem(struct prog_ctx_t* pc)
 {
     flw_delay(0x800000l);
-    last_xmodem_error = xmodem_send((char*)buf, len );
+#ifdef SIMPLE_BUFFER_ONLY
+    return xmodem_send(pc->buf, pc->len );
+#else
+    return xmodem_tx_async(read_data_cb, pc->len, pc);
+#endif
 }
 
 static char* find_space(char* p)
@@ -132,9 +178,33 @@ static uint32_t virt_to_dma(void* ptr)
 }
 
 char* edcl_buf_sync = NULL;
-char edcl_buf0[EDCL_BUF_LEN], edcl_buf1[EDCL_BUF_LEN];
+char edcl_buf0[EDCL_XMODEM_BUF_LEN], edcl_buf1[EDCL_XMODEM_BUF_LEN];
 
 static int prog_dev(struct flw_dev_t* seldev, char load, unsigned long addr, unsigned long size)
+{
+    int res;
+
+    puts("erasing\n");
+    res = seldev->erase(seldev, addr, size);
+    if (res) {
+        puts("error\n");
+        return res;
+    }
+    puts("completed\n");
+
+    flw_delay(0x800000);
+    if (load == 'X') {
+        struct prog_ctx_t pc;
+        pc.src_ptr = edcl_buf0;
+        pc.len = size;
+        pc.dst_addr = addr;
+        pc.dev = seldev;
+        res = last_err = load_buf_xmodem(&pc);
+    }
+    return res;
+}
+
+static int dupl_dev(struct flw_dev_t* seldev, char load, unsigned long addr, unsigned long size)
 {
     return 0;
 }
@@ -144,6 +214,7 @@ static void cmd_dec(void)
     char* edcl_buf = edcl_buf0;
     char cmd_buf[256];
     struct flw_dev_t* seldev = NULL;
+    struct prog_ctx_t pc = {0};
     unsigned long addr, size;
     int ret;
 
@@ -154,7 +225,7 @@ static void cmd_dec(void)
 
         if (!strcmp(cmd_buf,"help"))
         {
-            puts("Usage: help version exit list select bufptr rand print setbuf setbufx getbuf getbufx erase write read program lasterr\n");
+            puts("Usage: help version exit list select bufptr rand print setbuf setbufx getbuf getbufx erase write read program duplicate lasterr\n");
         }
         else if (!strcmp(cmd_buf,"version"))
         {
@@ -201,69 +272,78 @@ static void cmd_dec(void)
         }
         else if (!strcmp(cmd_buf, "bufrev"))
         {
-            buf_bitrev(edcl_buf, EDCL_BUF_LEN);
+            buf_bitrev(edcl_buf, EDCL_XMODEM_BUF_LEN);
             puts("completed\n");
         }
         else if (!strcmp(cmd_buf, "bufcmp"))
         {
-            if (!cmp_buf(edcl_buf0, edcl_buf1, EDCL_BUF_LEN))
+            if (!cmp_buf(edcl_buf0, edcl_buf1, EDCL_XMODEM_BUF_LEN))
                 printf("buffers are identical\n");
             else
                 printf("buffers are different\n");
         }
         else if (!strcmp(cmd_buf, "bufptr"))
         {
-            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x\n", virt_to_dma(edcl_buf0), virt_to_dma(edcl_buf1), virt_to_dma(&edcl_buf_sync), EDCL_BUF_LEN);
+            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x\n", virt_to_dma(edcl_buf0), virt_to_dma(edcl_buf1), virt_to_dma(&edcl_buf_sync), EDCL_XMODEM_BUF_LEN);
         }
         else if (!strcmp(cmd_buf, "rand"))
         {
-            fill_buf(edcl_buf, EDCL_BUF_LEN);
-            //print_buf(edcl_buf, EDCL_BUF_LEN);
+            fill_buf(edcl_buf, EDCL_XMODEM_BUF_LEN);
+            //print_buf(edcl_buf, EDCL_XMODEM_BUF_LEN);
             puts("completed\n");
         }
         else if (!strncmp(cmd_buf, "print", 5))
         {
-            if(get_addr_size(cmd_buf, &addr, &size) || addr+size > EDCL_BUF_LEN)
+            if(get_addr_size(cmd_buf, &addr, &size) || addr+size > EDCL_XMODEM_BUF_LEN)
                 puts("Bad parameters\n");
             else
                 print_buf(edcl_buf+addr, size);
         }
         else if (!strcmp(cmd_buf, "setbufx"))
-        {
+        { // just load buffer,one or multiple time
             puts("ready\n");
-            load_buf_xmodem(edcl_buf, EDCL_BUF_LEN);
+            pc.src_ptr = edcl_buf;
+            pc.len = EDCL_XMODEM_BUF_LEN;
+            pc.dst_addr = 0;
+            pc.dev = NULL;
+            last_err = load_buf_xmodem(&pc);
+            puts("completed\n");
+        }
+        else if (!strcmp(cmd_buf, "getbufx"))
+        { // just read buffer,last loading data will read
+            puts("ready\n");
+            pc.src_ptr = edcl_buf;
+            pc.len = EDCL_XMODEM_BUF_LEN;
+            pc.dst_addr = 0;
+            pc.dev = NULL;
+            last_err = send_buf_xmodem(&pc);
             puts("completed\n");
         }
         else if (!strcmp(cmd_buf, "setbuf"))
         {
             puts("ready\n");
-            load_buf(edcl_buf, EDCL_BUF_LEN);
-            puts("completed\n");
-        }
-        else if (!strcmp(cmd_buf, "getbufx"))
-        {
-            puts("ready\n");
-            send_buf_xmodem(edcl_buf, EDCL_BUF_LEN);
+            load_buf(edcl_buf, EDCL_XMODEM_BUF_LEN);
             puts("completed\n");
         }
         else if (!strcmp(cmd_buf, "getbuf"))
         {
             puts("ready\n");
-            send_buf(edcl_buf, EDCL_BUF_LEN);
+            send_buf(edcl_buf, EDCL_XMODEM_BUF_LEN);
             puts("completed\n");
         }
         else if (!strcmp(cmd_buf, "lasterr"))
         {
-            printf("Last Xmodem error %d\n", last_xmodem_error);
+            printf("Last Xmodem error %d\n", last_err);
         }
         else
         {
-            int erase = !strncmp(cmd_buf,"erase", 5),   // "erase <addr> <size>"
-                write = !strncmp(cmd_buf,"write", 5),   // "write <addr> <size>"
-                read = !strncmp(cmd_buf,"read", 4),     // "read <addr> <size>"
-                program = !strncmp(cmd_buf, "program", 7);  // "program <E,X> <addr> <size>"
+            int erase = !strncmp(cmd_buf,"erase", 5),           // "erase <addr> <size>"
+                write = !strncmp(cmd_buf,"write", 5),           // "write <addr> <size>"
+                read = !strncmp(cmd_buf,"read", 4),             // "read <addr> <size>"
+                program = !strncmp(cmd_buf, "program", 7),      // "program <E,X> <addr> <size>"
+                duplicate = !strncmp(cmd_buf, "duplicate", 9);  // "duplicate <E,X> <addr> <size>"
 
-            if (erase || write || read || program)
+            if (erase || write || read || program || duplicate)
             {
                 if (!seldev)
                     puts("Device no select!\n");
@@ -272,8 +352,8 @@ static void cmd_dec(void)
                     puts("Bad parameters\n");
                 else
                 {
-                    if((write || read) && size > EDCL_BUF_LEN) {
-                        size = EDCL_BUF_LEN;
+                    if((write || read) && size > EDCL_XMODEM_BUF_LEN) {
+                        size = EDCL_XMODEM_BUF_LEN;
                         puts("truncate buffer size\n");
                     }
                     if (erase)
@@ -291,9 +371,13 @@ static void cmd_dec(void)
                         printf("Read: address %lx,size %lx...", addr, size);
                         ret = seldev->read(seldev, addr, size, edcl_buf);
                     }
-                    else // if (program)
+                    else if (program)
                     {
                         ret = prog_dev(seldev, cmd_buf[8], addr, size);
+                    }
+                    else // if (duplicate)
+                    {
+                        ret = dupl_dev(seldev, cmd_buf[10], addr, size);
                     }
                     if (ret)
                         printf("error %d\n", ret);
