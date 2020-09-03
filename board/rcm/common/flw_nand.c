@@ -10,8 +10,8 @@ int rcm_nand_flw_read_page(unsigned long addr, char* data);
 
 int flw_nand_found(void)
 {
-    extern char edcl_buf0[];
-    return rcm_nand_flw_init(edcl_buf0);
+    extern char edcl_xmodem_buf0[];
+    return rcm_nand_flw_init(edcl_xmodem_buf0);
 }
 
 static int check_addr_size( unsigned long* addr, unsigned long* size, unsigned long check )

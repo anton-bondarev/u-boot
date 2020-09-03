@@ -40,6 +40,7 @@ void flash_dev_list_print(void)
 #endif
     putc('\n');
     }
+    puts("completed\n");
 }
 
 struct flw_dev_t* flash_dev_list_find(const char* name)

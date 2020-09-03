@@ -109,16 +109,15 @@ static size_t read_data_cb(size_t curpos, void *ptr, size_t length, void *arg)
 {
 	struct prog_ctx_t* pc = arg;
 
-    if (curpos == EDCL_XMODEM_BUF_LEN) {
+    if (curpos == 0) {
         if (pc->dev) {
             last_err = pc->dev->read(pc->dev, pc->dst_addr, EDCL_XMODEM_BUF_LEN, pc->src_ptr);
             pc->dst_addr += EDCL_XMODEM_BUF_LEN;
         }
-        curpos = 0;
     }
     memcpy(ptr, pc->src_ptr+curpos, length);
 
-    return curpos + length;
+    return (curpos + length) % EDCL_XMODEM_BUF_LEN;
 }
 #endif
 
@@ -177,10 +176,10 @@ static uint32_t virt_to_dma(void* ptr)
     return (uint32_t)ptr;
 }
 
-char* edcl_buf_sync = NULL;
-char edcl_buf0[EDCL_XMODEM_BUF_LEN], edcl_buf1[EDCL_XMODEM_BUF_LEN];
+char* edcl_xmodem_buf_sync = NULL;
+char edcl_xmodem_buf0[EDCL_XMODEM_BUF_LEN], edcl_xmodem_buf1[EDCL_XMODEM_BUF_LEN];
 
-static int prog_dev(struct flw_dev_t* seldev, char load, unsigned long addr, unsigned long size)
+static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long addr, unsigned long size)
 {
     int res;
 
@@ -193,25 +192,39 @@ static int prog_dev(struct flw_dev_t* seldev, char load, unsigned long addr, uns
     puts("completed\n");
 
     flw_delay(0x800000);
-    if (load == 'X') {
+    if (mode == 'X') {
         struct prog_ctx_t pc;
-        pc.src_ptr = edcl_buf0;
+        pc.src_ptr = edcl_xmodem_buf;
         pc.len = size;
         pc.dst_addr = addr;
         pc.dev = seldev;
         res = last_err = load_buf_xmodem(&pc);
     }
+    else
+        res = -1; // todo: error codes
     return res;
 }
 
-static int dupl_dev(struct flw_dev_t* seldev, char load, unsigned long addr, unsigned long size)
+static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long addr, unsigned long size)
 {
-    return 0;
+    int res = -1;
+
+    puts("ready\n");
+
+    if (mode == 'X') {
+        struct prog_ctx_t pc;
+        pc.src_ptr = edcl_xmodem_buf0;
+        pc.len = size;
+        pc.dst_addr = addr;
+        pc.dev = seldev;
+        res = last_err = send_buf_xmodem(&pc);
+    }
+    return res;
 }
 
 static void cmd_dec(void)
 {
-    char* edcl_buf = edcl_buf0;
+    char* edcl_xmodem_buf = edcl_xmodem_buf0;
     char cmd_buf[256];
     struct flw_dev_t* seldev = NULL;
     struct prog_ctx_t pc = {0};
@@ -262,34 +275,34 @@ static void cmd_dec(void)
         }
         else if (!strcmp(cmd_buf, "bufsel0"))
         {
-            edcl_buf = edcl_buf0;
+            edcl_xmodem_buf = edcl_xmodem_buf0;
             puts("selected\n");
         }
         else if (!strcmp(cmd_buf, "bufsel1"))
         {
-            edcl_buf = edcl_buf1;
+            edcl_xmodem_buf = edcl_xmodem_buf1;
             puts("selected\n");
         }
         else if (!strcmp(cmd_buf, "bufrev"))
         {
-            buf_bitrev(edcl_buf, EDCL_XMODEM_BUF_LEN);
+            buf_bitrev(edcl_xmodem_buf, EDCL_XMODEM_BUF_LEN);
             puts("completed\n");
         }
         else if (!strcmp(cmd_buf, "bufcmp"))
         {
-            if (!cmp_buf(edcl_buf0, edcl_buf1, EDCL_XMODEM_BUF_LEN))
+            if (!cmp_buf(edcl_xmodem_buf0, edcl_xmodem_buf1, EDCL_XMODEM_BUF_LEN))
                 printf("buffers are identical\n");
             else
                 printf("buffers are different\n");
         }
         else if (!strcmp(cmd_buf, "bufptr"))
         {
-            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x\n", virt_to_dma(edcl_buf0), virt_to_dma(edcl_buf1), virt_to_dma(&edcl_buf_sync), EDCL_XMODEM_BUF_LEN);
+            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x\n", virt_to_dma(edcl_xmodem_buf0), virt_to_dma(edcl_xmodem_buf1), virt_to_dma(&edcl_xmodem_buf_sync), EDCL_XMODEM_BUF_LEN);
         }
         else if (!strcmp(cmd_buf, "rand"))
         {
-            fill_buf(edcl_buf, EDCL_XMODEM_BUF_LEN);
-            //print_buf(edcl_buf, EDCL_XMODEM_BUF_LEN);
+            fill_buf(edcl_xmodem_buf, EDCL_XMODEM_BUF_LEN);
+            //print_buf(edcl_xmodem_buf, EDCL_XMODEM_BUF_LEN);
             puts("completed\n");
         }
         else if (!strncmp(cmd_buf, "print", 5))
@@ -297,12 +310,12 @@ static void cmd_dec(void)
             if(get_addr_size(cmd_buf, &addr, &size) || addr+size > EDCL_XMODEM_BUF_LEN)
                 puts("Bad parameters\n");
             else
-                print_buf(edcl_buf+addr, size);
+                print_buf(edcl_xmodem_buf+addr, size);
         }
         else if (!strcmp(cmd_buf, "setbufx"))
         { // just load buffer,one or multiple time
             puts("ready\n");
-            pc.src_ptr = edcl_buf;
+            pc.src_ptr = edcl_xmodem_buf;
             pc.len = EDCL_XMODEM_BUF_LEN;
             pc.dst_addr = 0;
             pc.dev = NULL;
@@ -312,7 +325,7 @@ static void cmd_dec(void)
         else if (!strcmp(cmd_buf, "getbufx"))
         { // just read buffer,last loading data will read
             puts("ready\n");
-            pc.src_ptr = edcl_buf;
+            pc.src_ptr = edcl_xmodem_buf;
             pc.len = EDCL_XMODEM_BUF_LEN;
             pc.dst_addr = 0;
             pc.dev = NULL;
@@ -322,13 +335,13 @@ static void cmd_dec(void)
         else if (!strcmp(cmd_buf, "setbuf"))
         {
             puts("ready\n");
-            load_buf(edcl_buf, EDCL_XMODEM_BUF_LEN);
+            load_buf(edcl_xmodem_buf, EDCL_XMODEM_BUF_LEN);
             puts("completed\n");
         }
         else if (!strcmp(cmd_buf, "getbuf"))
         {
             puts("ready\n");
-            send_buf(edcl_buf, EDCL_XMODEM_BUF_LEN);
+            send_buf(edcl_xmodem_buf, EDCL_XMODEM_BUF_LEN);
             puts("completed\n");
         }
         else if (!strcmp(cmd_buf, "lasterr"))
@@ -347,8 +360,9 @@ static void cmd_dec(void)
             {
                 if (!seldev)
                     puts("Device no select!\n");
-                else if (get_addr_size( program ? cmd_buf+8 : cmd_buf, &addr, &size) ||
-                        (program && ( cmd_buf[8] != 'E' && cmd_buf[8] != 'X' )))
+                else if (get_addr_size( program ? cmd_buf+8 : duplicate ? cmd_buf+10 : cmd_buf, &addr, &size) ||
+                        (program && ( cmd_buf[8] != 'E' && cmd_buf[8] != 'X' )) ||
+                        (duplicate && ( cmd_buf[10] != 'E' && cmd_buf[10] != 'X' )))
                     puts("Bad parameters\n");
                 else
                 {
@@ -364,20 +378,20 @@ static void cmd_dec(void)
                     else if (write)
                     {
                         printf("Write: address %lx,size %lx...", addr, size);
-                        ret = seldev->write(seldev, addr, size, edcl_buf);
+                        ret = seldev->write(seldev, addr, size, edcl_xmodem_buf);
                     }
                     else if (read)
                     {
                         printf("Read: address %lx,size %lx...", addr, size);
-                        ret = seldev->read(seldev, addr, size, edcl_buf);
+                        ret = seldev->read(seldev, addr, size, edcl_xmodem_buf);
                     }
                     else if (program)
                     {
-                        ret = prog_dev(seldev, cmd_buf[8], addr, size);
+                        ret = prog_dev(edcl_xmodem_buf, seldev, cmd_buf[8], addr, size);
                     }
                     else // if (duplicate)
                     {
-                        ret = dupl_dev(seldev, cmd_buf[10], addr, size);
+                        ret = dupl_dev(edcl_xmodem_buf, seldev, cmd_buf[10], addr, size);
                     }
                     if (ret)
                         printf("error %d\n", ret);
