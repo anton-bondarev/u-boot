@@ -1874,11 +1874,17 @@ void nand_deselect( void ) {
 static struct rcm_spl_nand_chips chips = {0};
 const struct rcm_spl_nand_chip* chip = &chips.chip[0];
 
-int rcm_nand_flw_init( char* dma_buf ) {
+int rcm_nand_flw_init( char* dma_buf, uint64_t* full_size, uint32_t* write_size, uint32_t* erase_size)
+{
         int err;
         iowrite32(0, (void*)SRAM_NOR_CTRL); // page 922
         nand_init();
         err = nand_spl_init_chips_param( &chips, dma_buf );
+        if (!err) {
+                if (full_size) *full_size = chips.full_size;
+                if (write_size) *write_size = chip->write_size;
+                if (erase_size) *erase_size = chip->erase_size;
+        }
         return err;
 }
 

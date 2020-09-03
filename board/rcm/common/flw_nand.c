@@ -3,7 +3,7 @@
 
 #include "flw_nand.h"
 
-int rcm_nand_flw_init(char* dma_buf);
+int rcm_nand_flw_init(char* dma_buf, uint64_t* full_size, uint32_t* write_size, uint32_t* erase_size);
 int rcm_nand_flw_erase_block(unsigned long addr);
 int rcm_nand_flw_write_page(unsigned long addr, char* data);
 int rcm_nand_flw_read_page(unsigned long addr, char* data);
@@ -11,7 +11,14 @@ int rcm_nand_flw_read_page(unsigned long addr, char* data);
 int flw_nand_found(void)
 {
     extern char edcl_xmodem_buf0[];
-    return rcm_nand_flw_init(edcl_xmodem_buf0);
+    int ret;
+    uint64_t full_size;
+    uint32_t write_size, erase_size;
+    ret = rcm_nand_flw_init(edcl_xmodem_buf0, &full_size, &write_size, &erase_size);
+    if (!ret) {
+        printf("Nand: chipsize=0x%x%x,writesize=0x%x,erasesize=0x%x\n", (uint32_t)(full_size>>32), (uint32_t)(full_size), write_size, erase_size);
+    }
+    return ret;
 }
 
 static int check_addr_size( unsigned long* addr, unsigned long* size, unsigned long check )

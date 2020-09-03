@@ -1,0 +1,2 @@
+#!/bin/bash
+edcltool -i enp4s0 -f ./loadspl.lua
