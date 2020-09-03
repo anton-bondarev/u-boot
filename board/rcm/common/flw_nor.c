@@ -8,8 +8,8 @@ ulong monitor_flash_len;
 
 int flw_nor_found(unsigned int bank, unsigned int show_info, flash_info_t* info)
 {
-    if (info->size == 0)
-        return -1;
+    if (info->size == 0 || info->sector_count == 0 || info->portwidth == 0 || info->chipwidth == 0)
+        return -1; // advanced check?
 
     if (show_info)
     {
