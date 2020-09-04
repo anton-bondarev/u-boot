@@ -26,14 +26,15 @@ sf_size = 0x10000
 
 #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
 nand_dev = "nand0"
-nand_addr = 0x500000
+nand_addr = 0x000000
 nand_size = 0x20000
 
 # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
 mmc_dev = "mmc0"
-mmc_addr = 0x40000
-mmc_size = 0x2000
+mmc_addr = 0x0
+mmc_size = 0x60000
 
+do_randfile = 1
 do_wr = 1
 do_restart = 1
 do_rd = 1
@@ -101,19 +102,55 @@ def select(dev): # список устройств и выбор нужного,
     send("bufsel0")
     expect("selected")
 
+def testx_complex(dtb, kern, fs):
+# зашивает в NAND dtb, ядро и файловую систему (в загружаемом затем uboot включить dts mb115-03)
+# ниже последовательность команд в uboot для загрузки, используя зашитое в NAND:
+# setenv mtdids nand0=mtd0
+# setenv mtdparts mtdparts=mtd0:0x720000(rootfs),0x20000(dtb),0x540000(kern)
+# setenv bootargs console=ttyAMA0 rootfstype=ubifs ubi.mtd=0 root=ubi0:root_volume rootwait
+# run setmem
+# nand read 50000000 740000 540000
+# nand read 50f00000 720000 20000
+# bootm 50000000 - 50f00000
+    global wr_file
+    global do_randfile,do_wr, do_restart, do_rd, do_cmp
+    do_randfile = 0
+    do_wr = 1
+    do_restart = 0
+    do_rd = 1
+    do_cmp = 1
+# пишем файловую систему
+    addr = 0
+    size = 0x720000
+    wr_file = "rootfs"
+    if fs:
+        testx(nand_dev, addr, size)
+# пишем dtb
+    addr += size
+    size = 0x20000
+    wr_file = "tx011.dtb"
+    if dtb:
+        testx(nand_dev, addr, size)
+# пишем образ ядра
+    addr += size
+    size = 0x540000
+    wr_file = "tx011.uImage"
+    if kern:
+        testx(nand_dev, addr, size)
+
 def testx(flash_dev, flash_addr, flash_size):
     global ser
-
     ser = ser_init()
     reset()
     load()
     select(flash_dev)
-
-    if do_wr: # генерим случайный файл и пишем
+# генерим случайный файл
+    if do_randfile:
         randgen = spawn("dd if=/dev/urandom bs=1 of=%s count=%u" % (wr_file, flash_size), encoding='utf-8')
         randgen.logfile_read = sys.stdout
         randgen.expect(["%x+0 records out" % flash_size, EOF, TIMEOUT], timeout=5)
-
+# записываем
+    if do_wr:
         send("program %c %x %x" % ('X', flash_addr, flash_size))
         expect("completed")
 
@@ -123,15 +160,15 @@ def testx(flash_dev, flash_addr, flash_size):
         modem.send(stream)
         stream.close()
         print(colored('%s: write finished' % flash_dev, 'green'))
-
+# выключим-включим
     if do_restart:
-        ser.close() # выключим-включим
+        ser.close()
         ser = ser_init()
         reset()
         load()
         select(flash_dev)
-
-    if do_rd: # читаем в файл
+# читаем в файл
+    if do_rd:
         send("duplicate %c %x %x" % ('X', flash_addr, flash_size))
         expect("ready")
 
@@ -143,8 +180,8 @@ def testx(flash_dev, flash_addr, flash_size):
         print(colored('%s: read finished' % flash_dev, 'green'))
 
     ser.close()
-
-    if do_cmp: # сравниваем
+# сравниваем
+    if do_cmp:
         crc32_wr = zlib.crc32(open(wr_file, 'rb').read(), 0)
         crc32_rd = zlib.crc32(open(rd_file, 'rb').read(), 0)
         ok = crc32_wr == crc32_rd
@@ -152,11 +189,11 @@ def testx(flash_dev, flash_addr, flash_size):
 
     return ok
 
-testx(sf_dev, sf_addr, sf_size)
+#testx(sf_dev, sf_addr, sf_size)
+#testx(nand_dev, nand_addr, nand_size)
+#testx(mmc_dev, mmc_addr, mmc_size)
 
-testx(nand_dev, nand_addr, nand_size)
-
-testx(mmc_dev, mmc_addr, mmc_size)
+testx_complex(1, 1, 1) # шить dtb, kernel, rootfs
 
 #nor: todo
 
