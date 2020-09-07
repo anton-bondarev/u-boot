@@ -348,6 +348,31 @@ static void cmd_dec(void)
         {
             printf("Last Xmodem error %d\n", last_err);
         }
+        else if (!strcmp(cmd_buf, "mmc_test"))
+        {
+            flash_dev_list_clear();
+            flw_mmc_list_add();
+            seldev = flash_dev_list_find("mmc0");
+            size = EDCL_XMODEM_BUF_LEN;
+            addr = 0;
+            while (1) {
+                fill_buf(edcl_xmodem_buf0, size);
+                ret = seldev->erase(seldev, addr, size);
+                if (ret)
+                    printf("Test: erase failed\n");
+                ret = ret || seldev->write(seldev, addr, size, edcl_xmodem_buf0);
+                if (ret)
+                    printf("Test: write failed\n");
+                ret = ret || seldev->read(seldev, addr, size, edcl_xmodem_buf1);
+                if (ret)
+                    printf("Test: read failed\n");
+                ret = ret || memcmp(edcl_xmodem_buf0, edcl_xmodem_buf1, size);
+                printf("Test: address %lx,size %lx,ret=%d\n", addr, size, ret);
+                addr += size;
+                if (ret)
+                    break;
+            }
+        }
         else
         {
             int erase = !strncmp(cmd_buf,"erase", 5),           // "erase <addr> <size>"

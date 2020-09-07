@@ -33,7 +33,7 @@
 #ifdef DEBUG 
 	#define Debug(...)  debug(__VA_ARGS__)
 #else
-	#define Debug(...)  delay_loop(3000)
+	#define Debug(...)  while(0) //delay_loop(3000)
 #endif	
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -44,7 +44,16 @@ struct rcm_mmc_platdata {
 	uint32_t reg_base;
 	struct gpio_desc card_detect;
 	uint bus_width;
+	unsigned int dccr0_flags;
+	unsigned int dccr1_flags;
+	unsigned int sdio_timeout;
 };
+
+// for dccrX_flags
+#define RMSDIO_AXI_BURST_MASK   0xf
+#define RMSDIO_AXI_BURST_SHIFT  4
+#define RMSDIO_AXI_SIZE_MASK    0x7
+#define RMSDIO_AXI_SIZE_SHIFT   12
 
 static inline struct rcm_mmc_platdata * mmc_get_platdata(const struct mmc * mmc)
 {
@@ -199,7 +208,7 @@ static bool wait_cmd_done_handle(const struct mmc * mmc)
 			rcm_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_CMD_DONE);
 			return true;
 		}
-	} while ( wait_tick() - start < SDIO_TIMEOUT );
+	} while ( wait_tick() - start < ((struct rcm_mmc_platdata*)mmc->priv)->sdio_timeout );
 
 	Debug("CMD ERROR: TIMEOUT\n");
 	return false;
@@ -218,7 +227,7 @@ static bool wait_tran_done_handle(const struct mmc * mmc)
 			rcm_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_SDC_DAT_DONE);
 			return true;
 		}
-	} while ( wait_tick() - start < SDIO_TIMEOUT );
+	} while ( wait_tick() - start < ((struct rcm_mmc_platdata*)mmc->priv)->sdio_timeout );
 
 	Debug("TRN ERROR: TIMEOUT\n");
 	return false;
@@ -237,7 +246,7 @@ static bool wait_ch0_dma_done_handle(const struct mmc * mmc)
 			rcm_writel(mmc, SDIO_DCCR_0, DSSR_CHANNEL_TR_DONE);
 			return true;
 		}
-	} while ( wait_tick() - start < SDIO_TIMEOUT );
+	} while ( wait_tick() - start < ((struct rcm_mmc_platdata*)mmc->priv)->sdio_timeout );
 
 	Debug("DMA_0 ERROR: TIMEOUT\n");
 	return false;
@@ -256,7 +265,7 @@ static bool wait_ch1_dma_done_handle(const struct mmc * mmc)
 			rcm_writel(mmc, SDIO_DCCR_1, DSSR_CHANNEL_TR_DONE);
 			return true;
 		}
-	} while ( wait_tick() - start < SDIO_TIMEOUT );
+	} while ( wait_tick() - start < ((struct rcm_mmc_platdata*)mmc->priv)->sdio_timeout );
 
 	Debug("DMA_1 ERROR: TIMEOUT\n");
 	return false;
@@ -275,7 +284,7 @@ static bool wait_buf_tran_finish_handle(const struct mmc * mmc)
 			rcm_writel(mmc, SDIO_SDR_BUF_TRAN_RESP_REG, SDR_TRAN_FIFO_FINISH);
 			return true;
 		}
-	} while( wait_tick() - start < SDIO_TIMEOUT );
+	} while( wait_tick() - start < ((struct rcm_mmc_platdata*)mmc->priv)->sdio_timeout );
 
 	Debug("BLK ERROR: TIMEOUT\n");
 	return false;
@@ -333,6 +342,10 @@ typedef enum
 
 static bool AXI_buf(const struct mmc * mmc, data_dir dir, uint buf_num, u8 * mem_ptr, uint len) 
 {
+	if (dir == DATA_WRITE)
+		rcm_writel(mmc, SDIO_DCCR_0, ((struct rcm_mmc_platdata*)mmc->priv)->dccr0_flags);
+	else
+		rcm_writel(mmc, SDIO_DCCR_1, ((struct rcm_mmc_platdata*)mmc->priv)->dccr1_flags);
 	rcm_writel(mmc, SDIO_BUF_TRAN_CTRL_REG, BUFER_TRANS_START | (dir == DATA_WRITE ? BUFER_TRANS_WRITE : 0x0) | buf_num);
 	rcm_writel(mmc, (dir == DATA_WRITE ? SDIO_DCDTR_0 : SDIO_DCDTR_1), len);
 	rcm_writel(mmc, (dir == DATA_WRITE ? SDIO_DCSSAR_0 : SDIO_DCDSAR_1), (uint32_t) mem_ptr);
@@ -385,15 +398,16 @@ static bool sd_read_block(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr
 
 static bool sd_write_block(const struct mmc * mmc, uint32_t dst_adr, u8 * src_ptr, uint len)
 {
+	rcm_writel(mmc, SDIO_DCCR_0, ((struct rcm_mmc_platdata*)mmc->priv)->dccr0_flags);
 	rcm_writel(mmc, SDIO_SDR_CARD_BLOCK_SET_REG, (len == 512 ? BLOCK_512_DATA_TRANS : (len << 16) | 0x0001));
 	rcm_writel(mmc, SDIO_BUF_TRAN_CTRL_REG, BUFER_TRANS_START | BUFER_TRANS_WRITE | 0);
 	rcm_writel(mmc, SDIO_DCDTR_0, len);
 	rcm_writel(mmc, SDIO_DCSSAR_0, (uint32_t) src_ptr);
 	rcm_writel(mmc, SDIO_DCCR_0, DCCR_VAL_WRITE);
-	
-	if ( ! wait_ch0_dma_done_handle(mmc) ) 
+
+	if ( ! wait_ch0_dma_done_handle(mmc) )
 		return false;
-	
+
 	if ( ! wait_buf_tran_finish_handle(mmc) ) 
 		return false;
 
@@ -402,10 +416,10 @@ static bool sd_write_block(const struct mmc * mmc, uint32_t dst_adr, u8 * src_pt
 	rcm_writel(mmc, SDIO_SDR_CMD_ARGUMENT_REG, dst_adr);
 	rcm_writel(mmc, SDIO_SDR_CTRL_REG, CMD24_CTRL | mmc_get_platdata(mmc)->bus_width);
 	
-	if ( ! wait_cmd_done_handle(mmc) ) 
+	if ( ! wait_cmd_done_handle(mmc) )
 		return false;
 	
-	if ( ! wait_tran_done_handle(mmc) ) 
+	if ( ! wait_tran_done_handle(mmc) )
 		return false;
 
 	return true;
@@ -418,7 +432,13 @@ static bool sd_write_block(const struct mmc*, uint32_t, u8*, uint);
 
 static bool sd_trans_data(const struct mmc * mmc, sd_data_oper oper, uint32_t sdc_adr, u8 * mem_ptr, uint blk_qty, uint blk_len)
 {
+#ifndef CONFIG_FLASHWRITER
 	u8* blk_buf = (u8*)memalign( 64, blk_len );
+#else
+	static u8* blk_buf; // because CONFIG_SPL_SYS_MALLOC_SIMPLE was defined, free does not work here
+	if (!blk_buf)
+		blk_buf = (u8*)memalign( 64, blk_len );
+#endif
 	if( ! blk_buf )
 		return false;
 	//BUG_ON(! mmc->high_capacity && (sdc_adr % blk_len) != 0);
@@ -484,10 +504,35 @@ static int rcm_mmc_probe(struct udevice * dev)
 	struct mmc * mmc = & pdata->mmc;
 	struct mmc_config * cfg = & pdata->cfg;
 
-	cfg->voltages = MMC_VDD_33_34 | MMC_VDD_32_33 | MMC_VDD_31_32 | MMC_VDD_165_195;	
+	unsigned int axi_arlen = 15;	// 16 data frames
+	unsigned int axi_awlen = 15;	// 16 data frames
+	unsigned int axi_arsize = 2;	// 4 bytes
+	unsigned int axi_awsize = 2;	// 4 bytes
+
+	pdata->sdio_timeout = SDIO_TIMEOUT;
+	if (ofnode_valid(dev->node)) {
+		unsigned int val;
+		if(ofnode_read_u32(dev->node, "axi-awlen", &val) == 0)
+			axi_awlen = val;
+		if(ofnode_read_u32(dev->node, "axi-arlen", &val) == 0)
+			axi_arlen = val;
+		if(ofnode_read_u32(dev->node, "axi-awsize", &val) == 0)
+			axi_awsize = val;
+		if(ofnode_read_u32(dev->node, "axi-arsize", &val) == 0)
+			axi_arsize = val;
+		if(ofnode_read_u32(dev->node, "sdio-timeout", &val) == 0)
+				pdata->sdio_timeout = val;
+	}
+
+	pdata->dccr0_flags = (axi_awlen & RMSDIO_AXI_BURST_MASK) << RMSDIO_AXI_BURST_SHIFT;
+	pdata->dccr0_flags |= (axi_awsize & RMSDIO_AXI_SIZE_MASK) << RMSDIO_AXI_SIZE_SHIFT;
+	pdata->dccr1_flags = (axi_arlen & RMSDIO_AXI_BURST_MASK) << RMSDIO_AXI_BURST_SHIFT;
+	pdata->dccr1_flags |= (axi_arsize & RMSDIO_AXI_SIZE_MASK) << RMSDIO_AXI_SIZE_SHIFT;
+
+	cfg->voltages = MMC_VDD_33_34 | MMC_VDD_32_33 | MMC_VDD_31_32 | MMC_VDD_165_195;
 	cfg->host_caps = MMC_MODE_8BIT | MMC_MODE_4BIT | MMC_MODE_HS_52MHz | MMC_MODE_HS;
 	cfg->f_min = 400000;
-	cfg->f_max = 8000000; 
+	cfg->f_max = 25000000;
 	cfg->b_max = 511; /* max 512 - 1 blocks */
 	cfg->name = dev->name;
 
