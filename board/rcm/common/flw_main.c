@@ -418,7 +418,7 @@ static void cmd_dec(void)
                     {
                         ret = dupl_dev(edcl_xmodem_buf, seldev, cmd_buf[10], addr, size);
                     }
-                    if (ret)
+                    if (ret < 0)
                         printf("error %d\n", ret);
                     else
                         puts("completed\n");
