@@ -9,6 +9,7 @@ from xmodem import XMODEM
 import serial
 import os
 import zlib
+import socket
 from rumboot.edclManager import edclmanager
 from rumboot.chipDb import ChipDb
 from rumboot.ImageFormatDb import ImageFormatDb
@@ -32,7 +33,8 @@ import io
 MODE_XMODEM = 0
 MODE_EDCL = 1
 
-mode = MODE_XMODEM
+write_mode = MODE_EDCL
+read_mode = MODE_XMODEM
 
 rstdev = "/dev/ttyACM0"
 ttydev = "/dev/ttyUSB6"
@@ -46,7 +48,7 @@ ser = None
 # Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
 sf_dev = "sf00"
 sf_addr = 0x200000
-sf_size = 0x20000
+sf_size = 0x10000
 
 #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
 nand_dev = "nand0"
@@ -64,8 +66,7 @@ do_restart = 1
 do_rd = 1
 do_cmp = 1
 
-buf0_ptr = 0
-buf1_ptr = 0
+buf_ptr = [0, 0]
 sync_ptr = 0
 buf_len = 0
 
@@ -154,8 +155,8 @@ def select(dev): # список устройств и выбор нужного,
     send("bufsel0")
     expect("selected")
 
-def get_buf():
-    global buf0_ptr, buf1_ptr, sync_ptr, buf_len
+def get_buf_ptr():
+    global buf_ptr, sync_ptr, buf_len
     send("bufptr") #"buffers 0x56474 0x55474 sync 0x55464 length 0x1000"
     while True:
         r = term.ser.readline()
@@ -165,15 +166,27 @@ def get_buf():
                 break
     s = r.decode('utf-8').split(sep=" ")
     print(s)
-    buf0_ptr = int(s[1], 16)
-    buf1_ptr = int(s[2], 16)
+    buf_ptr[0] = int(s[1], 16)
+    buf_ptr[1] = int(s[2], 16)
     sync_ptr = int(s[4], 16)
     buf_len =  int(s[6], 16)
-    #print("%x,%x,%x,%x\n", buf0_ptr, buf1_ptr, sync_ptr, buf_len)
+    #print("%x,%x,%x,%x\n", buf_ptr[0], buf_ptr[1], sync_ptr, buf_len)
+
+def read_sync(xfer):
+    global sync_ptr
+    return socket.htonl(xfer.read32(sync_ptr)[0])
+
+def write_sync(xfer, val):
+    global sync_ptr
+    xfer.write32(sync_ptr, socket.htonl(val))
 
 def testx(flash_dev, flash_addr, flash_size):
     global ser
     global term
+    global buf_ptr, sync_ptr, buf_len
+
+    xfer_xmodem = None
+    xfer_edcl = None
 
     term, reset = intialize_programmer("mm7705")
     reset.resetToHost()
@@ -195,47 +208,71 @@ def testx(flash_dev, flash_addr, flash_size):
         randgen = spawn("dd if=/dev/urandom bs=1 of=%s count=%u" % (wr_file, flash_size), encoding='utf-8')
         randgen.logfile_read = sys.stdout
         randgen.expect(["%x+0 records out" % flash_size, EOF, TIMEOUT], timeout=5)
-# адреса буферов
-        get_buf()
 # записываем
     if do_wr:
-        send("program %c %x %x" % ('X', flash_addr, flash_size))
-        expect("completed")
-        if mode == MODE_XMODEM:
+        if write_mode == MODE_XMODEM:
+            send("program %c %x %x" % ('X', flash_addr, flash_size))
+            expect("completed")
             time.sleep(0.5)
-            xfer = xferXmodem(term)
             wr_stream = open(wr_file, "rb")
-            xfer.connect(term.chip)
-            xfer.send(wr_stream, 0)
+            if xfer_xmodem == None:
+                xfer_xmodem = xferXmodem(term)
+            xfer_xmodem.connect(term.chip)
+            xfer_xmodem.send(wr_stream, 0)
             wr_stream.close();
-        else:
-            pass
+        elif write_mode == MODE_EDCL:
+            get_buf_ptr()
+            send("program %c %x %x" % ('E', flash_addr, flash_size))
+            expect("completed")
+            if xfer_edcl == None:
+                xfer_edcl = xferEdcl(term)
+            wr_stream = open(wr_file, "rb")
+            n = 0
+            while True:
+                xfer_edcl.connect(term.chip)
+                while True:
+                    rsync = read_sync(xfer_edcl)
+                    if rsync == 0:
+                        break
+                wr_buf = wr_stream.read(edcl_buf_size)
+                if not wr_buf:
+                    break
+                xfer_edcl.connect(term.chip)
+                xfer_edcl.send(io.BytesIO(wr_buf), buf_ptr[n])
+                write_sync(xfer_edcl, buf_ptr[n])
+                n ^= 1
+                print("send buffer(%x):%x,%x,%x,%x\n" % (rsync, wr_buf[0], wr_buf[1], wr_buf[2], wr_buf[3]))
+            wr_stream.close();
         print(colored('%s: write finished' % flash_dev, 'green'))
+# сделать обязательно...
+    term.ser.reset_input_buffer()
 # читаем в файл
     if do_rd:
-        send("duplicate %c %x %x" % ('X', flash_addr, flash_size))
-        expect("ready")
-        if mode == MODE_XMODEM:
+        if read_mode == MODE_XMODEM:
+            send("duplicate %c %x %x" % ('X', flash_addr, flash_size))
+            expect("ready")
             rd_stream = open(rd_file, "wb")
-            xfer.recv(rd_stream, 0, flash_size)
+            if xfer_xmodem == None:
+                xfer_xmodem = xferXmodem(term)
+            xfer_xmodem.connect(term.chip)
+            xfer_xmodem.recv(rd_stream, 0, flash_size)
             rd_stream.close()
-        else:
+        elif read_mode == MODE_XMODEM:
             pass
         print(colored('%s: read finished' % flash_dev, 'green'))
 # сравниваем
     if do_cmp:
         crc32_wr = zlib.crc32(open(wr_file, 'rb').read(), 0)
         crc32_rd = zlib.crc32(open(rd_file, 'rb').read(), 0)
-        ok = crc32_wr == crc32_rd
-        print(colored('%s: compare finished (%x-%x)' % (flash_dev, crc32_wr, crc32_rd) + ('ok' if ok else 'error'), 'green'))
-    return ok
-
+        err = (crc32_wr != crc32_rd)
+        print(colored('%s: compare finished (%x-%x)' % (flash_dev, crc32_wr, crc32_rd) + ('err' if err else 'ok'), 'red' if err else 'green'))
+    return err
 
 testx(sf_dev, sf_addr, sf_size)
 
-#testx(nand_dev, nand_addr, nand_size)
+testx(nand_dev, nand_addr, nand_size)
 
-#testx(mmc_dev, mmc_addr, mmc_size)
+testx(mmc_dev, mmc_addr, mmc_size)
 
 while True:
     pass

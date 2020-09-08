@@ -176,8 +176,9 @@ static uint32_t virt_to_dma(void* ptr)
     return (uint32_t)ptr;
 }
 
-char* edcl_xmodem_buf_sync = NULL;
-char edcl_xmodem_buf0[EDCL_XMODEM_BUF_LEN], edcl_xmodem_buf1[EDCL_XMODEM_BUF_LEN];
+char* edcl_xmodem_buf_sync  __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
+char edcl_xmodem_buf0[EDCL_XMODEM_BUF_LEN]  __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
+char edcl_xmodem_buf1[EDCL_XMODEM_BUF_LEN]  __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
 
 static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long addr, unsigned long size)
 {
@@ -200,8 +201,16 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
         pc.dev = seldev;
         res = last_err = load_buf_xmodem(&pc);
     }
-    else
-        res = -1; // todo: error codes
+    else {
+        char* curr_buf;
+        while (size > 0) {
+            while (!edcl_xmodem_buf_sync) putc('.');
+            curr_buf = edcl_xmodem_buf_sync, edcl_xmodem_buf_sync = 0;
+            res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);
+            if (res) last_err = res;
+            addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;
+        }
+    }
     return res;
 }
 
@@ -272,6 +281,10 @@ static void cmd_dec(void)
                 puts("Bad selection!\n");
             else
                 printf("Device %s selected\n", seldev->name);
+        }
+        else if (!strcmp(cmd_buf, "sync"))
+        {
+            printf("sync 0x%08x\n", (unsigned int)edcl_xmodem_buf_sync);
         }
         else if (!strcmp(cmd_buf, "bufsel0"))
         {

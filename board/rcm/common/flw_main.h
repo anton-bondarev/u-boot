@@ -16,11 +16,8 @@
 
 //#define SIMPLE_BUFFER_ONLY
 
-#ifndef CONFIG_SPL_XMODEM_SUPPORT
-    #error "CONFIG_SPL_XMODEM_SUPPORT must been on!"
-#endif
-
 #define EDCL_XMODEM_BUF_LEN 4096
+#define EDCL_XMODEM_BUF_ALIGN 256
 
 struct prog_ctx_t
 {
