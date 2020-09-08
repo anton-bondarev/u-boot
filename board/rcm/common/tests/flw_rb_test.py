@@ -33,8 +33,8 @@ import io
 MODE_XMODEM = 0
 MODE_EDCL = 1
 
-write_mode = MODE_EDCL
-read_mode = MODE_XMODEM
+write_mode = MODE_XMODEM
+read_mode = MODE_EDCL
 
 rstdev = "/dev/ttyACM0"
 ttydev = "/dev/ttyUSB6"
@@ -53,16 +53,15 @@ sf_size = 0x10000
 #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
 nand_dev = "nand0"
 nand_addr = 0x100000
-nand_size = 0x60000
+nand_size = 0x20000
 
 # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
 mmc_dev = "mmc0"
 mmc_addr = 0
 mmc_size = 4096
 
-do_randfile = 1
-do_wr = 1
-do_restart = 1
+do_randfile = 0
+do_wr = 0
 do_rd = 1
 do_cmp = 1
 
@@ -231,17 +230,18 @@ def testx(flash_dev, flash_addr, flash_size):
             while True:
                 xfer_edcl.connect(term.chip)
                 while True:
+                    #time.sleep(0.1)
                     rsync = read_sync(xfer_edcl)
                     if rsync == 0:
                         break
+                xfer_edcl.connect(term.chip)
                 wr_buf = wr_stream.read(edcl_buf_size)
                 if not wr_buf:
                     break
-                xfer_edcl.connect(term.chip)
-                xfer_edcl.send(io.BytesIO(wr_buf), buf_ptr[n])
-                write_sync(xfer_edcl, buf_ptr[n])
-                n ^= 1
-                print("send buffer(%x):%x,%x,%x,%x\n" % (rsync, wr_buf[0], wr_buf[1], wr_buf[2], wr_buf[3]))
+                xfer_edcl.send(io.BytesIO(wr_buf), buf_ptr[n & 1])
+                write_sync(xfer_edcl, buf_ptr[n & 1])
+                n = n+1
+                print("send buffer(%x):%x,%x,%x,%x\n" % (n, wr_buf[0], wr_buf[1], wr_buf[2], wr_buf[3]))
             wr_stream.close();
         print(colored('%s: write finished' % flash_dev, 'green'))
 # сделать обязательно...
@@ -257,8 +257,29 @@ def testx(flash_dev, flash_addr, flash_size):
             xfer_xmodem.connect(term.chip)
             xfer_xmodem.recv(rd_stream, 0, flash_size)
             rd_stream.close()
-        elif read_mode == MODE_XMODEM:
-            pass
+        elif read_mode == MODE_EDCL:
+            get_buf_ptr()
+            send("duplicate %c %x %x" % ('E', flash_addr, flash_size))
+            expect("ready")
+            rd_stream = open(rd_file, "wb")
+            if xfer_edcl == None:
+                xfer_edcl = xferEdcl(term)
+            for n in range(0, flash_size, edcl_buf_size):
+                xfer_edcl.connect(term.chip)
+                while True:
+                    rsync = read_sync(xfer_edcl)
+                    if rsync != 0:
+                        break
+                pos = rd_stream.tell()
+                xfer_edcl.connect(term.chip)
+                xfer_edcl.recv(rd_stream, rsync, edcl_buf_size)
+                off = pos + edcl_buf_size - rd_stream.tell()
+                rd_stream.seek(off, os.SEEK_CUR)
+                write_sync(xfer_edcl, 0)
+                print("read %u\n" % n)
+            rd_stream.truncate(flash_size)
+            rd_stream.close()
+
         print(colored('%s: read finished' % flash_dev, 'green'))
 # сравниваем
     if do_cmp:
@@ -270,9 +291,9 @@ def testx(flash_dev, flash_addr, flash_size):
 
 testx(sf_dev, sf_addr, sf_size)
 
-testx(nand_dev, nand_addr, nand_size)
+#testx(nand_dev, nand_addr, nand_size)
 
-testx(mmc_dev, mmc_addr, mmc_size)
+#testx(mmc_dev, mmc_addr, mmc_size)
 
 while True:
     pass

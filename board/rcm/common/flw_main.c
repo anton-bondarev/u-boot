@@ -205,11 +205,19 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
         char* curr_buf;
         while (size > 0) {
             while (!edcl_xmodem_buf_sync) putc('.');
-            curr_buf = edcl_xmodem_buf_sync, edcl_xmodem_buf_sync = 0;
+            curr_buf = edcl_xmodem_buf_sync;
+            #ifdef __PPC__
+                asm("msync");
+            #endif
+            edcl_xmodem_buf_sync = 0;
+             #ifdef __PPC__
+                asm("msync");
+            #endif
             res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);
             if (res) last_err = res;
             addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;
         }
+        edcl_xmodem_buf_sync = 0;
     }
     return res;
 }
@@ -227,6 +235,16 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
         pc.dst_addr = addr;
         pc.dev = seldev;
         res = last_err = send_buf_xmodem(&pc);
+    }
+    else {
+        edcl_xmodem_buf_sync = 0;
+        while (size > 0) {
+            res = seldev->read(seldev, addr, EDCL_XMODEM_BUF_LEN, edcl_xmodem_buf0);
+            if (res) last_err = res;
+            addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;
+            edcl_xmodem_buf_sync = edcl_xmodem_buf0;
+            while (edcl_xmodem_buf_sync) putc('.');
+        }
     }
     return res;
 }
