@@ -7,10 +7,6 @@ int flw_putc(char ch);
 
 int flw_getc(unsigned long tout);
 
-static inline void flw_delay(unsigned long value)
-{
-    unsigned long i;
-    for (i=0; i < value; i++) asm("nop\n");
-}
+void flw_delay(unsigned long value);
 
 #endif // FLW_SERIAL_H

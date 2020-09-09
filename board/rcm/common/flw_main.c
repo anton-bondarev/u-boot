@@ -203,17 +203,16 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
     }
     else {
         char* curr_buf;
+        unsigned int curr_num = 0;
         while (size > 0) {
-            while (!edcl_xmodem_buf_sync) putc('.');
-            curr_buf = edcl_xmodem_buf_sync;
-            #ifdef __PPC__
-                asm("msync");
-            #endif
-            edcl_xmodem_buf_sync = 0;
-             #ifdef __PPC__
-                asm("msync");
-            #endif
-            res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);
+            do {
+                curr_buf = curr_num & 1 ? edcl_xmodem_buf1 : edcl_xmodem_buf0;
+                flw_delay(0x10000);
+            } while (curr_buf != edcl_xmodem_buf_sync || !curr_buf);                            // wait for completion of edcl writing,get buffer pointer
+            curr_num++;
+            edcl_xmodem_buf_sync = 0;                                                           // enable next edcl writing
+            asm("msync");
+            res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);                   // write current
             if (res) last_err = res;
             addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;
         }
@@ -237,13 +236,30 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
         res = last_err = send_buf_xmodem(&pc);
     }
     else {
+        char* curr_buf = edcl_xmodem_buf0;
+        unsigned int curr_num = 0;
         edcl_xmodem_buf_sync = 0;
         while (size > 0) {
-            res = seldev->read(seldev, addr, EDCL_XMODEM_BUF_LEN, edcl_xmodem_buf0);
-            if (res) last_err = res;
+            res = seldev->read(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf );   // read
+            if (res) last_err = res;                                            // save last error
             addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;
-            edcl_xmodem_buf_sync = edcl_xmodem_buf0;
-            while (edcl_xmodem_buf_sync) putc('.');
+            edcl_xmodem_buf_sync = curr_buf;                                    // read ready indication
+            asm("msync");
+            char* save_sync;
+            while (1) {
+                save_sync = edcl_xmodem_buf_sync;
+                flw_delay(0x10000);
+                if (save_sync == edcl_xmodem_buf_sync) {
+                    if (curr_num & 1) {
+                        if ((int)save_sync == -1) break;
+                    }
+                    else {
+                        if ((int)save_sync == 0) break;
+                    }
+                }
+            };                                                                 // wait for edcl reading
+            curr_num++;
+            curr_buf = (curr_num & 1)  ? edcl_xmodem_buf1 : edcl_xmodem_buf0;   // switch buffer for next reading
         }
     }
     return res;

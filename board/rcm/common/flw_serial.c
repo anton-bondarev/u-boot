@@ -36,3 +36,9 @@ int flw_getc(unsigned long tout)
         return err;
     }
 }
+
+void flw_delay(unsigned long value)
+{
+    unsigned long i;
+    for (i=0; i < value; i++) asm("nop\n");
+}

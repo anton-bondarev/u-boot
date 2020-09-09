@@ -33,10 +33,10 @@ import io
 MODE_XMODEM = 0
 MODE_EDCL = 1
 
-write_mode = MODE_XMODEM
+write_mode = MODE_EDCL
 read_mode = MODE_EDCL
 
-rstdev = "/dev/ttyACM0"
+rstdev = "/dev/ttyACM1"
 ttydev = "/dev/ttyUSB6"
 baudrate = 1000000
 wr_file = "tmpwr"
@@ -48,7 +48,7 @@ ser = None
 # Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
 sf_dev = "sf00"
 sf_addr = 0x200000
-sf_size = 0x10000
+sf_size = 0x40000
 
 #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
 nand_dev = "nand0"
@@ -57,8 +57,8 @@ nand_size = 0x20000
 
 # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
 mmc_dev = "mmc0"
-mmc_addr = 0
-mmc_size = 4096
+mmc_addr = 0x500000
+mmc_size = 0x4000
 
 do_randfile = 0
 do_wr = 0
@@ -97,17 +97,6 @@ def intialize_programmer(target_chip=None, signal_sender=None):
         opts.baud = [ c.baudrate ]
 
     reset = resets[opts.reset[0]](opts)
-    # PP: TODO: change __init__ for terminal and call set_progress_widgets with 2 new arguments
-    # usage example
-    #       term.desc_widget(value, minimum, maximum)
-    #       term.desc_widget(value)
-    #       term.prog_widget(text)
-    # if signal_sender:
-    #     term = terminal(opts.port[0],
-    #                     opts.baud[0],
-    #                     signal_sender.update_progress_bar_terminal,
-    #                     signal_sender.set_value_terminal_label)
-    # else:
     term = terminal(opts.port[0], opts.baud[0])
     term.set_chip(c)
 
@@ -173,11 +162,30 @@ def get_buf_ptr():
 
 def read_sync(xfer):
     global sync_ptr
-    return socket.htonl(xfer.read32(sync_ptr)[0])
+    buffer = io.BytesIO()
+    xfer.recv(buffer, sync_ptr, 4)
+    buffer.truncate(4)
+    return int.from_bytes(buffer.getvalue(), 'big')
+
+def wait_eq_sync(xfer, val, tout=5):
+    for i in range(tout*10):
+        if read_sync(xfer) == val:
+            return
+        time.sleep(0.1)
+    print("wait_eq_sync timeout\n")
+
+def wait_neq_sync(xfer, val, tout=5):
+    for i in range(tout*10):
+        r = read_sync(xfer)
+        if r != val:
+            return r
+        time.sleep(0.1)
+    print("wait_neq_sync timeout\n")
+    return r
 
 def write_sync(xfer, val):
     global sync_ptr
-    xfer.write32(sync_ptr, socket.htonl(val))
+    xfer.send(io.BytesIO(val.to_bytes(4, 'big')), sync_ptr)
 
 def testx(flash_dev, flash_addr, flash_size):
     global ser
@@ -227,21 +235,17 @@ def testx(flash_dev, flash_addr, flash_size):
                 xfer_edcl = xferEdcl(term)
             wr_stream = open(wr_file, "rb")
             n = 0
+            xfer_edcl.connect(term.chip)
+            xfer_edcl.connect(term.chip)
             while True:
-                xfer_edcl.connect(term.chip)
-                while True:
-                    #time.sleep(0.1)
-                    rsync = read_sync(xfer_edcl)
-                    if rsync == 0:
-                        break
-                xfer_edcl.connect(term.chip)
                 wr_buf = wr_stream.read(edcl_buf_size)
                 if not wr_buf:
                     break
-                xfer_edcl.send(io.BytesIO(wr_buf), buf_ptr[n & 1])
+                xfer_edcl.send(io.BytesIO(wr_buf), buf_ptr[n & 1]) # set address of current buffer
                 write_sync(xfer_edcl, buf_ptr[n & 1])
+                wait_eq_sync(xfer_edcl, 0)
                 n = n+1
-                print("send buffer(%x):%x,%x,%x,%x\n" % (n, wr_buf[0], wr_buf[1], wr_buf[2], wr_buf[3]))
+                print(colored("send buffer %x: %x,%x,%x,%x" % (n, wr_buf[0], wr_buf[1], wr_buf[2], wr_buf[3]), 'yellow'))
             wr_stream.close();
         print(colored('%s: write finished' % flash_dev, 'green'))
 # сделать обязательно...
@@ -264,19 +268,23 @@ def testx(flash_dev, flash_addr, flash_size):
             rd_stream = open(rd_file, "wb")
             if xfer_edcl == None:
                 xfer_edcl = xferEdcl(term)
-            for n in range(0, flash_size, edcl_buf_size):
-                xfer_edcl.connect(term.chip)
+            xfer_edcl.connect(term.chip)
+            xfer_edcl.connect(term.chip)
+            for n in range(flash_size//edcl_buf_size):
                 while True:
-                    rsync = read_sync(xfer_edcl)
-                    if rsync != 0:
-                        break
+                    buf_addr = wait_neq_sync(xfer_edcl, 0) # get address of current buffer
+                    if n & 1:
+                        if buf_addr == buf_ptr[1]:
+                            break
+                    else:
+                        if buf_addr == buf_ptr[0]:
+                            break
                 pos = rd_stream.tell()
-                xfer_edcl.connect(term.chip)
-                xfer_edcl.recv(rd_stream, rsync, edcl_buf_size)
+                xfer_edcl.recv(rd_stream, buf_addr, edcl_buf_size)
                 off = pos + edcl_buf_size - rd_stream.tell()
                 rd_stream.seek(off, os.SEEK_CUR)
-                write_sync(xfer_edcl, 0)
-                print("read %u\n" % n)
+                write_sync(xfer_edcl, 0xffffffff if (n & 1) else 0)
+                print(colored("recv buffer %x" % n, 'yellow'))
             rd_stream.truncate(flash_size)
             rd_stream.close()
 
@@ -285,15 +293,19 @@ def testx(flash_dev, flash_addr, flash_size):
     if do_cmp:
         crc32_wr = zlib.crc32(open(wr_file, 'rb').read(), 0)
         crc32_rd = zlib.crc32(open(rd_file, 'rb').read(), 0)
-        err = (crc32_wr != crc32_rd)
+        err = 1 if (crc32_wr != crc32_rd) else 0
         print(colored('%s: compare finished (%x-%x)' % (flash_dev, crc32_wr, crc32_rd) + ('err' if err else 'ok'), 'red' if err else 'green'))
     return err
 
-testx(sf_dev, sf_addr, sf_size)
+sum_err = 0
 
-#testx(nand_dev, nand_addr, nand_size)
+#sum_err += testx(sf_dev, sf_addr, sf_size)
 
-#testx(mmc_dev, mmc_addr, mmc_size)
+#sum_err += testx(nand_dev, nand_addr, nand_size)
+
+sum_err += testx(mmc_dev, mmc_addr, mmc_size)
+
+print(colored("Completed,error %u" % sum_err, 'yellow'))
 
 while True:
     pass
