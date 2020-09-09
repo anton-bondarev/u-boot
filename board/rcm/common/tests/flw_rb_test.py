@@ -30,15 +30,22 @@ import inspect
 import time
 import io
 
+MDL_1888TX018 = 0
+MDL_1888BM018 = 1
+
+model = MDL_1888TX018
+
 MODE_XMODEM = 0
 MODE_EDCL = 1
 
 write_mode = MODE_EDCL
 read_mode = MODE_EDCL
 
-rstdev = "/dev/ttyACM1"
-ttydev = "/dev/ttyUSB6"
-baudrate = 1000000
+if model == MDL_1888TX018:
+    rstdev = "/dev/ttyACM1"
+    ttydev = "/dev/ttyUSB6"
+    baudrate = 1000000
+
 wr_file = "tmpwr"
 rd_file = "tmprd"
 
@@ -299,9 +306,9 @@ def testx(flash_dev, flash_addr, flash_size):
 
 sum_err = 0
 
-#sum_err += testx(sf_dev, sf_addr, sf_size)
+sum_err += testx(sf_dev, sf_addr, sf_size)
 
-#sum_err += testx(nand_dev, nand_addr, nand_size)
+sum_err += testx(nand_dev, nand_addr, nand_size)
 
 sum_err += testx(mmc_dev, mmc_addr, mmc_size)
 
