@@ -46,29 +46,34 @@ if model == MDL_1888TX018:
     ttydev = "/dev/ttyUSB6"
     baudrate = 1000000
 
+    # Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
+    sf_dev = "sf00"
+    sf_addr = 0x200000
+    sf_size = 0x10000
+
+    #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
+    nand_dev = "nand0"
+    nand_addr = 0x100000
+    nand_size = 0x20000
+
+    # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
+    mmc_dev = "mmc0"
+    mmc_addr = 0x500000
+    mmc_size = 0x4000
+
+elif model == MDL_1888BM018:
+    rstcmd = '"printf "22:05" |nc 192.168.10.239 6722'
+    ttydev = "/dev/ttyUSB7"
+    baudrate = 115200
+
 wr_file = "tmpwr"
 rd_file = "tmprd"
 
 edcl_buf_size = 4096
 ser = None
 
-# Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
-sf_dev = "sf00"
-sf_addr = 0x200000
-sf_size = 0x40000
-
-#Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
-nand_dev = "nand0"
-nand_addr = 0x100000
-nand_size = 0x20000
-
-# Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
-mmc_dev = "mmc0"
-mmc_addr = 0x500000
-mmc_size = 0x4000
-
-do_randfile = 0
-do_wr = 0
+do_randfile = 1
+do_wr = 1
 do_rd = 1
 do_cmp = 1
 
