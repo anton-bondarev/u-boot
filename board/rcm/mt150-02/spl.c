@@ -110,6 +110,12 @@ void spl_board_init(void) {
 
 void board_boot_order(u32 *spl_boot_list)
 {
+#ifndef CONFIG_FLASHWRITER
 	spl_boot_list[0] = BOOT_DEVICE_BOOTROM;
 	spl_boot_list[1] = spl_boot_device();
+#else
+	spl_boot_list[0] = BOOT_DEVICE_FLASH_WRITER;
+	spl_boot_list[1] = BOOT_DEVICE_BOOTROM;
+	spl_boot_list[2] = spl_boot_device();
+#endif
 }

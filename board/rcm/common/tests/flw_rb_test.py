@@ -33,18 +33,23 @@ import io
 MDL_1888TX018 = 0
 MDL_1888BM018 = 1
 
-model = MDL_1888TX018
+model = MDL_1888BM018
 
 MODE_XMODEM = 0
 MODE_EDCL = 1
 
-write_mode = MODE_EDCL
-read_mode = MODE_EDCL
+write_mode = MODE_XMODEM
+read_mode = MODE_XMODEM
+
+splpath = "./../../../../spl/u-boot-spl-dtb.rbi"
 
 if model == MDL_1888TX018:
+    chip = "mm7705"
+    rstmsg = "\x00boot: Waiting for a valid image @ 0x40000"
     rstdev = "/dev/ttyACM1"
     ttydev = "/dev/ttyUSB6"
     baudrate = 1000000
+    splbase = 0x40000
 
     # Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
     sf_dev = "sf00"
@@ -62,9 +67,16 @@ if model == MDL_1888TX018:
     mmc_size = 0x4000
 
 elif model == MDL_1888BM018:
+    chip = "oi10"
+    rstmsg = "boot: host: Hit 'X' for X-Modem upload"
     rstcmd = '"printf "22:05" |nc 192.168.10.239 6722'
     ttydev = "/dev/ttyUSB7"
     baudrate = 115200
+    splbase = 0x80020000
+
+    sf_dev = "sf00"
+    sf_addr = 0x200000
+    sf_size = 0x10000
 
 wr_file = "tmpwr"
 rd_file = "tmprd"
@@ -200,6 +212,9 @@ def write_sync(xfer, val):
     xfer.send(io.BytesIO(val.to_bytes(4, 'big')), sync_ptr)
 
 def testx(flash_dev, flash_addr, flash_size):
+    global chip
+    global rstmsg
+    global splbase
     global ser
     global term
     global buf_ptr, sync_ptr, buf_len
@@ -207,13 +222,15 @@ def testx(flash_dev, flash_addr, flash_size):
     xfer_xmodem = None
     xfer_edcl = None
 
-    term, reset = intialize_programmer("mm7705")
+    term, reset = intialize_programmer(chip)
     reset.resetToHost()
-    expect("\x00boot: Waiting for a valid image @ 0x40000")
+    expect(rstmsg)
     term.xfer.reconnect()
     term.xfer.connect(term.chip)
-    stream = open("/home/vs/work/u-boot/spl/u-boot-spl-dtb.rbi", "rb")
-    term.xfer.send(stream, 0x00040000)
+    stream = open(splpath, "rb")
+    if model == MDL_1888BM018:  # для TX018 в этом нет необходимости,почему?
+        send("X")
+    term.xfer.send(stream, splbase)
     stream.close()
     expect("Flashwriter(1.0.0) running(help for information):")
     select(flash_dev)
