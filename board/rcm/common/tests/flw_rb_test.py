@@ -33,7 +33,7 @@ import io
 MDL_1888TX018 = 0
 MDL_1888BM018 = 1
 
-model = MDL_1888BM018
+model = MDL_1888TX018
 
 MODE_XMODEM = 0
 MODE_EDCL = 1
@@ -343,7 +343,7 @@ sum_err = 0
 
 if model == MDL_1888TX018:
 
-    sum_err += testx(sf_dev0, sf_addr1, sf_size1)
+    sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
     sum_err += testx(nand_dev0, nand_addr0, nand_size0)
 
