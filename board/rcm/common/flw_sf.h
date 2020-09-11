@@ -25,7 +25,7 @@
     #define FLW_MAX_SF_CS_NUM 1
 #endif
 
-int flw_spi_flash_found(unsigned int bus, unsigned int cs);
+int flw_spi_flash_found(unsigned int bus, unsigned int cs, struct flw_dev_info_t* dev_info);
 
 int flw_spi_flash_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
 

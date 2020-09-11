@@ -6,11 +6,7 @@
 
 #include "flw_dev_list.h"
 
-#define FLW_NAND_ERASE_SIZE 0x20000
-
-#define FLW_NAND_WRITE_SIZE 0x800
-
-int flw_nand_found(void);
+int flw_nand_found(struct flw_dev_info_t* dev_info);
 
 int flw_nand_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
 

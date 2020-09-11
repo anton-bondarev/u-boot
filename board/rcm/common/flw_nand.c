@@ -3,28 +3,26 @@
 
 #include "flw_nand.h"
 
-int rcm_nand_flw_init(char* dma_buf, uint64_t* full_size, uint32_t* write_size, uint32_t* erase_size);
+int rcm_nand_flw_init(char* dma_buf, char* part, unsigned int partlen, uint64_t* full_size, uint32_t* write_size, uint32_t* erase_size);
 int rcm_nand_flw_erase_block(unsigned long addr);
 int rcm_nand_flw_write_page(unsigned long addr, char* data);
 int rcm_nand_flw_read_page(unsigned long addr, char* data);
 
-int flw_nand_found(void)
+int flw_nand_found(struct flw_dev_info_t* dev_info)
 {
     extern char edcl_xmodem_buf0[];
     int ret;
-    uint64_t full_size;
-    uint32_t write_size, erase_size;
-    ret = rcm_nand_flw_init(edcl_xmodem_buf0, &full_size, &write_size, &erase_size);
-    if (!ret) {
-        printf("Nand: chipsize=0x%x%x,writesize=0x%x,erasesize=0x%x\n", (uint32_t)(full_size>>32), (uint32_t)(full_size), write_size, erase_size);
-    }
+    ret = rcm_nand_flw_init(edcl_xmodem_buf0, dev_info->part, sizeof(dev_info->part), &dev_info->full_size, &dev_info->write_size, &dev_info->erase_size);
     return ret;
 }
 
 static int check_addr_size( unsigned long* addr, unsigned long* size, unsigned long check )
 {
-    if (*addr % check || *size % check)
-    {
+    if (check == 0) {
+        puts("Page/block size is null\n");
+        return -1;
+    }
+    if (*addr % check || *size % check) {
         puts("Address/length not multiple of page/block size\n");
         return -1;
     }
@@ -35,10 +33,11 @@ int flw_nand_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
 {
     int err;
     unsigned long curr, end = addr+size-1;
+    unsigned int flw_nand_erase_size = fd->dev_info.erase_size;
 
-    err = check_addr_size(&addr, &size, FLW_NAND_ERASE_SIZE);
+    err = check_addr_size(&addr, &size, flw_nand_erase_size);
     if (!err) {
-        for (curr = addr; curr <= end; curr += FLW_NAND_ERASE_SIZE)
+        for (curr = addr; curr <= end; curr += flw_nand_erase_size)
         {
             err = rcm_nand_flw_erase_block(curr);
             if (err) break;
@@ -50,14 +49,15 @@ int flw_nand_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
 static int flw_nand_rdwr(struct flw_dev_t* fd, int wr, unsigned long addr, unsigned long size, char* data)
 {
     unsigned long curr, end = addr+size-1;
-    int err = check_addr_size(&addr, &size, FLW_NAND_WRITE_SIZE);
+    unsigned int flw_nand_write_size = fd->dev_info.write_size;
+    int err = check_addr_size(&addr, &size, flw_nand_write_size);
     if (!err) {
-        for (curr = addr; curr <= end; curr += FLW_NAND_WRITE_SIZE) {
+        for (curr = addr; curr <= end; curr += flw_nand_write_size) {
             if (wr )
                 err = rcm_nand_flw_write_page(curr, data);
             else
                 err = rcm_nand_flw_read_page(curr, data);
-            data += FLW_NAND_WRITE_SIZE;
+            data += flw_nand_write_size;
             if (err)
                 break;
         }
@@ -77,7 +77,9 @@ int flw_nand_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, 
 
 void flw_nand_list_add(void)
 {
-    if (!flw_nand_found()) {
-        flash_dev_list_add("nand0", FLWDT_NAND, UINT_MAX, UINT_MAX, flw_nand_erase, flw_nand_write, flw_nand_read);
+    struct flw_dev_info_t dev_info = {0};
+    dev_info.dummy_nand0 = dev_info.dummy_nand1 = UINT_MAX;
+    if (!flw_nand_found(&dev_info)) {
+        flash_dev_list_add("nand0", FLWDT_NAND, &dev_info, flw_nand_erase, flw_nand_write, flw_nand_read);
     }
 }

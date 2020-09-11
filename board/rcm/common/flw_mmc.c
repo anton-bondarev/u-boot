@@ -3,7 +3,24 @@
 
 #include "flw_mmc.h"
 
-int flw_mmc_found(unsigned int slot, unsigned int info, struct mmc** mmc)
+static const char* bus_mode[FLW_BUS_MODE_CNT] = {
+    "MMC_LEGACY",
+    "MMC_HS",
+    "SD_HS",
+    "MMC_HS_52",
+    "MMC_DDR_52",
+    "UHS_SDR12",
+    "UHS_SDR25",
+    "UHS_SDR50",
+    "UHS_DDR50",
+    "UHS_SDR104",
+    "MMC_HS_200",
+    "MMC_HS_400",
+    "MMC_HS_400_ES",
+    "MODE_ERROR"
+};
+
+int flw_mmc_found(unsigned int slot, struct flw_dev_info_t* dev_info, struct mmc** mmc)
 { // mmcgetcd?
     struct mmc* mmc_tmp = NULL;
     int err;
@@ -12,29 +29,45 @@ int flw_mmc_found(unsigned int slot, unsigned int info, struct mmc** mmc)
     if (!err)
         mmc_tmp = find_mmc_device(slot);
 
-    if (info)
-        printf("%s MMC at slot %u\n", mmc_tmp ? "Found" : "Not found", slot);
-
     if (mmc_tmp) {
         err = mmc_init(mmc_tmp);
         if (!err) {
-            if (info) {
-                printf("Name %s,block length read 0x%x,block length write 0x%x,erase size(x512 byte) 0x%x\n",
-                    mmc_tmp->cfg->name, mmc_tmp->read_bl_len, mmc_tmp->write_bl_len,  mmc_tmp->erase_grp_size );
+            if (dev_info) {
+                if (mmc_tmp->selected_mode > FLW_BUS_MODE_CNT-1)
+                    mmc_tmp->selected_mode = FLW_BUS_MODE_CNT-1;
+                const char* mode = bus_mode[mmc_tmp->selected_mode];
+                unsigned int len = strlen(mode);
+                char* p = dev_info->part;
+                *p++ = (char)(mmc_tmp->cid[0] >> 16);
+                *p++ = (char)(mmc_tmp->cid[0] >> 8);
+                *p++ = ' ';
+                strcpy(p, mode), p += len;
+                *p++ = ' ';
+                *p++ = (char)mmc_tmp->cid[0];
+                *p++ = (char)(mmc_tmp->cid[1] >> 24);
+                *p++ = (char)(mmc_tmp->cid[1] >> 16);
+                *p++ = (char)(mmc_tmp->cid[1] >> 8);
+                *p++ = (char)mmc_tmp->cid[1];
+                *p = 0;
+                dev_info->full_size =  mmc_tmp->capacity;
+                dev_info->erase_size = mmc_tmp->erase_grp_size * 512;
+                dev_info->write_size = mmc_tmp->write_bl_len;
             }
             if (mmc)
                 *mmc = mmc_tmp;
             return 0;
         }
-        else if (info)
-            printf("Failed to initialize\n");
     }
     return -1;
 }
 
-static int conv_addr_size(unsigned long* addr, unsigned long* size)
+static int conv_addr_size(unsigned long* addr, unsigned long* size, unsigned int check)
 {
-    if( *addr % FLW_MMC_SECT_SIZE || *size % FLW_MMC_SECT_SIZE )
+    if (!check) {
+        puts("Block/page size is null\n");
+        return -1;
+    }
+    if( *addr % check || *size % check )
     {
         puts("Erase/write address/length not multiple of block size\n");
         return -1;
@@ -59,10 +92,10 @@ int flw_mmc_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
     struct mmc* mmc;
     unsigned int erase_num;
 
-    if (conv_addr_size(&addr, &size))
+    if (conv_addr_size(&addr, &size, fd->dev_info.erase_size))
         return -1;
 
-    if (flw_mmc_found(fd->slot, 0, &mmc))
+    if (flw_mmc_found(fd->dev_info.slot, 0, &mmc))
         return -1;
 
     if (check_protect(mmc))
@@ -81,10 +114,10 @@ int flw_mmc_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, 
     struct mmc* mmc;
     unsigned int write_num;
 
-    if (conv_addr_size(&addr, &size))
+    if (conv_addr_size(&addr, &size, fd->dev_info.write_size))
         return -1;
 
-    if (flw_mmc_found(fd->slot, 0, &mmc))
+    if (flw_mmc_found(fd->dev_info.slot, 0, &mmc))
         return -1;
 
     if (check_protect(mmc))
@@ -103,10 +136,10 @@ int flw_mmc_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, c
     struct mmc* mmc;
     unsigned int read_num;
 
-    if (conv_addr_size(&addr, &size))
+    if (conv_addr_size(&addr, &size, fd->dev_info.write_size))
         return -1;
 
-    if (flw_mmc_found(fd->slot, 0, &mmc))
+    if (flw_mmc_found(fd->dev_info.slot, NULL, &mmc))
         return -1;
 
     read_num = blk_dread(mmc_get_blk_desc(mmc), addr, size, data);
@@ -124,9 +157,12 @@ void flw_mmc_list_add(void)
 
     for (slot=0; slot<FLW_MAX_MMC_SLOT; slot++)
     {
-        if (!flw_mmc_found(slot, 1, NULL)) {
+        struct flw_dev_info_t dev_info = {0};
+        if (!flw_mmc_found(slot, &dev_info, NULL)) {
             name[3] = slot +'0';
-            flash_dev_list_add(name, FLWDT_MMC, slot, UINT_MAX, flw_mmc_erase, flw_mmc_write, flw_mmc_read);
+            dev_info.slot = slot;
+            dev_info.dummy_mmc = UINT_MAX;
+            flash_dev_list_add(name, FLWDT_MMC, &dev_info, flw_mmc_erase, flw_mmc_write, flw_mmc_read);
         }
     }
 }

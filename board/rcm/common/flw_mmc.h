@@ -13,11 +13,17 @@
     #error "CONFIG_SPL_MMC_WRITE must been on!" 
 #endif
 
-#define FLW_MAX_MMC_SLOT 3
+#ifdef CONFIG_TARGET_1888TX018
+    #define FLW_MAX_MMC_SLOT 1
+#endif
 
-#define FLW_MMC_SECT_SIZE 512
+#ifdef CONFIG_TARGET_1888BM18
+    #define FLW_MAX_MMC_SLOT 2
+#endif
 
-int flw_mmc_found(unsigned int slot, unsigned int info, struct mmc** mmc);
+#define FLW_BUS_MODE_CNT 14
+
+int flw_mmc_found(unsigned int slot, struct flw_dev_info_t* dev_info, struct mmc** mmc);
 
 int flw_mmc_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
 

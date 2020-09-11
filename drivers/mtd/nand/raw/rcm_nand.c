@@ -1594,6 +1594,7 @@ struct rcm_spl_nand_chip {
         uint32_t write_size;
         uint32_t oob_size;
         uint32_t erase_size;
+        char part[32];
 };
 
 struct rcm_spl_nand_chips {
@@ -1716,6 +1717,7 @@ static int nand_spl_read_param( uint32_t cs, struct rcm_spl_nand_chip* chip, uin
                         return -1;
                 }
                 chip->size = (uint64_t)type->chipsize << 20;
+                strlcpy(chip->part, type->name, sizeof(chip->part));
                 return 0;
         }
         return -1;
@@ -1874,13 +1876,14 @@ void nand_deselect( void ) {
 static struct rcm_spl_nand_chips chips = {0};
 const struct rcm_spl_nand_chip* chip = &chips.chip[0];
 
-int rcm_nand_flw_init( char* dma_buf, uint64_t* full_size, uint32_t* write_size, uint32_t* erase_size)
+int rcm_nand_flw_init( char* dma_buf, char* part, unsigned int partlen, uint64_t* full_size, uint32_t* write_size, uint32_t* erase_size)
 {
         int err;
         iowrite32(0, (void*)SRAM_NOR_CTRL); // page 922
         nand_init();
         err = nand_spl_init_chips_param( &chips, dma_buf );
         if (!err) {
+                if (part) strlcpy(part, chip->part, partlen);
                 if (full_size) *full_size = chips.full_size;
                 if (write_size) *write_size = chip->write_size;
                 if (erase_size) *erase_size = chip->erase_size;

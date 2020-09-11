@@ -46,7 +46,7 @@ static int conv_addr_size(unsigned long addr, unsigned long size, unsigned int s
 int flw_nor_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
 {
     int ret;
-    flash_info_t* info = &flash_info[fd->bank];
+    flash_info_t* info = &flash_info[fd->dev_info.bank];
     unsigned int start, end;
     unsigned long sect_size =  flash_sector_size(info, 0);
     ret = conv_addr_size( addr, size, sect_size, &start, &end);
@@ -63,7 +63,7 @@ int flw_nor_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
 int flw_nor_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data)
 {
     int ret;
-    unsigned long src = flash_info[fd->bank].start[0] + addr;
+    unsigned long src = flash_info[fd->dev_info.bank].start[0] + addr;
     ret = flash_write((char*)data, src, size);
     //printf("write: %lx-%lx\n", src, size);
     if (ret)
@@ -74,7 +74,7 @@ int flw_nor_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, 
 int flw_nor_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data)
 {
     unsigned int i;
-    unsigned long src = flash_info[fd->bank].start[0] + addr;
+    unsigned long src = flash_info[fd->dev_info.bank].start[0] + addr;
     //printf("read: %lx-%lx\n", src, size);
     for (i=0; i<size; i++) *data++ = *(char*)src++;
     return 0;
@@ -90,8 +90,11 @@ void flw_nor_list_add(void)
     for (bank=0; bank < FLW_MAX_NOR_BANK; ++bank)
     {
         if (!flw_nor_found(bank, 1, &flash_info[bank])) {
+            struct flw_dev_info_t dev_info = {0};
             name[3] = bank + '0';
-            flash_dev_list_add(name, FLWDT_NOR, bank, UINT_MAX, flw_nor_erase, flw_nor_write, flw_nor_read);
+            dev_info.bank = bank;
+            dev_info.dummy_nor = UINT_MAX;
+            flash_dev_list_add(name, FLWDT_NOR, &dev_info, flw_nor_erase, flw_nor_write, flw_nor_read);
         }
      }
 }

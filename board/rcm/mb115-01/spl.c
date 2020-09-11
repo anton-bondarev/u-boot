@@ -92,6 +92,7 @@ void usleep(uint32_t usec);
 
 void spl_board_init(void)
 {
+#ifndef CONFIG_FLASHWRITER
 	/* init dram */
 	ddr_init(0);
 
@@ -102,7 +103,7 @@ void spl_board_init(void)
 		do_reset(0,0,0,0);
 	}
 	gd->ram_size = CONFIG_SYS_DDR_SIZE;
-
+#endif
 #ifdef CONFIG_MTD_RCM_NOR
 	rcm_mtd_arbiter_init();
 	rcm_sram_nor_init();
