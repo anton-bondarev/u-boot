@@ -6,6 +6,6 @@ config FLASHWRITER
 			CONFIG_SPL_MMC_SUPPORT for MMC programming
 			CONFIG_SPL_NOR_SUPPORT for NOR flash programming
 			CONFIG_SPL_NAND_SUPPORT for NAND flash programming
-	select SPL_MMC_WRITE
+	select SPL_CLK
 	select SPL_SYS_MALLOC_SIMPLE
 	default n

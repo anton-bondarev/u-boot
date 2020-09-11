@@ -14,6 +14,7 @@ CONFIG_DEBUG_UART_CLOCK=100000000
 CONFIG_DEBUG_UART_SKIP_INIT=y # the UART speed is configured by RUMBOOT and it depens on the board switches
 
 CONFIG_SPL=y
+CONFIG_SPL_CLK=y
 CONFIG_SPL_TEXT_BASE=0x80020000
 CONFIG_SPL_SEPARATE_BSS=y
 CONFIG_SPL_LDSCRIPT="arch/powerpc/cpu/ppc470s/u-boot-spl.lds"

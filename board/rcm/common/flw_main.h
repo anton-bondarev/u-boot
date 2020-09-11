@@ -7,10 +7,26 @@
 #include "flw_serial.h"
 #include "flw_xmodem.h"
 #include "flw_dev_list.h"
-#include "flw_sf.h"
-#include "flw_mmc.h"
-#include "flw_nor.h"
-#include "flw_nand.h"
+
+#ifdef CONFIG_SPL_SPI_FLASH_SUPPORT
+    #include "flw_sf.h"
+#endif
+
+#ifdef CONFIG_SPL_MMC_SUPPORT
+    #include "flw_mmc.h"
+#endif
+
+#ifdef CONFIG_SPL_NOR_SUPPORT
+    #include "flw_nor.h"
+#endif
+
+#ifdef CONFIG_SPL_NAND_SUPPORT
+    #include "flw_nand.h"
+#endif
+
+#ifndef CONFIG_SPL_CLK
+    #error "CONFIG_SPL_CLK must been on!"
+#endif
 
 #define FLW_VERSION "1.0.0"
 

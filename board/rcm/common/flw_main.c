@@ -96,7 +96,6 @@ static size_t write_data_cb(size_t curpos, void *data, size_t length, void *arg)
 
 static int load_buf_xmodem(struct prog_ctx_t* pc)
 {
-    flw_delay(0x800000l);
 #ifdef SIMPLE_BUFFER_ONLY
     return xmodem_get(pc->src_ptr, pc->len );
 #else
@@ -123,7 +122,6 @@ static size_t read_data_cb(size_t curpos, void *ptr, size_t length, void *arg)
 
 static int send_buf_xmodem(struct prog_ctx_t* pc)
 {
-    flw_delay(0x800000l);
 #ifdef SIMPLE_BUFFER_ONLY
     return xmodem_send(pc->buf, pc->len );
 #else
@@ -192,7 +190,7 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
     }
     puts("completed\n");
 
-    flw_delay(0x800000);
+    flw_delay(8000000l/1000);
     if (mode == 'X') {
         struct prog_ctx_t pc;
         pc.src_ptr = edcl_xmodem_buf;
@@ -207,7 +205,7 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
         while (size > 0) {
             do {
                 curr_buf = curr_num & 1 ? edcl_xmodem_buf1 : edcl_xmodem_buf0;
-                flw_delay(0x10000);
+                flw_delay(100);
             } while (curr_buf != edcl_xmodem_buf_sync || !curr_buf);                            // wait for completion of edcl writing,get buffer pointer
             curr_num++;
             edcl_xmodem_buf_sync = 0;                                                           // enable next edcl writing
@@ -248,7 +246,7 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
             char* save_sync;
             while (1) {
                 save_sync = edcl_xmodem_buf_sync;
-                flw_delay(0x10000);
+                flw_delay(100);
                 if (save_sync == edcl_xmodem_buf_sync) {
                     if (curr_num & 1) {
                         if ((int)save_sync == -1) break;
@@ -395,6 +393,7 @@ static void cmd_dec(void)
         {
             printf("Last Xmodem error %d\n", last_err);
         }
+#ifdef CONFIG_SPL_MMC_SUPPORT
         else if (!strcmp(cmd_buf, "mmc_test"))
         {
             flash_dev_list_clear();
@@ -420,6 +419,7 @@ static void cmd_dec(void)
                     break;
             }
         }
+#endif // CONFIG_SPL_MMC_SUPPORT
         else
         {
             int erase = !strncmp(cmd_buf,"erase", 5),           // "erase <addr> <size>"

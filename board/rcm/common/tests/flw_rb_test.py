@@ -52,19 +52,19 @@ if model == MDL_1888TX018:
     splbase = 0x40000
 
     # Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
-    sf_dev = "sf00"
-    sf_addr = 0x200000
-    sf_size = 0x10000
+    sf_dev0 = "sf00"
+    sf_addr0 = 0x200000
+    sf_size0 = 0x10000
 
     #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
-    nand_dev = "nand0"
-    nand_addr = 0x100000
-    nand_size = 0x20000
+    nand_dev0 = "nand0"
+    nand_addr0 = 0x100000
+    nand_size0 = 0x20000
 
     # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
-    mmc_dev = "mmc0"
-    mmc_addr = 0x500000
-    mmc_size = 0x4000
+    mmc_dev0 = "mmc0"
+    mmc_addr0 = 0x500000
+    mmc_size0 = 0x4000
 
 elif model == MDL_1888BM018:
     chip = "oi10"
@@ -74,9 +74,22 @@ elif model == MDL_1888BM018:
     baudrate = 115200
     splbase = 0x80020000
 
-    sf_dev = "sf00"
-    sf_addr = 0x200000
-    sf_size = 0x10000
+    """ mb150-02.dts: для работы пары sf00 и sf10 вытаскиваем mmc:
+    mmc0: mmc0@D002C000 {
+        status = "disabled";
+    mmc1: mmc1@D003C000 {
+        status = "disabled";
+    spi0: spi@D002B000 {
+        // status = "disabled";
+    spi1: spi@D003B000 {
+        // status = "disabled"; """
+    sf_dev0 = "sf00"
+    sf_addr0 = 0x200000
+    sf_size0 = 0x10000
+
+    sf_dev1 = "sf10"
+    sf_addr1 = 0x200000
+    sf_size1 = 0x10000
 
 wr_file = "tmpwr"
 rd_file = "tmprd"
@@ -249,7 +262,7 @@ def testx(flash_dev, flash_addr, flash_size):
         if write_mode == MODE_XMODEM:
             send("program %c %x %x" % ('X', flash_addr, flash_size))
             expect("completed")
-            time.sleep(0.5)
+            #time.sleep(0.5)
             wr_stream = open(wr_file, "rb")
             if xfer_xmodem == None:
                 xfer_xmodem = xferXmodem(term)
@@ -328,11 +341,19 @@ def testx(flash_dev, flash_addr, flash_size):
 
 sum_err = 0
 
-sum_err += testx(sf_dev, sf_addr, sf_size)
+if model == MDL_1888TX018:
 
-sum_err += testx(nand_dev, nand_addr, nand_size)
+    sum_err += testx(sf_dev0, sf_addr1, sf_size1)
 
-sum_err += testx(mmc_dev, mmc_addr, mmc_size)
+    sum_err += testx(nand_dev0, nand_addr0, nand_size0)
+
+    sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
+
+elif model == MDL_1888BM018:
+
+    sum_err += testx(sf_dev0, sf_addr0, sf_size0)
+
+    sum_err += testx(sf_dev1, sf_addr1, sf_size1)
 
 print(colored("Completed,error %u" % sum_err, 'yellow'))
 
