@@ -170,8 +170,6 @@ typedef enum
     utmi_suspendm_en_bit_num = 3
 } usb0_reset_reg_bit_numbers;
 
-void usleep(uint32_t usec);
-
 static int rcm_musb_reset(struct musb *musb)
 {
 	struct rcm_musb_data *pdata = to_rcm_musb_data(musb->controller);
@@ -185,12 +183,12 @@ static int rcm_musb_reset(struct musb *musb)
     //T1 - POR LOW
     writeb((unsigned char) (0 << POR_reset_bit_num) | (1 << utmi_reset_phy_bit_num) | (0 << utmi_suspendm_en_bit_num) | (0 << utmi_reset_musb_bit_num),
 				control+RCM_USB0_RESET_REG_OFFSET);
-    usleep(10);
+    udelay(10);
 
     //T2 - SUSPENDM HIGH
     writeb((unsigned char) (0 << POR_reset_bit_num) | (1 << utmi_reset_phy_bit_num) | (1 << utmi_suspendm_en_bit_num) | (0 << utmi_reset_musb_bit_num),
 				control+RCM_USB0_RESET_REG_OFFSET);
-    usleep(47);
+    udelay(47);
 
     //T3 T4 UTMI_RESET LOW
     writeb((unsigned char) (0 << POR_reset_bit_num) | (0 << utmi_reset_phy_bit_num) | (1 << utmi_suspendm_en_bit_num) | (0 << utmi_reset_musb_bit_num),

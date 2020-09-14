@@ -633,8 +633,9 @@
 #define MUL_63( n ) ADD( MUL_62( n ), n )
 #define MUL( n, m ) CAT( MUL_, n )( m )
 
-
+#ifndef ARRAY_SIZE
 #define ARRAY_SIZE( array ) (sizeof(array) / sizeof(array[0]))
+#endif
 
 #define MEM8(addr)  (*(volatile uint8_t*)(addr))
 #define MEM16(addr) (*(volatile uint16_t*)(addr))

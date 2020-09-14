@@ -6,9 +6,9 @@
 
 #include "flw_dev_list.h"
 
-#define FLW_MAX_NOR_BANK 3
+#define FLW_MAX_NOR_BANK 2
 
-int flw_nor_found(unsigned int bank, unsigned int show_info, flash_info_t* info);
+int flw_nor_found(unsigned int bank, struct flw_dev_info_t* dev_info, flash_info_t* info);
 
 int flw_nor_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
 

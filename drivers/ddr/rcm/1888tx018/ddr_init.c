@@ -10,13 +10,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <linux/string.h>
+#include <linux/delay.h>
 #include <compiler.h>
 #include "ddr_impl_h/ddr.h"
 #include "ddr_impl_h/ddr_impl.h"
 #include "ddr_impl_h/ddr_regs.h"
 #include "ddr_impl_h/mivem_assert.h"
 #include "ddr_impl_h/mivem_macro.h"
-#include "timer.h"
 #include "ddr_impl_h/ppc_476fp_lib_c.h"
 #include "ddr_impl_h/ddr/plb6mcif2.h"
 #include "ddr_impl_h/ddr/ddr34lmc.h"
@@ -119,7 +119,7 @@ void plb6mcif2_simple_init( uint32_t base_addr, const uint32_t puaba )
             reg_field(31, 0b0)); //Disable Rank3
 
     const uint32_t Tsnoop = (plb6bc_dcr_read_PLB6BC_TSNOOP(PLB6_BC_BASE) & (0b1111 << 28)) >> 28;
-    usleep(1000);
+    udelay(1000);
     plb6mcif2_dcr_write_PLB6MCIF2_PLBCFG(base_addr,
             //PLB6MCIF2 enable [31] = 0b1
               reg_field(0, 0b0) //Non-coherent
@@ -154,99 +154,6 @@ static void wait_some_time(void)
 //         ;
 // }
 
-//*************************************************DDR INIT FUNCTIONS*************************************************/
-
-static void init_mmu(void)
-{
-    asm volatile (
-	// initialize MMUCR
-	"addis 0, 0, 0x0000   \n\t"  // 0x0000
-	"ori   0, 0, 0x0000   \n\t"  // 0x0000
-	"mtspr 946, 0          \n\t"  // SPR_MMUCR, 946
-	"mtspr 48,  0          \n\t"  // SPR_PID,    48
-	// Set up TLB search priority
-	"addis 0, 0, 0x9ABC   \n\t"  // 0x1234
-	"ori   0, 0, 0xDEF8   \n\t"  // 0x5678  
-	//  "addis r0, r0, 0x1234   \n\t"  // 0x1234
-	//	"ori   r0, r0, 0x5678   \n\t"  // 0x5678  
-	"mtspr 830, 0          \n\t"  // SSPCR, 830
-	"mtspr 831, 0          \n\t"  // USPCR, 831
-	"mtspr 829, 0          \n\t"  // ISPCR, 829
-	"isync                  \n\t"  // 
-	"msync                  \n\t"  // 
-	:::
-    );   
-};
-
-static void write_tlb_entry4(void)
-{
-
- asm volatile (
-	"addis 3, 0, 0x0000   \n\t"  // 0x0000, 0x0000
-	"addis 4, 0, 0x4000   \n\t"  // 0x8200, 0x0000
-	"ori   4, 4, 0x0bf0   \n\t"  // 0x08f0, 0x0BF0 04.04.2017 add_dauny
-	"tlbwe 4, 3, 0        \n\t"
-
-	"addis 4, 0, 0x0000   \n\t"  // 0x8200
-	"ori   4, 4, 0x0000   \n\t"  // 0x0000
-	"tlbwe 4, 3, 1        \n\t"
-
-	"addis 4, 0, 0x0003  \n\t"  // 0x0003, 0000
-	"ori   4, 4, 0x043f   \n\t"  // 0x043F, 023F
-	"tlbwe 4, 3, 2        \n\t"
-  "isync                  \n\t"  // 
-  "msync                  \n\t"  // 
-  :::
-  );
-
-};
-
-static void write_tlb_entry8(void)
-{
-
- asm volatile (
-	"addis 3, 0, 0x0000   \n\t"  // 0x0000, 0x0000
-	"addis 4, 0, 0x8000   \n\t"  // 0x8200, 0x0000
-	"ori   4, 4, 0x0bf0   \n\t"  // 0x08f0, 0x0BF0 04.04.2017 add_dauny
-	"tlbwe 4, 3, 0        \n\t"
-
-	"addis 4, 0, 0x0000   \n\t"  // 0x8200
-	"ori   4, 4, 0x0002   \n\t"  // 0x0000
-	"tlbwe 4, 3, 1        \n\t"
-
-	"addis 4, 0, 0x0003   \n\t"  // 0x0003, 0000
-	"ori   4, 4, 0x043f   \n\t"  // 0x043F, 023F
-	"tlbwe 4, 3, 2        \n\t"
-  "isync                  \n\t"  // 
-  "msync                  \n\t"  // 
-  :::
-  );
-
-};
-
-static uint32_t read_dcr_reg(uint32_t addr)
-{
-  uint32_t res;
-
-  asm volatile   (
-  "mfdcrx (%0), (%1) \n\t"       // mfdcrx RT, RA
-  :"=r"(res)
-  :"r"((uint32_t) addr)
-  :  
-	);
-  return res;
-};
-
-static void write_dcr_reg(uint32_t addr, uint32_t value)
-{
-
-  asm volatile   (
-  "mtdcrx (%0), (%1) \n\t"       // mtdcrx RA, RS
-  ::"r"((uint32_t) addr), "r"((uint32_t) value)
-  :  
-	);
-};
-
 // static void report_DDR_core_regs(uint32_t baseAddr)
 // {
 //     volatile uint32_t cntr;
@@ -261,20 +168,6 @@ static void write_dcr_reg(uint32_t addr, uint32_t value)
 //         wait_some_time_1 ();
 //     }
 // }
-
-static void commutate_plb6(void)
-{
-    uint32_t dcr_val=0;
-    init_mmu();
-    
-    // PLB6 commutation
-    // Set Seg0, Seg1, Seg2 and BC_CR0
-    write_dcr_reg(0x80000204, 0x00000010);  // BC_SGD1
-    write_dcr_reg(0x80000205, 0x00000010);  // BC_SGD2
-    dcr_val = read_dcr_reg(0x80000200);     // BC_CR0
-    write_dcr_reg(0x80000200, dcr_val | 0x80000000);  
-}
-
 
 int get_ddr3_spd_bypath(const char * spdpath, ddr3_spd_eeprom_t* spd);
 unsigned int rcm_compute_dimm_parameters(const ddr3_spd_eeprom_t *spd,
@@ -537,10 +430,6 @@ void ddr_init (int slowdown)
             dimm1_params_invalid = validate_dimm_parameters(&dpar1, 1);
 
 #endif
-
-    commutate_plb6();
-    write_tlb_entry4();
-    write_tlb_entry8();
 
     if((slowdown==2) || (dimm0_params_invalid && dimm1_params_invalid))
     {
@@ -908,10 +797,10 @@ static void ddr3phy_init(uint32_t baseAddr, const DdrBurstLength burstLen)
     while (((ioread32(SCTL_BASE + SCTL_PLL_STATE)>>2)&1) != 1) //#ev Ожидаем установления частоты
     {
     }
-    // usleep(5); //let's wait 5us
+    // udelay(5); //let's wait 5us
     // rumboot_printf("    _dbg_1\n");
     
-    //usleep(4);
+    //udelay(4);
 
     //  select DDR PHY internal PLL
     ddr3phy_write_DDR3PHY_PHYREGEF(baseAddr, 0x1);
@@ -932,7 +821,7 @@ static void ddr34lmc_dfi_init(const uint32_t baseAddr)
 
     //PHY spec says we must wait for 2500ps*2000dfi_clk1x = 5us
     //let's wait a bit more
-    usleep(10);
+    udelay(10);
 
     //check DFI_INIT_COMPLETE
     reg = ddr34lmc_dcr_read_DDR34LMC_MCSTAT(baseAddr);
@@ -1137,7 +1026,7 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     if (initMode == DdrInitMode_FollowSpecWaitRequirements)
     {
         // rumboot_printf("Wait 200us according to spec...\n");
-        usleep(200); //in microseconds
+        udelay(200); //in microseconds
     }
     else if (initMode == DdrInitMode_ViolateSpecWaitRequirements)
     {
@@ -1389,7 +1278,7 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
     if (initMode == DdrInitMode_FollowSpecWaitRequirements)
     {
         // rumboot_printf("Wait 500us according to spec...\n");
-        usleep(500); //in microseconds
+        udelay(500); //in microseconds
     }
     else if (initMode == DdrInitMode_ViolateSpecWaitRequirements)
     {
@@ -1449,7 +1338,7 @@ void ddr_ddr34lmc_init(const uint32_t baseAddr,
 // static void _ddr3phy_calibrate(const uint32_t baseAddr)
 // {
 //    dcrwrite32(0x01, baseAddr + DDR3PHY_PHYREG02);
-//    usleep(6);  //  in microseconds
+//    udelay(6);  //  in microseconds
 //    dcrwrite32(0x00, baseAddr + DDR3PHY_PHYREG02);  //  Stop calibration
 // }
 
@@ -1526,7 +1415,7 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
         reg = ddr3phy_read_DDR3PHY_PHYREGF0(baseAddr);
         if ((reg & 0x1f) == 0x1f)
             break;
-        usleep(1);
+        udelay(1);
     } while(++time != PHY_CALIBRATION_TIMEOUT);
     
     
@@ -1600,7 +1489,7 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
         reg = ddr3phy_read_DDR3PHY_PHYREGFF(baseAddr);
         if ((reg & 0x1f) == 0x1f)
             break;
-        usleep(1);
+        udelay(1);
     } while(++time != PHY_CALIBRATION_TIMEOUT);
     
     ddr3phy_write_DDR3PHY_PHYREG02(baseAddr, 0xA0); //Stop calibration
@@ -1870,7 +1759,7 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
 //    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
 //     
 //    }
-//    usleep(10);  //  in microseconds #ev 
+//    udelay(10);  //  in microseconds #ev 
 //    
 //    
 //    
@@ -1989,7 +1878,7 @@ static void ddr3phy_calibrate(const uint32_t baseAddr)
 //    ddr3phy_write_DDR3PHY_PHYREG57(baseAddr,0x1);  // Write DQS DLL delay (0-7)-старший байт (слева)
 //     
 //    }
-//    usleep(10);  //  in microseconds #ev 
+//    udelay(10);  //  in microseconds #ev 
 //    
 //   
 //    
@@ -2184,7 +2073,7 @@ void ddr_enter_self_refresh_mode(const uint32_t baseAddr)
     ddr34lmc_dcr_write_DDR34LMC_MCOPT2(baseAddr,
             mcopt2_reg | reg_field(0, 0b1)); //SELF_REF_EN = 1
     //wait tRP + tRFC = 13750ps + 260000ps
-    usleep(1); //let's wait 1us
+    udelay(1); //let's wait 1us
 
     mcstat_reg = ddr34lmc_dcr_read_DDR34LMC_MCSTAT(baseAddr);
     TEST_ASSERT(mcstat_reg & reg_field(1, 0b1), "Failed to enter self-refresh mode");
@@ -2210,7 +2099,7 @@ void ddr_exit_self_refresh_mode(const uint32_t baseAddr)
     ddr34lmc_dcr_write_DDR34LMC_MCOPT2(baseAddr, mcopt2_reg);
 
     //wait a little tRFC_XPR + tXSDLL = 260000ps + 16*16*2500ps =  260000ps + 640000ps = 900000ps
-    usleep(2); //let's wait 2us
+    udelay(2); //let's wait 2us
 
     const uint32_t INIT_COMPLETE_TIMEOUT = 1000;
     uint32_t time = 0;
@@ -2317,7 +2206,7 @@ void ddr_exit_self_refresh_mode(const uint32_t baseAddr)
 // 
 //     crg_ddr_upd_cken ();
 //     crg_cpu_upd_cken ();
-//     usleep(4); //workaround
+//     udelay(4); //workaround
 // 
 //    //
 //     // rumboot_printf ("Clear RESET.......................\n");

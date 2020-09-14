@@ -6,25 +6,15 @@
 extern flash_info_t flash_info[];
 ulong monitor_flash_len;
 
-int flw_nor_found(unsigned int bank, unsigned int show_info, flash_info_t* info)
+int flw_nor_found(unsigned int bank, struct flw_dev_info_t* dev_info, flash_info_t* info)
 {
     if (info->size == 0 || info->sector_count == 0 || info->portwidth == 0 || info->chipwidth == 0)
         return -1; // advanced check?
 
-    if (show_info)
-    {
-        printf("Bank #%d: %s flash (%d x %d)", bank, info->name, (info->portwidth << 3), (info->chipwidth << 3));
-
-        if (info->size < 1024 * 1024)
-            printf("  Size: %ld kB in %d Sectors\n", info->size >> 10, info->sector_count);
-        else
-            printf("  Size: %ld MB in %d sectors\n", info->size >> 20, info->sector_count);
-
-        unsigned long sect_size = flash_sector_size(info, 0);
-
-        printf("addresses: %08lx..%08lx,sector size %lx\n",
-                info->start[0], info->start[info->sector_count-1]+sect_size-1, sect_size);
-    }
+    dev_info->full_size = info->size;
+    dev_info->write_size = 1; // may be xmodem/edcl buffer size is better?
+    dev_info->erase_size = flash_sector_size(info, 0);
+    strlcpy(dev_info->part, info->name, sizeof(dev_info->part));
     return 0;
 }
 
@@ -64,10 +54,12 @@ int flw_nor_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, 
 {
     int ret;
     unsigned long src = flash_info[fd->dev_info.bank].start[0] + addr;
+    flash_set_verbose(0);
     ret = flash_write((char*)data, src, size);
     //printf("write: %lx-%lx\n", src, size);
     if (ret)
         flash_perror(ret);
+    flash_set_verbose(1);
     return ret;
 }
 
@@ -75,8 +67,10 @@ int flw_nor_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, c
 {
     unsigned int i;
     unsigned long src = flash_info[fd->dev_info.bank].start[0] + addr;
+    flash_set_verbose(0);
     //printf("read: %lx-%lx\n", src, size);
     for (i=0; i<size; i++) *data++ = *(char*)src++;
+    flash_set_verbose(1);
     return 0;
 }
 
@@ -86,14 +80,14 @@ void flw_nor_list_add(void)
     unsigned int bank;
 
     flash_init();
-
     for (bank=0; bank < FLW_MAX_NOR_BANK; ++bank)
     {
-        if (!flw_nor_found(bank, 1, &flash_info[bank])) {
-            struct flw_dev_info_t dev_info = {0};
-            name[3] = bank + '0';
-            dev_info.bank = bank;
-            dev_info.dummy_nor = UINT_MAX;
+        name[3] = bank + '0';
+        flash_info_t* info = &flash_info[bank];
+        struct flw_dev_info_t dev_info = {0};
+        dev_info.bank = bank;
+        dev_info.dummy_nor = UINT_MAX;
+        if (!flw_nor_found(bank, &dev_info, info)) {
             flash_dev_list_add(name, FLWDT_NOR, &dev_info, flw_nor_erase, flw_nor_write, flw_nor_read);
         }
      }

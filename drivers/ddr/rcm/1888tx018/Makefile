@@ -8,6 +8,4 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-ifdef CONFIG_1888TX018_DDR
-obj-$(CONFIG_TARGET_1888TX018) += ddr_init.o timer.o
-endif
+obj-y += ddr_init.o

@@ -66,6 +66,16 @@ if model == MDL_1888TX018:
     mmc_addr0 = 0x500000
     mmc_size0 = 0x4000
 
+    #  CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
+    nor_dev0 = "nor0"
+    nor_addr0 = 0x0
+    nor_size0 = 0x80000
+
+    #  CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
+    nor_dev1 = "nor1"
+    nor_addr1 = 0x500000
+    nor_size1 = 0x40000
+
 elif model == MDL_1888BM018:
     chip = "oi10"
     rstmsg = "boot: host: Hit 'X' for X-Modem upload"
@@ -345,9 +355,13 @@ if model == MDL_1888TX018:
 
     sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
-    sum_err += testx(nand_dev0, nand_addr0, nand_size0)
+   # sum_err += testx(nand_dev0, nand_addr0, nand_size0)
 
     sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
+
+    sum_err += testx(nor_dev0, nor_addr0, nor_size0)
+
+    sum_err += testx(nor_dev1, nor_addr1, nor_size1)
 
 elif model == MDL_1888BM018:
 

@@ -14,6 +14,7 @@
 #include <asm/io.h>
 #include <asm/tlb47x.h>
 #include "boot.h"
+#include "timer.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -88,22 +89,127 @@ bool is_ddr_ok(void)
 		return 0;
 }
 
-void usleep(uint32_t usec);
+//*************************************************DDR AND TIMER INIT FUNCTIONS*************************************************/
+
+static void init_mmu(void)
+{
+    asm volatile (
+	// initialize MMUCR
+	"addis 0, 0, 0x0000   \n\t"  // 0x0000
+	"ori   0, 0, 0x0000   \n\t"  // 0x0000
+	"mtspr 946, 0          \n\t"  // SPR_MMUCR, 946
+	"mtspr 48,  0          \n\t"  // SPR_PID,    48
+	// Set up TLB search priority
+	"addis 0, 0, 0x9ABC   \n\t"  // 0x1234
+	"ori   0, 0, 0xDEF8   \n\t"  // 0x5678
+	//  "addis r0, r0, 0x1234   \n\t"  // 0x1234
+	//	"ori   r0, r0, 0x5678   \n\t"  // 0x5678
+	"mtspr 830, 0          \n\t"  // SSPCR, 830
+	"mtspr 831, 0          \n\t"  // USPCR, 831
+	"mtspr 829, 0          \n\t"  // ISPCR, 829
+	"isync                  \n\t"  //
+	"msync                  \n\t"  //
+	:::
+    );
+};
+
+static uint32_t read_dcr_reg(uint32_t addr)
+{
+  uint32_t res;
+
+  asm volatile   (
+  "mfdcrx (%0), (%1) \n\t"       // mfdcrx RT, RA
+  :"=r"(res)
+  :"r"((uint32_t) addr)
+  :
+	);
+  return res;
+};
+
+static void write_dcr_reg(uint32_t addr, uint32_t value)
+{
+
+  asm volatile   (
+  "mtdcrx (%0), (%1) \n\t"       // mtdcrx RA, RS
+  ::"r"((uint32_t) addr), "r"((uint32_t) value)
+  :
+	);
+};
+
+static void commutate_plb6(void)
+{
+    uint32_t dcr_val=0;
+    init_mmu();
+
+    // PLB6 commutation
+    // Set Seg0, Seg1, Seg2 and BC_CR0
+    write_dcr_reg(0x80000204, 0x00000010);  // BC_SGD1
+    write_dcr_reg(0x80000205, 0x00000010);  // BC_SGD2
+    dcr_val = read_dcr_reg(0x80000200);     // BC_CR0
+    write_dcr_reg(0x80000200, dcr_val | 0x80000000);
+}
+
+static void write_tlb_entry4(void)
+{
+ asm volatile (
+	"addis 3, 0, 0x0000   \n\t"  // 0x0000, 0x0000
+	"addis 4, 0, 0x4000   \n\t"  // 0x8200, 0x0000
+	"ori   4, 4, 0x0bf0   \n\t"  // 0x08f0, 0x0BF0 04.04.2017 add_dauny
+	"tlbwe 4, 3, 0        \n\t"
+
+	"addis 4, 0, 0x0000   \n\t"  // 0x8200
+	"ori   4, 4, 0x0000   \n\t"  // 0x0000
+	"tlbwe 4, 3, 1        \n\t"
+
+	"addis 4, 0, 0x0003  \n\t"  // 0x0003, 0000
+	"ori   4, 4, 0x043f   \n\t"  // 0x043F, 023F
+	"tlbwe 4, 3, 2        \n\t"
+  "isync                  \n\t"  //
+  "msync                  \n\t"  //
+  :::
+  );
+};
+
+static void write_tlb_entry8(void)
+{
+ asm volatile (
+	"addis 3, 0, 0x0000   \n\t"  // 0x0000, 0x0000
+	"addis 4, 0, 0x8000   \n\t"  // 0x8200, 0x0000
+	"ori   4, 4, 0x0bf0   \n\t"  // 0x08f0, 0x0BF0 04.04.2017 add_dauny
+	"tlbwe 4, 3, 0        \n\t"
+
+	"addis 4, 0, 0x0000   \n\t"  // 0x8200
+	"ori   4, 4, 0x0002   \n\t"  // 0x0000
+	"tlbwe 4, 3, 1        \n\t"
+
+	"addis 4, 0, 0x0003   \n\t"  // 0x0003, 0000
+	"ori   4, 4, 0x043f   \n\t"  // 0x043F, 023F
+	"tlbwe 4, 3, 2        \n\t"
+  "isync                  \n\t"  //
+  "msync                  \n\t"  //
+  :::
+  );
+};
 
 void spl_board_init(void)
 {
-#ifndef CONFIG_FLASHWRITER
+	commutate_plb6();
+	write_tlb_entry4();
+	write_tlb_entry8();
+
+#ifdef CONFIG_1888TX018_DDR
 	/* init dram */
 	ddr_init(0);
 
 	if(!is_ddr_ok())
 	{
 		printf("Error in DDR resetting...\n");
-		usleep(1000);
+		udelay(1000);
 		do_reset(0,0,0,0);
 	}
 	gd->ram_size = CONFIG_SYS_DDR_SIZE;
 #endif
+
 #ifdef CONFIG_MTD_RCM_NOR
 	rcm_mtd_arbiter_init();
 	rcm_sram_nor_init();
