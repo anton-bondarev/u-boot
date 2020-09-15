@@ -435,9 +435,7 @@ static bool sd_trans_data(const struct mmc * mmc, sd_data_oper oper, uint32_t sd
 #ifndef CONFIG_FLASHWRITER
 	u8* blk_buf = (u8*)memalign( 64, blk_len );
 #else
-	static u8* blk_buf; // because CONFIG_SPL_SYS_MALLOC_SIMPLE was defined, free does not work here
-	if (!blk_buf)
-		blk_buf = (u8*)memalign( 64, blk_len );
+	extern u8* blk_buf;
 #endif
 	if( ! blk_buf )
 		return false;

@@ -169,15 +169,6 @@ static void get_cmd(char* buf, unsigned int len)
     }
 }
 
-static uint32_t virt_to_dma(void* ptr)
-{
-    return (uint32_t)ptr;
-}
-
-char* edcl_xmodem_buf_sync  __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
-char edcl_xmodem_buf0[EDCL_XMODEM_BUF_LEN]  __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
-char edcl_xmodem_buf1[EDCL_XMODEM_BUF_LEN]  __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
-
 static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long addr, unsigned long size)
 {
     int res;
@@ -279,11 +270,15 @@ static void cmd_dec(void)
 
         if (!strcmp(cmd_buf,"help"))
         {
-            puts("Usage: help version exit list select bufptr rand print setbuf setbufx getbuf getbufx erase write read program duplicate lasterr\n");
+            puts("Usage: help version reset exit list select bufptr rand print setbuf setbufx getbuf getbufx erase write read program duplicate lasterr\n");
         }
         else if (!strcmp(cmd_buf,"version"))
         {
             puts(FLW_VERSION"\n");
+        }
+        else if (!strcmp(cmd_buf,"reset"))
+        {
+            do_reset(NULL, 0, 0, NULL);
         }
         else if (!strcmp(cmd_buf,"exit"))
         {
@@ -342,7 +337,7 @@ static void cmd_dec(void)
         }
         else if (!strcmp(cmd_buf, "bufptr"))
         {
-            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x\n", virt_to_dma(edcl_xmodem_buf0), virt_to_dma(edcl_xmodem_buf1), virt_to_dma(&edcl_xmodem_buf_sync), EDCL_XMODEM_BUF_LEN);
+            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x\n", flw_virt_to_dma(edcl_xmodem_buf0), flw_virt_to_dma(edcl_xmodem_buf1), flw_virt_to_dma(&edcl_xmodem_buf_sync), EDCL_XMODEM_BUF_LEN);
         }
         else if (!strcmp(cmd_buf, "rand"))
         {

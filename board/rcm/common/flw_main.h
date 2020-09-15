@@ -4,6 +4,7 @@
 #include <serial.h>
 #include <xyzModem.h>
 
+#include "flw_buffers.h"
 #include "flw_serial.h"
 #include "flw_xmodem.h"
 #include "flw_dev_list.h"
@@ -31,9 +32,6 @@
 #define FLW_VERSION "1.0.0"
 
 //#define SIMPLE_BUFFER_ONLY
-
-#define EDCL_XMODEM_BUF_LEN 4096
-#define EDCL_XMODEM_BUF_ALIGN 256
 
 struct prog_ctx_t
 {

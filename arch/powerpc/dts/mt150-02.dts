@@ -75,6 +75,7 @@
 			};
 
 			gpio0: gpio0@D0028000 {
+				u-boot,dm-pre-reloc;
 				compatible = "rcm,pl061";
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -85,6 +86,7 @@
 			};
 
 			gpio1: gpio1@D0038000 {
+				u-boot,dm-pre-reloc;
 				compatible = "rcm,pl061";
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -95,22 +97,38 @@
 			};
 
 			mmc0: mmc0@D002C000 {
-				status = "disabled";
+				u-boot,dm-pre-reloc;
+				//status = "disabled";
 				compatible = "rcm,mmc-0.2";
 				reg = <0xD002C000 0x1000>;
 				carddetect-gpio = <&gpio0 3 0>;
+				min-frequency = <1000000>;
+				max-frequency = <25000000>;
+				axi-awlen = <15>;
+				axi-arlen = <15>;
+				axi-awsize = <2>;
+				axi-arsize = <2>;
+				sdio-timeout = <2000000>;
 			};
 
 			mmc1: mmc1@D003C000 {
-				status = "disabled";
+				u-boot,dm-pre-reloc;
+				//status = "disabled";
 				compatible = "rcm,mmc-0.2";
 				reg = <0xD003C000 0x1000>;
 				carddetect-gpio = <&gpio1 0 0>;
+				min-frequency = <1000000>;
+				max-frequency = <25000000>;
+				axi-awlen = <15>;
+				axi-arlen = <15>;
+				axi-awsize = <2>;
+				axi-arsize = <2>;
+				sdio-timeout = <2000000>;
 			};
 
 			spi0: spi@D002B000 {
-				u-boot,dm-pre-reloc;
-				// status = "disabled";
+				//u-boot,dm-pre-reloc;
+				status = "disabled";
 				compatible = "arm,pl022-spi", "arm,primecell";
 				reg = <0 0xD002B000 0 0x1000>;
 				#address-cells = <1>;
@@ -120,8 +138,8 @@
 			};
 
 			spi1: spi@D003B000 {
-				u-boot,dm-pre-reloc;
-				// status = "disabled";
+				//u-boot,dm-pre-reloc;
+				status = "disabled";
 				compatible = "arm,pl022-spi", "arm,primecell";
 				reg = <0 0xD003B000 0 0x1000>;
 				#address-cells = <1>;

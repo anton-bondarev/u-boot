@@ -17,6 +17,7 @@ from rumboot.resetSeq import ResetSeqFactory
 from rumboot.cmdline import arghelper
 from rumboot.terminal import terminal
 from rumboot.xfer import *
+from shutil import copyfile
 import argparse
 import rumboot_xrun
 import rumboot
@@ -33,7 +34,7 @@ import io
 MDL_1888TX018 = 0
 MDL_1888BM018 = 1
 
-model = MDL_1888TX018
+model = MDL_1888BM018
 
 MODE_XMODEM = 0
 MODE_EDCL = 1
@@ -100,6 +101,14 @@ elif model == MDL_1888BM018:
     sf_dev1 = "sf10"
     sf_addr1 = 0x200000
     sf_size1 = 0x10000
+
+    mmc_dev0 = "mmc0"
+    mmc_addr0 = 0x100000
+    mmc_size0 = 0x8000
+
+    mmc_dev1 = "mmc1"
+    mmc_addr1 = 0x200000
+    mmc_size1 = 0x8000
 
 wr_file = "tmpwr"
 rd_file = "tmprd"
@@ -241,6 +250,7 @@ def testx(flash_dev, flash_addr, flash_size):
     global ser
     global term
     global buf_ptr, sync_ptr, buf_len
+    err = 0
 
     xfer_xmodem = None
     xfer_edcl = None
@@ -349,6 +359,17 @@ def testx(flash_dev, flash_addr, flash_size):
         print(colored('%s: compare finished (%x-%x)' % (flash_dev, crc32_wr, crc32_rd) + ('err' if err else 'ok'), 'red' if err else 'green'))
     return err
 
+def mmc0_to_mmc1_copy(addr, size): #    # slice mmc0 -> mmc1 and check mmc1
+    global do_randfile, do_wr, do_rd, do_cmp
+    err = 0
+    do_randfile = 0
+    do_wr = 0; do_rd = 1; do_cmp = 0
+    err += testx(mmc_dev0, addr, size)
+    copyfile(rd_file, wr_file)
+    do_wr = 1; do_rd = 1; do_cmp = 1
+    err += testx(mmc_dev1, addr, size)
+    return err
+
 sum_err = 0
 
 if model == MDL_1888TX018:
@@ -365,9 +386,15 @@ if model == MDL_1888TX018:
 
 elif model == MDL_1888BM018:
 
-    sum_err += testx(sf_dev0, sf_addr0, sf_size0)
+    #sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
-    sum_err += testx(sf_dev1, sf_addr1, sf_size1)
+    #sum_err += testx(sf_dev1, sf_addr1, sf_size1)
+
+    sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
+
+    sum_err += testx(mmc_dev1, mmc_addr1, mmc_size1)
+
+    #sum_err += mmc0_to_mmc1_copy(0, 0x400000)
 
 print(colored("Completed,error %u" % sum_err, 'yellow'))
 

@@ -1,4 +1,5 @@
 obj-y += flw_dev_list.o
+obj-y += flw_buffers.o
 ifdef CONFIG_SPL_BUILD
 ifdef CONFIG_FLASHWRITER
 obj-$(CONFIG_SPL_SPI_FLASH_SUPPORT) += flw_sf.o
