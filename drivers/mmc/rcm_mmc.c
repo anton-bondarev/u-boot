@@ -432,10 +432,10 @@ static bool sd_write_block(const struct mmc*, uint32_t, u8*, uint);
 
 static bool sd_trans_data(const struct mmc * mmc, sd_data_oper oper, uint32_t sdc_adr, u8 * mem_ptr, uint blk_qty, uint blk_len)
 {
-#ifndef CONFIG_FLASHWRITER
-	u8* blk_buf = (u8*)memalign( 64, blk_len );
-#else
+#if (defined CONFIG_FLASHWRITER && defined CONFIG_TARGET_1888BM18)
 	extern u8* blk_buf;
+#else
+	u8* blk_buf = (u8*)memalign( 64, blk_len );
 #endif
 	if( ! blk_buf )
 		return false;

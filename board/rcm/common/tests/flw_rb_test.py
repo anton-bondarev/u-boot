@@ -34,12 +34,12 @@ import io
 MDL_1888TX018 = 0
 MDL_1888BM018 = 1
 
-model = MDL_1888BM018
+model = MDL_1888TX018
 
 MODE_XMODEM = 0
 MODE_EDCL = 1
 
-write_mode = MODE_XMODEM
+write_mode = MODE_EDCL
 read_mode = MODE_XMODEM
 
 splpath = "./../../../../spl/u-boot-spl-dtb.rbi"
@@ -70,7 +70,7 @@ if model == MDL_1888TX018:
     #  CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
     nor_dev0 = "nor0"
     nor_addr0 = 0x0
-    nor_size0 = 0x80000
+    nor_size0 = 0x40000
 
     #  CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
     nor_dev1 = "nor1"
@@ -345,7 +345,8 @@ def testx(flash_dev, flash_addr, flash_size):
                 xfer_edcl.recv(rd_stream, buf_addr, edcl_buf_size)
                 off = pos + edcl_buf_size - rd_stream.tell()
                 rd_stream.seek(off, os.SEEK_CUR)
-                write_sync(xfer_edcl, 0xffffffff if (n & 1) else 0)
+                #write_sync(xfer_edcl, 0xffffffff if (n & 1) else 0)
+                write_sync(xfer_edcl, 0)
                 print(colored("recv buffer %x" % n, 'yellow'))
             rd_stream.truncate(flash_size)
             rd_stream.close()

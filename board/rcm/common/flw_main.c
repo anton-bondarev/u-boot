@@ -14,14 +14,14 @@ static uint32_t get_sys_timer(void)
     return *(uint32_t*)TMR_ADDR;
 }
 
-static void fill_buf(char* wr_buf, unsigned int len)
+static void fill_buf(volatile char* wr_buf, unsigned int len)
 {
     unsigned int i;
     for (i=0; i<len; i++)
         wr_buf[i] = rand();
 }
 
-static int cmp_buf(char* buf0, char* buf1, unsigned int len)
+static int cmp_buf(volatile char* buf0, volatile char* buf1, unsigned int len)
 {
     unsigned int i;
     for (i=0; i<len; i++)
@@ -191,21 +191,18 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
         res = last_err = load_buf_xmodem(&pc);
     }
     else {
-        char* curr_buf;
-        unsigned int curr_num = 0;
-        while (size > 0) {
-            do {
-                curr_buf = curr_num & 1 ? edcl_xmodem_buf1 : edcl_xmodem_buf0;
-                flw_delay(100);
-            } while (curr_buf != edcl_xmodem_buf_sync || !curr_buf);                            // wait for completion of edcl writing,get buffer pointer
-            curr_num++;
-            edcl_xmodem_buf_sync = 0;                                                           // enable next edcl writing
-            asm("msync");
-            res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);                   // write current
-            if (res) last_err = res;
-            addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;
+        while (size > 0) {                                                          // check size % EDCL_XMODEM_BUF_LEN is 0 before
+            while (!edcl_xmodem_buf_sync) flw_delay(100);                           // wait for valid address
+            char* curr_buf = (char*)edcl_xmodem_buf_sync;                           // saving address
+            edcl_xmodem_buf_sync = 0;                                               // clear sync, host see it and can load now other buffer
+            asm("msync");                                                           // hier?
+            res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);       // and we do writing current buffer
+            if (res) {                                                              // if error,break operation and rememeber error code
+                last_err = res;
+                break;
+            }
+            addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;               // correction address of next buffer
         }
-        edcl_xmodem_buf_sync = 0;
     }
     return res;
 }
@@ -218,37 +215,26 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
 
     if (mode == 'X') {
         struct prog_ctx_t pc;
-        pc.src_ptr = edcl_xmodem_buf0;
+        pc.src_ptr = (char*)edcl_xmodem_buf0;
         pc.len = size;
         pc.dst_addr = addr;
         pc.dev = seldev;
         res = last_err = send_buf_xmodem(&pc);
     }
     else {
-        char* curr_buf = edcl_xmodem_buf0;
-        unsigned int curr_num = 0;
+        char* curr_buf = (char*)edcl_xmodem_buf0;
         edcl_xmodem_buf_sync = 0;
-        while (size > 0) {
-            res = seldev->read(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf );   // read
-            if (res) last_err = res;                                            // save last error
-            addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;
-            edcl_xmodem_buf_sync = curr_buf;                                    // read ready indication
+        while (size > 0) {                                                          // check size % EDCL_XMODEM_BUF_LEN is 0 before
+            res = seldev->read(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);        // reading
+            if (res) {                                                              // if error,break operation and rememeber error code
+                last_err = res;
+                break;
+            }
+            addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;               // next reading address
+            while (edcl_xmodem_buf_sync) flw_delay(100);                            // wait for host ready
+            edcl_xmodem_buf_sync = curr_buf;                                        // and set current buffer address
             asm("msync");
-            char* save_sync;
-            while (1) {
-                save_sync = edcl_xmodem_buf_sync;
-                flw_delay(100);
-                if (save_sync == edcl_xmodem_buf_sync) {
-                    if (curr_num & 1) {
-                        if ((int)save_sync == -1) break;
-                    }
-                    else {
-                        if ((int)save_sync == 0) break;
-                    }
-                }
-            };                                                                 // wait for edcl reading
-            curr_num++;
-            curr_buf = (curr_num & 1)  ? edcl_xmodem_buf1 : edcl_xmodem_buf0;   // switch buffer for next reading
+            curr_buf = (char*)(curr_buf == edcl_xmodem_buf0 ? edcl_xmodem_buf1 : edcl_xmodem_buf0); // switch buffer
         }
     }
     return res;
@@ -256,7 +242,7 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
 
 static void cmd_dec(void)
 {
-    char* edcl_xmodem_buf = edcl_xmodem_buf0;
+    char* edcl_xmodem_buf = (char*)edcl_xmodem_buf0;
     char cmd_buf[256];
     struct flw_dev_t* seldev = NULL;
     struct prog_ctx_t pc = {0};
@@ -315,12 +301,12 @@ static void cmd_dec(void)
         }
         else if (!strcmp(cmd_buf, "bufsel0"))
         {
-            edcl_xmodem_buf = edcl_xmodem_buf0;
+            edcl_xmodem_buf = (char*)edcl_xmodem_buf0;
             puts("selected\n");
         }
         else if (!strcmp(cmd_buf, "bufsel1"))
         {
-            edcl_xmodem_buf = edcl_xmodem_buf1;
+            edcl_xmodem_buf = (char*)edcl_xmodem_buf1;
             puts("selected\n");
         }
         else if (!strcmp(cmd_buf, "bufrev"))
@@ -397,17 +383,19 @@ static void cmd_dec(void)
             size = EDCL_XMODEM_BUF_LEN;
             addr = 0;
             while (1) {
-                fill_buf(edcl_xmodem_buf0, size);
+                char* src = (char*)edcl_xmodem_buf0;
+                char* dst = (char*)edcl_xmodem_buf1;
+                fill_buf(src, size);
                 ret = seldev->erase(seldev, addr, size);
                 if (ret)
                     printf("Test: erase failed\n");
-                ret = ret || seldev->write(seldev, addr, size, edcl_xmodem_buf0);
+                ret = ret || seldev->write(seldev, addr, size, src);
                 if (ret)
                     printf("Test: write failed\n");
-                ret = ret || seldev->read(seldev, addr, size, edcl_xmodem_buf1);
+                ret = ret || seldev->read(seldev, addr, size, dst);
                 if (ret)
                     printf("Test: read failed\n");
-                ret = ret || memcmp(edcl_xmodem_buf0, edcl_xmodem_buf1, size);
+                ret = ret || memcmp(src, dst, size);
                 printf("Test: address %lx,size %lx,ret=%d\n", addr, size, ret);
                 addr += size;
                 if (ret)
@@ -431,6 +419,8 @@ static void cmd_dec(void)
                         (program && ( cmd_buf[8] != 'E' && cmd_buf[8] != 'X' )) ||
                         (duplicate && ( cmd_buf[10] != 'E' && cmd_buf[10] != 'X' )))
                     puts("Bad parameters\n");
+                else if ((program || duplicate) && (size % EDCL_XMODEM_BUF_LEN))
+                    puts("Data size not multiple of buffer size\n");
                 else
                 {
                     if((write || read) && size > EDCL_XMODEM_BUF_LEN) {
@@ -474,6 +464,12 @@ static int flash_writer_pseudo_loader(struct spl_image_info *spl_image, struct s
 {
     printf("Flashwriter(%s) running(help for information):\n", FLW_VERSION);
     srand(get_sys_timer());
+    edcl_xmodem_buf0 = (char*)memalign( EDCL_XMODEM_BUF_ALIGN, EDCL_XMODEM_BUF_LEN );
+    edcl_xmodem_buf1 = (char*)memalign( EDCL_XMODEM_BUF_ALIGN, EDCL_XMODEM_BUF_LEN );
+    if (!edcl_xmodem_buf0 || !edcl_xmodem_buf1) {
+        printf("Memory allocation error\n");
+        return -1;
+    }
     cmd_dec(); 
     return -1;
 }
