@@ -24,11 +24,11 @@
 #define XMODEM_RETRY_LIMIT		3 //128
 
 // error return codes
-#define XMODEM_ERROR_REMOTECANCEL	-1
-#define XMODEM_ERROR_OUTOFSYNC		-2
-#define XMODEM_ERROR_RETRYEXCEED	-3
-
-
+#define XMODEM_ERROR_REMOTECANCEL	-1000
+#define XMODEM_ERROR_OUTOFSYNC		-1001
+#define XMODEM_ERROR_RETRYEXCEED	-1002
+#define XMODEM_ERROR_XMIT			-1003
+#define XMODEM_ERROR_ACT			-1004
 
 size_t xmodem_get( char *to, size_t maxszs);
 

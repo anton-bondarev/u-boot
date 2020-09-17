@@ -294,7 +294,7 @@ int xmodem_tx_async(size_t (*transmit_cb)(size_t curpos, void *ptr, size_t lengt
 				flw_putc(CAN);
 				flw_putc(CAN);
 				xmodem_flush_input();
-				return -4; /* xmit error */
+				return XMODEM_ERROR_XMIT; /* xmit error */
 			}
 			else {
 				for (retry = 0; retry < 10; ++retry) {
@@ -302,7 +302,7 @@ int xmodem_tx_async(size_t (*transmit_cb)(size_t curpos, void *ptr, size_t lengt
 					if ((c = flw_getc((XMODEM_TIMEOUT_DELAY)<<1)) == ACK) break;
 				}
 				xmodem_flush_input();
-				return (c == ACK)?len:-5;
+				return (c == ACK)?len:XMODEM_ERROR_ACT;
 			}
 		}
 	}
