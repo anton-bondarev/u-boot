@@ -464,12 +464,6 @@ static int flash_writer_pseudo_loader(struct spl_image_info *spl_image, struct s
 {
     printf("Flashwriter(%s) running(help for information):\n", FLW_VERSION);
     srand(get_sys_timer());
-    edcl_xmodem_buf0 = (char*)memalign( EDCL_XMODEM_BUF_ALIGN, EDCL_XMODEM_BUF_LEN );
-    edcl_xmodem_buf1 = (char*)memalign( EDCL_XMODEM_BUF_ALIGN, EDCL_XMODEM_BUF_LEN );
-    if (!edcl_xmodem_buf0 || !edcl_xmodem_buf1) {
-        printf("Memory allocation error\n");
-        return -1;
-    }
     cmd_dec(); 
     return -1;
 }

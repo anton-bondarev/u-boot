@@ -40,7 +40,7 @@ MODE_XMODEM = 0
 MODE_EDCL = 1
 
 write_mode = MODE_EDCL
-read_mode = MODE_XMODEM
+read_mode = MODE_EDCL
 
 splpath = "./../../../../spl/u-boot-spl-dtb.rbi"
 
@@ -52,9 +52,16 @@ if model == MDL_1888TX018:
     baudrate = 1000000
     splbase = 0x40000
 
+    """ Part  Start Sector    Num Sectors     UUID          Type      Addr
+        1     2048            8388608         0d632b5d-01     83      0x100000
+        2     8390656         8388608         0d632b5d-02     83      0x100100000
+        3     16779264        8388608         0d632b5d-03     83      0x‭200100000‬
+        4     25167872        5948416         0d632b5d-04     83      0x300100000
+    """
+
     # Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
     sf_dev0 = "sf00"
-    sf_addr0 = 0x200000
+    sf_addr0 = 0x300000
     sf_size0 = 0x10000
 
     #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
@@ -64,7 +71,7 @@ if model == MDL_1888TX018:
 
     # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
     mmc_dev0 = "mmc0"
-    mmc_addr0 = 0x500000
+    mmc_addr0 = 0x100000
     mmc_size0 = 0x4000
 
     #  CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
@@ -377,13 +384,13 @@ if model == MDL_1888TX018:
 
     sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
-   # sum_err += testx(nand_dev0, nand_addr0, nand_size0)
+    sum_err += testx(nand_dev0, nand_addr0, nand_size0)
 
-    sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
+   # sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
 
-    sum_err += testx(nor_dev0, nor_addr0, nor_size0)
+   # sum_err += testx(nor_dev0, nor_addr0, nor_size0)
 
-    sum_err += testx(nor_dev1, nor_addr1, nor_size1)
+   # sum_err += testx(nor_dev1, nor_addr1, nor_size1)
 
 elif model == MDL_1888BM018:
 

@@ -4,15 +4,12 @@
 #include <linux/types.h>
 
 #define EDCL_XMODEM_BUF_LEN 4096
-#define EDCL_XMODEM_BUF_ALIGN 4
+#define EDCL_XMODEM_BUF_ALIGN 64
 
-extern volatile char* edcl_xmodem_buf0;
-extern volatile char* edcl_xmodem_buf1;
+extern volatile char blk_buf[];
+extern volatile char edcl_xmodem_buf0[];
+extern volatile char edcl_xmodem_buf1[];
 extern volatile char* edcl_xmodem_buf_sync;
-
-#ifdef CONFIG_TARGET_1888BM18
-extern char* blk_buf;
-#endif
 
 uint32_t flw_virt_to_dma(volatile void* ptr);
 
