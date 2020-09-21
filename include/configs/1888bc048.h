@@ -40,4 +40,6 @@
 #define CONFIG_SYS_PL310_BASE	0x01106000
 #endif
 
+#define BOOT_DEVICE_FLASH_WRITER 14 // pseudo loader,for flash programming
+
 #endif

@@ -21,6 +21,10 @@
     #define FLW_MAX_MMC_SLOT 2
 #endif
 
+#ifdef CONFIG_TARGET_1888BC048
+    #define FLW_MAX_MMC_SLOT 2
+#endif
+
 #define FLW_BUS_MODE_CNT 14
 
 int flw_mmc_found(unsigned int slot, struct flw_dev_info_t* dev_info, struct mmc** mmc);

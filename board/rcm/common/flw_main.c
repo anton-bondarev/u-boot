@@ -195,7 +195,9 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
             while (!edcl_xmodem_buf_sync) flw_delay(100);                           // wait for valid address
             char* curr_buf = (char*)edcl_xmodem_buf_sync;                           // saving address
             edcl_xmodem_buf_sync = 0;                                               // clear sync, host see it and can load now other buffer
+#ifdef __PPC__
             asm("msync");                                                           // hier?
+#endif
             res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);       // and we do writing current buffer
             if (res) {                                                              // if error,break operation and rememeber error code
                 last_err = res;
@@ -233,7 +235,9 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
             addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;               // next reading address
             while (edcl_xmodem_buf_sync) flw_delay(100);                            // wait for host ready
             edcl_xmodem_buf_sync = curr_buf;                                        // and set current buffer address
+#ifdef __PPC__
             asm("msync");
+#endif
             curr_buf = (char*)(curr_buf == edcl_xmodem_buf0 ? edcl_xmodem_buf1 : edcl_xmodem_buf0); // switch buffer
         }
     }

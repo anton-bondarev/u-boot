@@ -1,6 +1,6 @@
 #include "flw_buffers.h"
 
-#ifdef CONFIG_TARGET_1888TX018
+#if defined CONFIG_TARGET_1888TX018 || defined CONFIG_TARGET_1888BC048
 volatile char blk_buf[512] ;
 volatile char edcl_xmodem_buf0[EDCL_XMODEM_BUF_LEN] __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
 volatile char edcl_xmodem_buf1[EDCL_XMODEM_BUF_LEN] __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
