@@ -16,7 +16,7 @@ int flw_nand_found(struct flw_dev_info_t* dev_info)
     return ret;
 }
 
-static int check_addr_size( unsigned long* addr, unsigned long* size, unsigned long check )
+static int check_addr_size( unsigned long long* addr, unsigned long long* size, unsigned long check )
 {
     if (check == 0) {
         puts("Page/block size is null\n");
@@ -29,10 +29,10 @@ static int check_addr_size( unsigned long* addr, unsigned long* size, unsigned l
     return 0;
 }
 
-int flw_nand_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
+int flw_nand_erase(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size)
 {
     int err;
-    unsigned long curr, end = addr+size-1;
+    unsigned long long curr, end = addr+size-1;
     unsigned int flw_nand_erase_size = fd->dev_info.erase_size;
 
     err = check_addr_size(&addr, &size, flw_nand_erase_size);
@@ -46,9 +46,9 @@ int flw_nand_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
     return err;
 }
 
-static int flw_nand_rdwr(struct flw_dev_t* fd, int wr, unsigned long addr, unsigned long size, char* data)
+static int flw_nand_rdwr(struct flw_dev_t* fd, int wr, unsigned long long addr, unsigned long long size, char* data)
 {
-    unsigned long curr, end = addr+size-1;
+    unsigned long long curr, end = addr+size-1;
     unsigned int flw_nand_write_size = fd->dev_info.write_size;
     int err = check_addr_size(&addr, &size, flw_nand_write_size);
     if (!err) {
@@ -65,12 +65,12 @@ static int flw_nand_rdwr(struct flw_dev_t* fd, int wr, unsigned long addr, unsig
     return err;
 }
 
-int flw_nand_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data)
+int flw_nand_write(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, const char* data)
 {
     return flw_nand_rdwr(fd, 1, addr, size, (char*)data);
 }
 
-int flw_nand_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data)
+int flw_nand_read(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, char* data)
 {
     return flw_nand_rdwr(fd, 0, addr, size, data);
 }

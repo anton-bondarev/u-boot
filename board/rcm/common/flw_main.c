@@ -141,14 +141,15 @@ static char* find_space(char* p)
     return NULL;
 }
 
-static int get_addr_size(char* p, unsigned long* addr, unsigned long* size)
+static int get_addr_size(char* p, unsigned long long* addr, unsigned long long* size)
 {
+    char* endptr;
     if ((p = find_space(p)) == NULL)
         return -1;
-    *addr = simple_strtoul(p, NULL, 16);
+    *addr =  ustrtoull(p, &endptr, 16);
     if ((p = find_space(p)) == NULL)
         return -1;
-    *size = simple_strtoul(p, NULL, 16);
+    *size =  ustrtoull(p, &endptr, 16);
     return 0;
 }
 
@@ -171,7 +172,7 @@ static void get_cmd(char* buf, unsigned int len)
     }
 }
 
-static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long addr, unsigned long size)
+static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long long addr, unsigned long long size)
 {
     int res;
 
@@ -211,7 +212,7 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
     return res;
 }
 
-static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long addr, unsigned long size)
+static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long long addr, unsigned long long size)
 {
     int res = -1;
 
@@ -270,7 +271,7 @@ static void cmd_dec(void)
     char cmd_buf[256];
     struct flw_dev_t* seldev = NULL;
     struct prog_ctx_t pc = {0};
-    unsigned long addr, size;
+    unsigned long long addr, size;
     int ret;
 
     while (1)
@@ -397,7 +398,7 @@ static void cmd_dec(void)
                 continue;
             }
             size = EDCL_XMODEM_BUF_LEN;
-            addr = 0x0;
+            addr = 0;
             ret = seldev->erase(seldev, addr, seldev->dev_info.full_size);
             if (ret)
                 printf("Test: erase failed\n");
@@ -410,7 +411,8 @@ static void cmd_dec(void)
                 if (ret)
                     printf("Test: read failed\n");
                 ret = ret || memcmp(src, dst, size);
-                printf("Test: address %lx,size %lx,ret=%d\n", addr, size, ret);
+                printf("Test: address %x%08x,size %x%08x,ret=%d\n",
+                    (unsigned int)(addr>>32), (unsigned int)addr, (unsigned int)(size>>32), (unsigned int)size, ret);
                 addr += size;
                 if (ret)
                     break;
@@ -441,19 +443,21 @@ static void cmd_dec(void)
                         size = EDCL_XMODEM_BUF_LEN;
                         puts("truncate buffer size\n");
                     }
+                    if (erase || write || read) {
+                        printf("%s: address %x%08x,size %x%08x...",
+                            erase ? "Erase" : write ? "Write" : "Read",
+                            (unsigned int)(addr>>32), (unsigned int)addr, (unsigned int)(size>>32), (unsigned int)size);
+                    }
                     if (erase)
                     {
-                        printf("Erase: address %lx,size %lx...", addr, size);
                         ret = seldev->erase(seldev, addr, size);
                     }
                     else if (write)
                     {
-                        printf("Write: address %lx,size %lx...", addr, size);
                         ret = seldev->write(seldev, addr, size, edcl_xmodem_buf);
                     }
                     else if (read)
                     {
-                        printf("Read: address %lx,size %lx...", addr, size);
                         ret = seldev->read(seldev, addr, size, edcl_xmodem_buf);
                     }
                     else if (program)

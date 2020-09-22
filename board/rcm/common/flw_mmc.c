@@ -61,19 +61,18 @@ int flw_mmc_found(unsigned int slot, struct flw_dev_info_t* dev_info, struct mmc
     return -1;
 }
 
-static int conv_addr_size(unsigned long* addr, unsigned long* size, unsigned int check)
+static int conv_addr_size(unsigned long long* addr, unsigned long long* size, unsigned int check)
 {
     if (!check) {
         puts("Block/page size is null\n");
         return -1;
     }
-    if( *addr % check || *size % check )
-    {
+    if( *addr % check || *size % check ) {
         puts("Erase/write address/length not multiple of block size\n");
         return -1;
     }
     *addr >>= 9; // /= 512
-    *size >>= 9; // /= 512
+    *size >>= 9;
     return 0;
 }
 
@@ -87,7 +86,7 @@ static int check_protect(struct mmc* mmc)
     return 0;
 }
 
-int flw_mmc_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
+int flw_mmc_erase(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size)
 {
     struct mmc* mmc;
     unsigned int erase_num;
@@ -109,7 +108,7 @@ int flw_mmc_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
     return -1;
 }
 
-int flw_mmc_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data)
+int flw_mmc_write(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, const char* data)
 {
     struct mmc* mmc;
     unsigned int write_num;
@@ -131,7 +130,7 @@ int flw_mmc_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, 
     return -1;
 }
 
-int flw_mmc_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data)
+int flw_mmc_read(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, char* data)
 {
     struct mmc* mmc;
     unsigned int read_num;

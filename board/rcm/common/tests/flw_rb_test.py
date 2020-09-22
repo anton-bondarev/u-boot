@@ -65,10 +65,15 @@ def setup_model_param(model):
         nand_dev0 = "nand0"     # Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
         nand_addr0 = 0x100000
         nand_size0 = 0x20000
-
+        """ Part  Start Sector    Num Sectors     UUID          Type      Addr
+            1     2048            8388608         0d632b5d-01     83      0x100000
+            2     8390656         8388608         0d632b5d-02     83      0x100100000
+            3     16779264        8388608         0d632b5d-03     83      0x200100000
+            4     25167872        5948416         0d632b5d-04     83      0x300100000
+        """
         mmc_dev0 = "mmc0"       # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
-        mmc_addr0 = 0x100000
-        mmc_size0 = 0x4000
+        mmc_addr0 = 0x300100000
+        mmc_size0 = 0x5ad000
 
         nor_dev0 = "nor0"       # CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
         nor_addr0 = 0x0
@@ -437,7 +442,7 @@ if model == MDL_1888TX018:
 
     sum_err += testx(nand_dev0, nand_addr0, nand_size0)
 
-   # sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
+    sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
 
    # sum_err += testx(nor_dev0, nor_addr0, nor_size0)
 

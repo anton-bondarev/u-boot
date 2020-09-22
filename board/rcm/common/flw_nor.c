@@ -33,13 +33,13 @@ static int conv_addr_size(unsigned long addr, unsigned long size, unsigned int s
     return 0;
 }
 
-int flw_nor_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
+int flw_nor_erase(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size)
 {
     int ret;
     flash_info_t* info = &flash_info[fd->dev_info.bank];
     unsigned int start, end;
     unsigned long sect_size =  flash_sector_size(info, 0);
-    ret = conv_addr_size( addr, size, sect_size, &start, &end);
+    ret = conv_addr_size(addr, size, sect_size, &start, &end);
     if (ret == 0) {
         //printf("erase sectors: %x-%x\n", start, end);
         flash_protect(FLAG_PROTECT_CLEAR, start, end, info);
@@ -50,26 +50,26 @@ int flw_nor_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size)
     return ret;
 }
 
-int flw_nor_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data)
+int flw_nor_write(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, const char* data)
 {
     int ret;
-    unsigned long src = flash_info[fd->dev_info.bank].start[0] + addr;
+    unsigned long src = flash_info[fd->dev_info.bank].start[0] + (unsigned long)addr;
     flash_set_verbose(0);
-    ret = flash_write((char*)data, src, size);
-    //printf("write: %lx-%lx\n", src, size);
+    ret = flash_write((char*)data, src, (unsigned long)size);
+    //printf("write: %lx-%lx\n", src, (unsigned long)size);
     if (ret)
         flash_perror(ret);
     flash_set_verbose(1);
     return ret;
 }
 
-int flw_nor_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data)
+int flw_nor_read(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, char* data)
 {
-    unsigned int i;
-    unsigned long src = flash_info[fd->dev_info.bank].start[0] + addr;
+    unsigned long i;
+    unsigned long src = flash_info[fd->dev_info.bank].start[0] + (unsigned long)addr;
     flash_set_verbose(0);
-    //printf("read: %lx-%lx\n", src, size);
-    for (i=0; i<size; i++) *data++ = *(char*)src++;
+    //printf("read: %lx-%lx\n", src, (unsigned long)size);
+    for (i=0; i<(unsigned long)size; i++) *data++ = *(char*)src++;
     flash_set_verbose(1);
     return 0;
 }

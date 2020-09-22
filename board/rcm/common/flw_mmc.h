@@ -29,11 +29,11 @@
 
 int flw_mmc_found(unsigned int slot, struct flw_dev_info_t* dev_info, struct mmc** mmc);
 
-int flw_mmc_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
+int flw_mmc_erase(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size);
 
-int flw_mmc_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data);
+int flw_mmc_write(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, const char* data);
 
-int flw_mmc_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data);
+int flw_mmc_read(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, char* data);
 
 void flw_mmc_list_add(void);
 

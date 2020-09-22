@@ -8,11 +8,11 @@
 
 int flw_nand_found(struct flw_dev_info_t* dev_info);
 
-int flw_nand_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
+int flw_nand_erase(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size);
 
-int flw_nand_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data);
+int flw_nand_write(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, const char* data);
 
-int flw_nand_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data);
+int flw_nand_read(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, char* data);
 
 void flw_nand_list_add(void);
 

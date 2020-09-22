@@ -32,11 +32,11 @@
 
 int flw_spi_flash_found(unsigned int bus, unsigned int cs, struct flw_dev_info_t* dev_info);
 
-int flw_spi_flash_erase(struct flw_dev_t* fd, unsigned long addr, unsigned long size);
+int flw_spi_flash_erase(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size);
 
-int flw_spi_flash_write(struct flw_dev_t* fd, unsigned long addr, unsigned long size, const char* data);
+int flw_spi_flash_write(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, const char* data);
 
-int flw_spi_flash_read(struct flw_dev_t* fd, unsigned long addr, unsigned long size, char* data);
+int flw_spi_flash_read(struct flw_dev_t* fd, unsigned long long addr, unsigned long long size, char* data);
 
 void flw_spi_flash_list_add(void);
 
