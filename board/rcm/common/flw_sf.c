@@ -12,8 +12,8 @@ int flw_spi_flash_found(unsigned int bus, unsigned int cs, struct flw_dev_info_t
         if (dev_info) {
             strlcpy(dev_info->part, flash->name, FLW_PART_BUF_SIZE );
             dev_info->full_size = flash->size;
-            dev_info->erase_size = flash->page_size;
-            dev_info->write_size = flash->erase_size;
+            dev_info->erase_size = flash->erase_size;
+            dev_info->write_size = flash->page_size;
         }
         spi_flash_free(flash);
         return 0;

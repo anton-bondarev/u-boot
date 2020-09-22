@@ -8,11 +8,13 @@
 
 static int last_err; // for saving possible transactions error, if not error - packet szie
 
+#ifdef CONFIG_TARGET_1888TX018
 static uint32_t get_sys_timer(void)
 { // for 1888tx018 only
     #define TMR_ADDR 0x000a2004
     return *(uint32_t*)TMR_ADDR;
 }
+#endif
 
 static void fill_buf(volatile char* wr_buf, unsigned int len)
 {
@@ -244,6 +246,24 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
     return res;
 }
 
+static void upd_dev_list(void)
+{
+    flash_dev_list_clear();
+#ifdef CONFIG_SPL_SPI_FLASH_SUPPORT
+    flw_spi_flash_list_add();
+#endif
+#ifdef CONFIG_SPL_MMC_SUPPORT
+    flw_mmc_list_add();
+#endif
+#ifdef CONFIG_SPL_NOR_SUPPORT
+    flw_nor_list_add();
+#endif
+#ifdef CONFIG_SPL_NAND_SUPPORT
+    flw_nand_list_add();
+#endif
+    flash_dev_list_print();
+}
+
 static void cmd_dec(void)
 {
     char* edcl_xmodem_buf = (char*)edcl_xmodem_buf0;
@@ -260,7 +280,7 @@ static void cmd_dec(void)
 
         if (!strcmp(cmd_buf,"help"))
         {
-            puts("Usage: help version reset exit list select bufptr rand print setbuf setbufx getbuf getbufx erase write read program duplicate lasterr\n");
+            puts("Usage: help version reset exit list select dtest bufptr rand print bufrev bufcmp setbuf setbufx getbuf getbufx erase write read program duplicate lasterr\n");
         }
         else if (!strcmp(cmd_buf,"version"))
         {
@@ -276,20 +296,7 @@ static void cmd_dec(void)
         }
         else if (!strcmp(cmd_buf,"list"))
         {
-            flash_dev_list_clear();
-#ifdef CONFIG_SPL_SPI_FLASH_SUPPORT
-            flw_spi_flash_list_add();
-#endif
-#ifdef CONFIG_SPL_MMC_SUPPORT
-            flw_mmc_list_add();
-#endif
-#ifdef CONFIG_SPL_NOR_SUPPORT
-            flw_nor_list_add();
-#endif
-#ifdef CONFIG_SPL_NAND_SUPPORT
-            flw_nand_list_add();
-#endif
-            flash_dev_list_print();
+            upd_dev_list();
         }
         else if (!strncmp(cmd_buf, "select", 6)) // "select sf00"
         {
@@ -378,21 +385,24 @@ static void cmd_dec(void)
         {
             printf("Last Xmodem error %d\n", last_err);
         }
-#ifdef CONFIG_SPL_MMC_SUPPORT
-        else if (!strcmp(cmd_buf, "mmc_test"))
+        else if (!strncmp(cmd_buf, "dtest", 5))                 // "dtest <devname>"
         {
-            flash_dev_list_clear();
-            flw_mmc_list_add();
-            seldev = flash_dev_list_find("mmc0");
+            char* src = (char*)edcl_xmodem_buf0;
+            char* dst = (char*)edcl_xmodem_buf1;
+            char* devname = cmd_buf+6;
+            upd_dev_list();
+            seldev = flash_dev_list_find(devname);
+            if (!seldev) {
+                puts("Unknown device\n");
+                continue;
+            }
             size = EDCL_XMODEM_BUF_LEN;
-            addr = 0;
-            while (1) {
-                char* src = (char*)edcl_xmodem_buf0;
-                char* dst = (char*)edcl_xmodem_buf1;
+            addr = 0x0;
+            ret = seldev->erase(seldev, addr, seldev->dev_info.full_size);
+            if (ret)
+                printf("Test: erase failed\n");
+            while (addr < seldev->dev_info.full_size) {
                 fill_buf(src, size);
-                ret = seldev->erase(seldev, addr, size);
-                if (ret)
-                    printf("Test: erase failed\n");
                 ret = ret || seldev->write(seldev, addr, size, src);
                 if (ret)
                     printf("Test: write failed\n");
@@ -405,8 +415,8 @@ static void cmd_dec(void)
                 if (ret)
                     break;
             }
+            puts("completed\n");
         }
-#endif // CONFIG_SPL_MMC_SUPPORT
         else
         {
             int erase = !strncmp(cmd_buf,"erase", 5),           // "erase <addr> <size>"
@@ -467,8 +477,10 @@ static void cmd_dec(void)
 static int flash_writer_pseudo_loader(struct spl_image_info *spl_image, struct spl_boot_device *bootdev)
 {
     printf("Flashwriter(%s) running(help for information):\n", FLW_VERSION);
+#ifdef CONFIG_TARGET_1888TX018 // for testing only,remove after
     srand(get_sys_timer());
-    cmd_dec(); 
+#endif
+    cmd_dec();
     return -1;
 }
 

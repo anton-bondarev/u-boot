@@ -30,92 +30,101 @@ import ctypes
 import inspect
 import time
 import io
+import getch
 
 MDL_1888TX018 = 0
 MDL_1888BM018 = 1
-
-model = MDL_1888TX018
+MDL_1888BC048 = 2
 
 MODE_XMODEM = 0
 MODE_EDCL = 1
 
-write_mode = MODE_EDCL
-read_mode = MODE_EDCL
+write_mode = MODE_XMODEM
+read_mode = MODE_XMODEM
 
 splpath = "./../../../../spl/u-boot-spl-dtb.rbi"
 
-if model == MDL_1888TX018:
-    chip = "mm7705"
-    rstmsg = "\x00boot: Waiting for a valid image @ 0x40000"
-    rstdev = "/dev/ttyACM1"
-    ttydev = "/dev/ttyUSB6"
-    baudrate = 1000000
-    splbase = 0x40000
+def setup_model_param(model):
+    global chip, rstmsg, rstdev, baudrate, splbase
+    global sf_dev0, sf_addr0, sf_size0, sf_dev1, sf_addr1, sf_size1
+    global nand_dev0, nand_addr0, nand_size0
+    global mmc_dev0, mmc_addr0, mmc_size0, mmc_dev1, mmc_addr1, mmc_size1
+    global nor_dev0, nor_addr0, nor_size0, nor_dev1, nor_addr1, nor_size1
 
-    """ Part  Start Sector    Num Sectors     UUID          Type      Addr
-        1     2048            8388608         0d632b5d-01     83      0x100000
-        2     8390656         8388608         0d632b5d-02     83      0x100100000
-        3     16779264        8388608         0d632b5d-03     83      0x‭200100000‬
-        4     25167872        5948416         0d632b5d-04     83      0x300100000
-    """
+    if model == MDL_1888TX018:
+        chip = "mm7705"
+        rstmsg = "\x00boot: Waiting for a valid image @ 0x40000"
+        rstdev = "/dev/ttyACM1"
+        baudrate = 1000000
+        splbase = 0x40000
 
-    # Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
-    sf_dev0 = "sf00"
-    sf_addr0 = 0x300000
-    sf_size0 = 0x10000
+        sf_dev0 = "sf00"        # Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
+        sf_addr0 = 0x300000
+        sf_size0 = 0x10000
 
-    #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
-    nand_dev0 = "nand0"
-    nand_addr0 = 0x100000
-    nand_size0 = 0x20000
+        nand_dev0 = "nand0"     # Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
+        nand_addr0 = 0x100000
+        nand_size0 = 0x20000
 
-    # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
-    mmc_dev0 = "mmc0"
-    mmc_addr0 = 0x100000
-    mmc_size0 = 0x4000
+        mmc_dev0 = "mmc0"       # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
+        mmc_addr0 = 0x100000
+        mmc_size0 = 0x4000
 
-    #  CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
-    nor_dev0 = "nor0"
-    nor_addr0 = 0x0
-    nor_size0 = 0x40000
+        nor_dev0 = "nor0"       # CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
+        nor_addr0 = 0x0
+        nor_size0 = 0x40000
 
-    #  CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
-    nor_dev1 = "nor1"
-    nor_addr1 = 0x500000
-    nor_size1 = 0x40000
+        nor_dev1 = "nor1"       # CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
+        nor_addr1 = 0x500000
+        nor_size1 = 0x40000
+        return True
+    elif model == MDL_1888BM018:
+        chip = "oi10"
+        rstmsg = "boot: host: Hit 'X' for X-Modem upload"
+        rstcmd = '"printf "22:05" |nc 192.168.10.239 6722'
+        baudrate = 115200
+        splbase = 0x80020000 # it's wrong?
 
-elif model == MDL_1888BM018:
-    chip = "oi10"
-    rstmsg = "boot: host: Hit 'X' for X-Modem upload"
-    rstcmd = '"printf "22:05" |nc 192.168.10.239 6722'
-    ttydev = "/dev/ttyUSB7"
-    baudrate = 115200
-    splbase = 0x80020000
+        sf_dev0 = "sf00"
+        sf_addr0 = 0x200000
+        sf_size0 = 0x10000
 
-    """ mb150-02.dts: для работы пары sf00 и sf10 вытаскиваем mmc:
-    mmc0: mmc0@D002C000 {
-        status = "disabled";
-    mmc1: mmc1@D003C000 {
-        status = "disabled";
-    spi0: spi@D002B000 {
-        // status = "disabled";
-    spi1: spi@D003B000 {
-        // status = "disabled"; """
-    sf_dev0 = "sf00"
-    sf_addr0 = 0x200000
-    sf_size0 = 0x10000
+        sf_dev1 = "sf10"
+        sf_addr1 = 0x200000
+        sf_size1 = 0x10000
 
-    sf_dev1 = "sf10"
-    sf_addr1 = 0x200000
-    sf_size1 = 0x10000
+        mmc_dev0 = "mmc0"
+        mmc_addr0 = 0x100000
+        mmc_size0 = 0x8000
 
-    mmc_dev0 = "mmc0"
-    mmc_addr0 = 0x100000
-    mmc_size0 = 0x8000
+        mmc_dev1 = "mmc1"
+        mmc_addr1 = 0x200000
+        mmc_size1 = 0x8000
+        return True
+    elif model == MDL_1888BC048:
+        chip = "basis"
+        rstmsg = "boot: host: Hit 'X' for xmodem upload\n"
+        rstcmd = '"printf "22:05" |nc 192.168.10.239 6722'
+        baudrate = 6000000
+        splbase = 0x00040000
 
-    mmc_dev1 = "mmc1"
-    mmc_addr1 = 0x200000
-    mmc_size1 = 0x8000
+        sf_dev0 = "sf00"
+        sf_addr0 = 0x0
+        sf_size0 = 0x4000
+
+        sf_dev1 = "sf10"
+        sf_addr1 = 0x200000
+        sf_size1 = 0x10000
+
+        mmc_dev0 = "mmc0"
+        mmc_addr0 = 0x100000
+        mmc_size0 = 0x8000
+
+        mmc_dev1 = "mmc1"
+        mmc_addr1 = 0x200000
+        mmc_size1 = 0x8000
+        return True
+    return False
 
 wr_file = "tmpwr"
 rd_file = "tmprd"
@@ -123,7 +132,9 @@ rd_file = "tmprd"
 edcl_buf_size = 4096
 ser = None
 
-do_randfile = 1
+do_term = 0
+do_rand_file = 1
+do_55aa_file = 0
 do_wr = 1
 do_rd = 1
 do_cmp = 1
@@ -188,9 +199,10 @@ def send(cmd):
     cmd += "\n"
     term.ser.write(cmd.encode('utf-8'))
 
-def expect(msg):
+def expect(msg, crlf=True):
     global ser
-    msg += "\r\n"
+    if crlf:
+        msg += "\r\n"
     while True:
         r = term.ser.readline()
         if r:
@@ -198,7 +210,7 @@ def expect(msg):
             if r == msg.encode('utf-8'):
                 return
 
-def select(dev): # список устройств и выбор нужного,выбор буфера можно не делать
+def select(dev):
     send("list")
     expect("completed")
     send("select %s" % dev)
@@ -250,6 +262,21 @@ def write_sync(xfer, val):
     global sync_ptr
     xfer.send(io.BytesIO(val.to_bytes(4, 'big')), sync_ptr)
 
+def usr_input():
+    while 1:
+        data = input()+"\r\n"
+        #print(data.encode('utf-8'))
+        term.ser.write(data.encode('utf-8'))
+        time.sleep(5)
+
+def usr_term():
+    myThread = threading.Thread(target=usr_input)
+    myThread.start()
+    while 1:
+        data = term.ser.readline()
+        if data != b'':
+            print(data.decode('utf-8'))
+
 def testx(flash_dev, flash_addr, flash_size):
     global chip
     global rstmsg
@@ -264,27 +291,39 @@ def testx(flash_dev, flash_addr, flash_size):
 
     term, reset = intialize_programmer(chip)
     reset.resetToHost()
-    expect(rstmsg)
+    expect(rstmsg, False if model == MDL_1888BC048 else True)
     term.xfer.reconnect()
     term.xfer.connect(term.chip)
     stream = open(splpath, "rb")
-    if model == MDL_1888BM018:  # для TX018 в этом нет необходимости,почему?
+    if model == MDL_1888BM018 or model == MDL_1888BC048:
         send("X")
     term.xfer.send(stream, splbase)
     stream.close()
     expect("Flashwriter(1.0.0) running(help for information):")
-    select(flash_dev)
 
-# генерим случайный файл
+    if do_term:
+        usr_term()
+
+    select(flash_dev)
     if os.path.exists(rd_file):
         os.remove(rd_file)
-    if do_randfile:
+
+    if do_rand_file:
         if os.path.exists(wr_file):
             os.remove(wr_file)
         randgen = spawn("dd if=/dev/urandom bs=1 of=%s count=%u" % (wr_file, flash_size), encoding='utf-8')
         randgen.logfile_read = sys.stdout
         randgen.expect(["%x+0 records out" % flash_size, EOF, TIMEOUT], timeout=5)
-# записываем
+
+    if do_55aa_file:
+        data = [0x55, 0xaa]
+        if os.path.exists(wr_file):
+            os.remove(wr_file)
+        stream = open(wr_file, "wb")
+        for i in range(flash_size):
+            stream.write(data[i&1].to_bytes(1, byteorder='big'))
+        stream.close()
+
     if do_wr:
         if write_mode == MODE_XMODEM:
             send("program %c %x %x" % ('X', flash_addr, flash_size))
@@ -317,9 +356,9 @@ def testx(flash_dev, flash_addr, flash_size):
                 print(colored("send buffer %x: %x,%x,%x,%x" % (n, wr_buf[0], wr_buf[1], wr_buf[2], wr_buf[3]), 'yellow'))
             wr_stream.close();
         print(colored('%s: write finished' % flash_dev, 'green'))
-# сделать обязательно...
+
     term.ser.reset_input_buffer()
-# читаем в файл
+
     if do_rd:
         if read_mode == MODE_XMODEM:
             send("duplicate %c %x %x" % ('X', flash_addr, flash_size))
@@ -359,7 +398,7 @@ def testx(flash_dev, flash_addr, flash_size):
             rd_stream.close()
 
         print(colored('%s: read finished' % flash_dev, 'green'))
-# сравниваем
+
     if do_cmp:
         crc32_wr = zlib.crc32(open(wr_file, 'rb').read(), 0)
         crc32_rd = zlib.crc32(open(rd_file, 'rb').read(), 0)
@@ -379,6 +418,18 @@ def mmc0_to_mmc1_copy(addr, size): #    # slice mmc0 -> mmc1 and check mmc1
     return err
 
 sum_err = 0
+
+sel_model = {
+    "redd":         MDL_1888TX018,
+    "nov-nil01":    MDL_1888BM018,
+    "nov-nil03":    MDL_1888BC048
+}
+
+model = sel_model[socket.gethostname()]
+
+if setup_model_param(model) == False:
+    printf("Error: model mismatch\n")
+    exit
 
 if model == MDL_1888TX018:
 
@@ -403,6 +454,10 @@ elif model == MDL_1888BM018:
     sum_err += testx(mmc_dev1, mmc_addr1, mmc_size1)
 
     #sum_err += mmc0_to_mmc1_copy(0, 0x400000)
+
+elif model == MDL_1888BC048:
+
+    sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
 print(colored("Completed,error %u" % sum_err, 'yellow'))
 

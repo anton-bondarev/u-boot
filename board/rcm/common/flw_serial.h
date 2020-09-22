@@ -3,15 +3,15 @@
 
 #ifdef CONFIG_TARGET_1888TX018
     #define  FLW_TOUT 1000000
-#endif
+#endif // empirical,can be changed
 
 #ifdef CONFIG_TARGET_1888BM18
     #define  FLW_TOUT 1000
-#endif
+#endif // too
 
 #ifdef CONFIG_TARGET_1888BC048
-    #define  FLW_TOUT 1000
-#endif
+    #define  FLW_TOUT 100000
+#endif // too
 
 int flw_putc(char ch);
 

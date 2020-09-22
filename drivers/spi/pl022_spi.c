@@ -23,6 +23,9 @@
 #include <spi.h>
 #include <hang.h>
 
+#define PRINT_BUFFER(buf) printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", \
+    buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]); 
+
 #define SSP_CR0		0x000
 #define SSP_CR1		0x004
 #define SSP_DR		0x008
@@ -463,27 +466,34 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	}
 	else if (ps->cmd_len && (!flags || (!(flags & SPI_XFER_BEGIN) && (flags & SPI_XFER_END)))) // getting cmd result?
 	{
+#ifndef CONFIG_FLASHWRITER
 		unsigned char *newout = 0;
 		unsigned char *newin = 0;
-
+#else
+		extern unsigned char newout[];
+		extern unsigned char newin[];
+#endif
+#ifndef CONFIG_FLASHWRITER
 		newout = malloc(ps->cmd_len + len);
+#endif
 		memset(newout, 0, ps->cmd_len + len);
 		memcpy(newout, ps->cmd, ps->cmd_len);
 		if (dout)
 			memcpy(newout + ps->cmd_len, dout, len);
-
-		if (din)
+#ifndef CONFIG_FLASHWRITER
+		if (din) {
 			newin = malloc(ps->cmd_len + len);
-
+		}
+#endif
 		ret = pl022_spi_xfer_int(ps, ps->cmd_len + len, newout, newin);
 
 		if (din)
 			memcpy(din, newin + ps->cmd_len, len);
-
+#ifndef CONFIG_FLASHWRITER
 		free(newout);
 		if (newin)
 			free(newin);
-
+#endif
 		ps->cmd_len = 0;
 	}
 	else if (!flags || ((flags & SPI_XFER_BEGIN) && (flags & SPI_XFER_END))) // single action

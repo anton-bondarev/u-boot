@@ -82,12 +82,14 @@ bool is_ddr_ok(void)
 
 void spl_board_init(void)
 {
+#ifndef CONFIG_FLASHWRITER
 	if(!is_ddr_ok())
 	{
 		printf("Error in DDR resetting...\n");
 		udelay(1000000);
 		do_reset(0,0,0,0);
 	}
+#endif
 
 	gd->ram_size = CONFIG_SYS_DDR_SIZE;
 }
