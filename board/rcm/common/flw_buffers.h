@@ -8,28 +8,21 @@
 
 #ifdef CONFIG_TARGET_1888TX018
 extern volatile char blk_buf[];
-extern volatile char edcl_xmodem_buf0[];
-extern volatile char edcl_xmodem_buf1[];
 #endif
 
 #ifdef CONFIG_TARGET_1888BM18
 extern volatile char* blk_buf;
-extern volatile char* edcl_xmodem_buf0;
-extern volatile char* edcl_xmodem_buf1;
 #endif
 
 #ifdef CONFIG_TARGET_1888BC048
 extern volatile char newin[];
 extern volatile char newout[];
 extern volatile char blk_buf[];
-extern volatile char edcl_xmodem_buf0[];
-extern volatile char edcl_xmodem_buf1[];
 #endif
 
+extern volatile char edcl_xmodem_buf0[];
+extern volatile char edcl_xmodem_buf1[];
 extern volatile char* edcl_xmodem_buf_sync;
-
-#define PRINT_BUFFER(buf) printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", \
-    buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]); 
 
 uint32_t flw_virt_to_dma(volatile void* ptr);
 
