@@ -99,6 +99,12 @@ config SYS_I2C_DW
 	  controller is used in various SoCs, e.g. the ST SPEAr, Altera
 	  SoCFPGA, Synopsys ARC700 and some Intel x86 SoCs.
 
+config SYS_I2C_RCM_BASIS
+	bool "MT143-05 I2C Controller"
+	default n
+	help
+	  Say yes here to add support for Basis I2C controller
+
 config SYS_I2C_DW_ENABLE_STATUS_UNSUPPORTED
 	bool "DW I2C Enable Status Register not supported"
 	depends on SYS_I2C_DW && (TARGET_SPEAR300 || TARGET_SPEAR310 || \
