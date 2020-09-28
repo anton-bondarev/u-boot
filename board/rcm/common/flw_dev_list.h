@@ -5,7 +5,7 @@
 
 #define MAX_DEV_NUM 16
 
-enum FLW_DEV_TYPE {FLWDT_UNKNOWN=0, FLWDT_SF, FLWDT_MMC, FLWDT_NAND, FLWDT_NOR};
+enum FLW_DEV_TYPE {FLWDT_UNKNOWN=0, FLWDT_SF, FLWDT_MMC, FLWDT_NAND, FLWDT_NOR, FLWDT_I2C};
 #define FLW_PART_BUF_SIZE 32
 
 struct flw_dev_t;
@@ -41,6 +41,12 @@ struct flw_dev_info_t
         {
             unsigned int bank;
             unsigned int dummy_nor;
+        };
+        struct
+        {
+            unsigned int i2c_bus;
+            unsigned char i2c_addr;
+            unsigned char i2c_alen;
         };
     };
 };

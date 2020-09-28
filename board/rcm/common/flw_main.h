@@ -25,6 +25,10 @@
     #include "flw_nand.h"
 #endif
 
+#ifndef CONFIG_SPL_I2C_SUPPORT
+#include "flw_i2c_eeprom.h"
+#endif
+
 #ifndef CONFIG_SPL_CLK
     #error "CONFIG_SPL_CLK must been on!"
 #endif

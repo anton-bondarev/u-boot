@@ -262,6 +262,9 @@ static void upd_dev_list(void)
 #ifdef CONFIG_SPL_NAND_SUPPORT
     flw_nand_list_add();
 #endif
+#ifdef CONFIG_SPL_I2C_SUPPORT
+    flw_i2c_eeprom_list_add();
+#endif
     flash_dev_list_print();
 }
 

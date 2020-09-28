@@ -50,6 +50,7 @@ def setup_model_param(model):
     global nand_dev0, nand_addr0, nand_size0
     global mmc_dev0, mmc_addr0, mmc_size0, mmc_dev1, mmc_addr1, mmc_size1
     global nor_dev0, nor_addr0, nor_size0, nor_dev1, nor_addr1, nor_size1
+    global i2c_dev0, i2c_addr0, i2c_size0
 
     if model == MDL_1888TX018:
         chip = "mm7705"
@@ -128,6 +129,11 @@ def setup_model_param(model):
         mmc_dev1 = "mmc1"
         mmc_addr1 = 0x200000
         mmc_size1 = 0x8000
+
+        i2c_dev0 = "i2c0"
+        i2c_addr0 = 0
+        i2c_size0 = 0x2000
+
         return True
     return False
 
@@ -463,6 +469,8 @@ elif model == MDL_1888BM018:
 elif model == MDL_1888BC048:
 
     sum_err += testx(sf_dev0, sf_addr0, sf_size0)
+
+    sum_err += testx(i2c_dev0, i2c_addr0, i2c_size0)
 
 print(colored("Completed,error %u" % sum_err, 'yellow'))
 
