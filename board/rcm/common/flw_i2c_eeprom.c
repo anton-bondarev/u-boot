@@ -5,17 +5,12 @@
 
 #include "flw_i2c_eeprom.h"
 
-#ifdef CONFIG_TARGET_1888TX018
-    // todo
-#endif
-
-#ifdef CONFIG_TARGET_1888BM18
-    // todo
+#if defined CONFIG_TARGET_1888TX018 || defined CONFIG_TARGET_1888BM18
+// TODO if need
 #endif
 
 #ifdef CONFIG_TARGET_1888BC048
     static const i2c_eeprom_param_t i2c_eeprom_param[FLW_MAX_I2C_BUS][FLW_MAX_I2C_DEV] = {{{"24aa64", 0x50, 2, 8192}}};
-#endif
 
 struct udevice* flw_i2c_eeprom_found(unsigned int i2c_bus, unsigned int i2c_addr)
 {
@@ -79,8 +74,11 @@ int flw_i2c_eeprom_read(struct flw_dev_t* fd, unsigned long long addr, unsigned 
     return flw_i2c_eeprom_rd_wr(fd, false, addr, size, (unsigned char*)data);
 }
 
+#endif
+
 void flw_i2c_eeprom_list_add(void)
 {
+#ifdef CONFIG_TARGET_1888BC048
 unsigned int bus, dev;
 char* name = "i2c*";
 
@@ -103,5 +101,6 @@ char* name = "i2c*";
             }
         }
     }
+#endif
 }
 

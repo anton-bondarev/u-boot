@@ -9,12 +9,8 @@
     #error "CONFIG_DM_I2C must been on!" 
 #endif
 
-#ifdef CONFIG_TARGET_1888TX018
-    // todo
-#endif
-
-#ifdef CONFIG_TARGET_1888BM18
-    // todo
+#if defined CONFIG_TARGET_1888TX018 || defined CONFIG_TARGET_1888BM18
+// TODO if need
 #endif
 
 #ifdef CONFIG_TARGET_1888BC048
