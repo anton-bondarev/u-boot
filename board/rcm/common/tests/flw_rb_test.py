@@ -128,7 +128,7 @@ def setup_model_param(model):
 
         mmc_dev1 = "mmc1"
         mmc_addr1 = 0x200000
-        mmc_size1 = 0x8000
+        mmc_size1 = 0x800000
 
         i2c_dev0 = "i2c0"
         i2c_addr0 = 0
@@ -471,6 +471,8 @@ elif model == MDL_1888BC048:
     sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
     sum_err += testx(i2c_dev0, i2c_addr0, i2c_size0)
+
+    sum_err += testx(mmc_dev1, mmc_addr1, mmc_size1)
 
 print(colored("Completed,error %u" % sum_err, 'yellow'))
 

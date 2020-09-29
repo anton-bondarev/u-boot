@@ -25,7 +25,7 @@
     #include "flw_nand.h"
 #endif
 
-#ifndef CONFIG_SPL_I2C_SUPPORT
+#ifdef CONFIG_SPL_I2C_SUPPORT
 #include "flw_i2c_eeprom.h"
 #endif
 

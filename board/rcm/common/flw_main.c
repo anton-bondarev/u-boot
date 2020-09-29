@@ -268,6 +268,46 @@ static void upd_dev_list(void)
     flash_dev_list_print();
 }
 
+static void dtest(const char* devname)
+{
+    unsigned long long addr = 0, size = EDCL_XMODEM_BUF_LEN;
+    char* src = (char*)edcl_xmodem_buf0;
+    char* dst = (char*)edcl_xmodem_buf1;
+
+    upd_dev_list();
+
+    struct flw_dev_t* seldev = flash_dev_list_find(devname);
+    if (!seldev) {
+        printf("Unknown device (%s)\n", devname);
+        return;
+    }
+
+    puts("Erase..");
+    if (seldev->erase(seldev, addr, seldev->dev_info.full_size)) {
+        puts("failed\n");
+        return;
+    }
+    puts("OK\n");
+
+    while (addr < seldev->dev_info.full_size) {
+        fill_buf(src, size);
+        if (seldev->write(seldev, addr, size, src)) {
+            puts("Write failed\n");
+            break;
+        }
+        if (seldev->read(seldev, addr, size, dst)) {
+            puts("Read failed\n");
+            break;
+        }
+        int err = memcmp(src, dst, size);
+        printf("Address %x%08x,size %x%08x,ret=%d\n",
+            (unsigned int)(addr>>32), (unsigned int)addr, (unsigned int)(size>>32), (unsigned int)size, err);
+        if (err)
+            break;
+        addr += size;
+    }
+}
+
 static void cmd_dec(void)
 {
     char* edcl_xmodem_buf = (char*)edcl_xmodem_buf0;
@@ -391,35 +431,8 @@ static void cmd_dec(void)
         }
         else if (!strncmp(cmd_buf, "dtest", 5))                 // "dtest <devname>"
         {
-            char* src = (char*)edcl_xmodem_buf0;
-            char* dst = (char*)edcl_xmodem_buf1;
             char* devname = cmd_buf+6;
-            upd_dev_list();
-            seldev = flash_dev_list_find(devname);
-            if (!seldev) {
-                puts("Unknown device\n");
-                continue;
-            }
-            size = EDCL_XMODEM_BUF_LEN;
-            addr = 0;
-            ret = seldev->erase(seldev, addr, seldev->dev_info.full_size);
-            if (ret)
-                printf("Test: erase failed\n");
-            while (addr < seldev->dev_info.full_size) {
-                fill_buf(src, size);
-                ret = ret || seldev->write(seldev, addr, size, src);
-                if (ret)
-                    printf("Test: write failed\n");
-                ret = ret || seldev->read(seldev, addr, size, dst);
-                if (ret)
-                    printf("Test: read failed\n");
-                ret = ret || memcmp(src, dst, size);
-                printf("Test: address %x%08x,size %x%08x,ret=%d\n",
-                    (unsigned int)(addr>>32), (unsigned int)addr, (unsigned int)(size>>32), (unsigned int)size, ret);
-                addr += size;
-                if (ret)
-                    break;
-            }
+            dtest(devname);
             puts("completed\n");
         }
         else
