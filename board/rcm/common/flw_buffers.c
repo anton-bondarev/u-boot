@@ -5,7 +5,7 @@ volatile char blk_buf[512];
 #endif
 
 #ifdef CONFIG_TARGET_1888BM18
-#define IM1_BASE_ADDRESS 0xC00000000
+#define IM1_BASE_ADDRESS 0xC0000000
 volatile char* blk_buf = (volatile char*)(IM1_BASE_ADDRESS);
 #endif
 
