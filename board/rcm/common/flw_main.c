@@ -282,15 +282,12 @@ static void dtest(const char* devname)
         return;
     }
 
-    puts("Erase..");
-    if (seldev->erase(seldev, addr, seldev->dev_info.full_size)) {
-        puts("failed\n");
-        return;
-    }
-    puts("OK\n");
-
     while (addr < seldev->dev_info.full_size) {
         fill_buf(src, size);
+        if (seldev->erase(seldev, addr, size)) {
+            puts("Erase failed\n");
+            break;
+        }
         if (seldev->write(seldev, addr, size, src)) {
             puts("Write failed\n");
             break;
