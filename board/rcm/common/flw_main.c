@@ -196,6 +196,7 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
     else {
 #ifdef CONFIRM_HANDSHAKE
         edcl_xmodem_sync_conf = 0;
+        edcl_xmodem_buf_sync = 0;
 #endif
         while (size > 0) {                                                          // check size % EDCL_XMODEM_BUF_LEN is 0 before
             while (edcl_xmodem_buf_sync == 0) flw_delay(100);                       // wait for valid address
