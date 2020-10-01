@@ -38,9 +38,15 @@ MDL_1888BC048 = 2
 
 MODE_XMODEM = 0
 MODE_EDCL = 1
+                            # host                  target
+CONFIRM_HANDSHAKE = 0       # data -> sync
+                            #                       ~sync -> conf
+                            # wait for conf
+                            # write 0 to conf(2x)
+                            #                       wait to conf
 
-write_mode = MODE_XMODEM
-read_mode = MODE_XMODEM
+write_mode = MODE_EDCL
+read_mode = MODE_EDCL
 
 splpath = "./../../../../spl/u-boot-spl-dtb.rbi"
 
@@ -152,6 +158,7 @@ do_cmp = 1
 
 buf_ptr = [0, 0]
 sync_ptr = 0
+conf_ptr = 0
 buf_len = 0
 
 def intialize_programmer(target_chip=None, signal_sender=None):
@@ -230,7 +237,7 @@ def select(dev):
     expect("selected")
 
 def get_buf_ptr():
-    global buf_ptr, sync_ptr, buf_len
+    global buf_ptr, sync_ptr, conf_ptr, buf_len
     send("bufptr") #"buffers 0x56474 0x55474 sync 0x55464 length 0x1000"
     while True:
         r = term.ser.readline()
@@ -243,35 +250,53 @@ def get_buf_ptr():
     buf_ptr[0] = int(s[1], 16)
     buf_ptr[1] = int(s[2], 16)
     sync_ptr = int(s[4], 16)
-    buf_len =  int(s[6], 16)
-    #print("%x,%x,%x,%x\n", buf_ptr[0], buf_ptr[1], sync_ptr, buf_len)
+    buf_len = int(s[6], 16)
+    if CONFIRM_HANDSHAKE:
+        conf_ptr =  int(s[8], 16)
+    print("%x,%x,%x,%x,%x\n" % (buf_ptr[0], buf_ptr[1], sync_ptr, conf_ptr, buf_len))
 
-def read_sync(xfer):
-    global sync_ptr
+def read_sync_conf(xfer, ptr):
     buffer = io.BytesIO()
-    xfer.recv(buffer, sync_ptr, 4)
+    xfer.recv(buffer, ptr, 4)
     buffer.truncate(4)
     return int.from_bytes(buffer.getvalue(), 'big')
 
 def wait_eq_sync(xfer, val, tout=5):
+    global sync_ptr
     for i in range(tout*10):
-        if read_sync(xfer) == val:
-            return
+        r = read_sync_conf(xfer, sync_ptr)
+        if r == val:
+            return True
         time.sleep(0.1)
-    print("wait_eq_sync timeout\n")
+    print("wait_eq_sync timeout(%x,%x)\n" % (val,r))
+    return False
 
 def wait_neq_sync(xfer, val, tout=5):
+    global sync_ptr
     for i in range(tout*10):
-        r = read_sync(xfer)
+        r = read_sync_conf(xfer, sync_ptr)
         if r != val:
             return r
         time.sleep(0.1)
-    print("wait_neq_sync timeout\n")
+    print("wait_neq_sync timeout(%x,%x)\n" % (val,r))
     return r
 
-def write_sync(xfer, val):
+def write_sync(xfer, val, tout=0.5):
     global sync_ptr
+    global conf_ptr
     xfer.send(io.BytesIO(val.to_bytes(4, 'big')), sync_ptr)
+    if CONFIRM_HANDSHAKE == False:
+        return True
+    for i in range(int(tout*10)):
+        rd_val = read_sync_conf(xfer, conf_ptr)
+        if rd_val == (val ^ 0xffffffff):
+            val = 0
+            xfer.send(io.BytesIO(val.to_bytes(4, 'big')), conf_ptr)
+            xfer.send(io.BytesIO(val.to_bytes(4, 'big')), conf_ptr)
+            return True
+        time.sleep(0.1)
+    print("write_sync timeout(%x,%x)\n" % (val,rd_val))
+    return False
 
 def usr_input():
     while 1:
@@ -360,8 +385,11 @@ def testx(flash_dev, flash_addr, flash_size):
                 wr_buf = wr_stream.read(edcl_buf_size)
                 if not wr_buf:
                     break
-                xfer_edcl.send(io.BytesIO(wr_buf), buf_ptr[n & 1]) # set address of current buffer
-                write_sync(xfer_edcl, buf_ptr[n & 1])
+                while True:
+                    xfer_edcl.send(io.BytesIO(wr_buf), buf_ptr[n & 1])          # set address of current buffer
+                    if write_sync(xfer_edcl, buf_ptr[n & 1]) == True:           # if sync been writen
+                        break
+                    xfer_edcl.reconnect()                                       # else reconnect and resend
                 wait_eq_sync(xfer_edcl, 0)
                 n = n+1
                 print(colored("send buffer %x: %x,%x,%x,%x" % (n, wr_buf[0], wr_buf[1], wr_buf[2], wr_buf[3]), 'yellow'))
@@ -429,6 +457,7 @@ def mmc0_to_mmc1_copy(addr, size): #    # slice mmc0 -> mmc1 and check mmc1
     return err
 
 sum_err = 0
+test_num = 100
 
 sel_model = {
     "redd":         MDL_1888TX018,
@@ -442,39 +471,40 @@ if setup_model_param(model) == False:
     printf("Error: model mismatch\n")
     exit
 
-if model == MDL_1888TX018:
+for iter in range(test_num):
+    if model == MDL_1888TX018:
 
-    sum_err += testx(sf_dev0, sf_addr0, sf_size0)
+        sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
-    sum_err += testx(nand_dev0, nand_addr0, nand_size0)
+        sum_err += testx(nand_dev0, nand_addr0, nand_size0)
 
-    sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
+        sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
 
-   # sum_err += testx(nor_dev0, nor_addr0, nor_size0)
+    # sum_err += testx(nor_dev0, nor_addr0, nor_size0)
 
-   # sum_err += testx(nor_dev1, nor_addr1, nor_size1)
+    # sum_err += testx(nor_dev1, nor_addr1, nor_size1)
 
-elif model == MDL_1888BM018:
+    elif model == MDL_1888BM018:
 
-    #sum_err += testx(sf_dev0, sf_addr0, sf_size0)
+        #sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
-    #sum_err += testx(sf_dev1, sf_addr1, sf_size1)
+        #sum_err += testx(sf_dev1, sf_addr1, sf_size1)
 
-    sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
+        sum_err += testx(mmc_dev0, mmc_addr0, mmc_size0)
 
-    sum_err += testx(mmc_dev1, mmc_addr1, mmc_size1)
+        #sum_err += testx(mmc_dev1, mmc_addr1, mmc_size1)
 
-    #sum_err += mmc0_to_mmc1_copy(0, 0x400000)
+        #sum_err += mmc0_to_mmc1_copy(0, 0x400000)
 
-elif model == MDL_1888BC048:
+    elif model == MDL_1888BC048:
 
-    sum_err += testx(sf_dev0, sf_addr0, sf_size0)
+        sum_err += testx(sf_dev0, sf_addr0, sf_size0)
 
-    sum_err += testx(i2c_dev0, i2c_addr0, i2c_size0)
+        sum_err += testx(i2c_dev0, i2c_addr0, i2c_size0)
 
-    sum_err += testx(mmc_dev1, mmc_addr1, mmc_size1)
+        sum_err += testx(mmc_dev1, mmc_addr1, mmc_size1)
 
-print(colored("Completed,error %u" % sum_err, 'yellow'))
+    print(colored("Iteration %u completed,error %u" % (iter+1, sum_err), 'yellow'))
 
 while True:
     pass
