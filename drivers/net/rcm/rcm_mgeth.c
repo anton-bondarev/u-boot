@@ -740,6 +740,12 @@ static int mgeth_ofdata_to_platdata(struct udevice *dev)
 		pdata->enetaddr[3] = mac[3];
 		pdata->enetaddr[4] = mac[4];
 		pdata->enetaddr[5] = mac[5];
+
+		/* Load current MAC address */
+		memcpy(priv->dev_addr, pdata->enetaddr, ETH_ALEN);
+
+		// set filters for given MAC
+		mgeth_set_packet_filter(priv);
 	}
 	return 0;
 }
