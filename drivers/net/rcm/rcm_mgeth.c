@@ -396,7 +396,7 @@ static void init_descr(mgeth_priv *priv)
 			MGETH_TXBD_CNT * sizeof(long_desc));
 
 		memset(priv->rxbd_base, 0, MGETH_RXBD_CNT * sizeof(long_desc));
-		memset(priv->txbd_base, 0, MGETH_RXBD_CNT * sizeof(long_desc));
+		memset(priv->txbd_base, 0, MGETH_TXBD_CNT * sizeof(long_desc));
 
 		/* allocate buffers to all descriptors  */
 		priv->rxbuf_base = malloc(MGETH_RXBUF_SIZE * MGETH_RXBD_CNT);
