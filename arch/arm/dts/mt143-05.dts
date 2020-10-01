@@ -56,6 +56,20 @@
 		    u-boot,dm-pre-reloc;
 		};
 
+		i2c0: i2c@0x01046000 {
+			compatible = "rcm,i2cbasis";
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+			clocks = <&clock_axi_slow>;
+			reg = <0x01046000 0x1000>;
+			bus-clock = <100000>;
+			write-delay = <5000>;
+			rx-fifo-size = <128>;
+			tx-fifo-size = <128>;
+			u-boot,dm-pre-reloc;
+			status = "okay";
+		};
+
 		gpio0: gpio0@0x01088000 {
 		    compatible = "rcm,gpio";
 			#address-cells = <1>;

@@ -17,6 +17,9 @@ obj-$(CONFIG_SYS_I2C_DW) += designware_i2c.o
 ifdef CONFIG_DM_PCI
 obj-$(CONFIG_SYS_I2C_DW) += designware_i2c_pci.o
 endif
+ifdef CONFIG_TARGET_1888BC048
+obj-$(CONFIG_SYS_I2C_RCM_BASIS) += rcm_basis_i2c.o
+endif
 obj-$(CONFIG_SYS_I2C_FSL) += fsl_i2c.o
 obj-$(CONFIG_SYS_I2C_IHS) += ihs_i2c.o
 obj-$(CONFIG_SYS_I2C_INTEL) += intel_i2c.o
