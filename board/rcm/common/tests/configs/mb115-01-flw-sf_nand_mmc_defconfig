@@ -744,7 +744,7 @@ CONFIG_PL061_GPIO=y
 
 #
 # Hardware Spinlock Support
-W#
+#
 # CONFIG_DM_HWSPINLOCK is not set
 
 #
