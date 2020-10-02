@@ -323,6 +323,21 @@ static void dtest(const char* devname)
     }
 }
 
+static void set_br(const char* br_str)
+{
+    char* endptr;
+    unsigned long new_baudrate = ustrtoul(br_str, &endptr, 10);
+    printf("Baudrate: current=%u", gd->baudrate);
+    if (new_baudrate >= BAUDRATE_MIN && new_baudrate <= BAUDRATE_MAX)
+    {
+        gd->baudrate = (unsigned int)new_baudrate;
+        printf(",new=%u", gd->baudrate);
+        udelay(100000);
+        serial_setbrg();
+    }
+    puts("\n");
+}
+
 static void cmd_dec(void)
 {
     char* edcl_xmodem_buf = (char*)edcl_xmodem_buf0;
@@ -339,7 +354,7 @@ static void cmd_dec(void)
 
         if (!strcmp(cmd_buf,"help"))
         {
-            puts("Usage: help version reset exit list select dtest bufptr rand print bufrev bufcmp setbuf setbufx getbuf getbufx erase write read program duplicate lasterr\n");
+            puts("Usage: help version reset exit baudrate list select dtest bufptr rand print bufrev bufcmp setbuf setbufx getbuf getbufx erase write read program duplicate lasterr\n");
         }
         else if (!strcmp(cmd_buf,"version"))
         {
@@ -352,6 +367,10 @@ static void cmd_dec(void)
         else if (!strcmp(cmd_buf,"exit"))
         {
             return;
+        }
+        else if (!strncmp(cmd_buf,"baudrate", 8))
+        {
+            set_br(cmd_buf+9);
         }
         else if (!strcmp(cmd_buf,"list"))
         {
