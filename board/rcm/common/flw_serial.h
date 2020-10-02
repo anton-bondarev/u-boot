@@ -13,6 +13,10 @@
     #define  FLW_TOUT 100000
 #endif // too
 
+#ifdef CONFIG_TARGET_1879VM8YA
+    #define  FLW_TOUT 8000
+#endif
+
 int flw_putc(char ch);
 
 int flw_getc(unsigned long tout);

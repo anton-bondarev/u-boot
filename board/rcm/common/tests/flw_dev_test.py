@@ -10,19 +10,27 @@ import serial
 import os
 import zlib
 
+MDL_1888TX018 = 0
+MDL_1888BM018 = 1
+MDL_1888BC048 = 2
+MDL_1879VM8YA = 3
+
+model = MDL_1879VM8YA
+
 rstdev = "/dev/ttyACM0"
-ttydev = "/dev/ttyUSB6"
-baudrate = 1000000
+rstchr = ['C', 'c']
+ttydev = "/dev/ttyUSB0"
+ttybr = 115200
 wr_file = "tmpwr"
 rd_file = "tmprd"
 
 edcl_buf_size = 4096
 ser = None
 
-# Name m25p32, size 0x400000, page size 0x100, erase size 0x10000
+# w25q128fw size: 001000000 erasesize: 00001000 writesize: 00000100\r\n'
 sf_dev = "sf00"
-sf_addr = 0x20000
-sf_size = 0x10000
+sf_addr = 0x0
+sf_size = 0x2000
 
 #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
 nand_dev = "nand0"
@@ -39,16 +47,46 @@ do_wr = 1
 do_restart = 1
 do_rd = 1
 do_cmp = 1
+do_cksum = 1
+
+def write_data_file(name, size):
+    b = bytearray()
+    s = 0
+    for i in range(size-2):
+        r = random.randint(0,255)
+        s += r
+        b.append(r)
+    b.append((s>>8)&0xff)
+    b.append((s>>0)&0xff)
+    stream = open(name, "wb")
+    stream.write(b)
+    stream.close()
+    #print("%x,%x,%x" % (s, b[size-2], b[size-1]))
+
+def check_data_file(name, size):
+    s = 0
+    i = 0
+    stream = open(name, "rb")
+    b = stream.read(size)
+    for i in range(size-2):
+        s += b[i]
+    #print("%x,%x,%x" % (s, b[size-2], b[size-1]))
+    return ((s>>8)&0xff) == b[size-2] and ((s>>0)&0xff) == b[size-1]
 
 def ser_init():
-    global ttydev
-    return serial.Serial( port=ttydev, baudrate=1000000, timeout=30, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
+    global ttydev, ttybr
+    return serial.Serial( port=ttydev, baudrate=ttybr, timeout=3, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
 
 def send(cmd):
     global ser
     print(cmd)
     cmd += "\n"
-    ser.write(cmd.encode('utf-8'))
+    if model != MDL_1879VM8YA:
+        ser.write(cmd.encode('utf-8'))
+    else:
+        for i in range(len(cmd)):
+            ser.write(cmd[i].encode('utf-8'))
+            time.sleep(0.02)
 
 def expect(msg):
     global ser
@@ -68,7 +106,9 @@ def getc(size, timeout=30):
     if getc_cnt > 0x20000:
         getc_cnt = 0
         print('.', end = '\n')
-    return ser.read(size) or None
+    d = ser.read(size) or None
+    #print(colored(d if d != None else "None", 'green'))
+    return d
 
 putc_cnt = 0;
 def putc(data, timeout=30):
@@ -76,22 +116,36 @@ def putc(data, timeout=30):
     global putc_cnt
     l = len(data)
     for i in range(len(data)):
-        ser.write(data[i:i+1])
+        d = data[i:i+1]
+        #print(colored(d, 'yellow'))
+        ser.write(d)
+        #time.sleep(0.01)
     putc_cnt += l
     if putc_cnt > 0x20000:
         putc_cnt = 0
         print('.', end = '\n')
-    return l
+    return 
+
+def rst_cmd(chr, dev):
+    os.system('echo %c > %s\n' % (chr, dev))
 
 def reset(): # сброс (реле)
-    os.system('echo b > %s' % rstdev)
+    global rstchr, rstdev
+    rst_cmd(rstchr[0], rstdev)
     time.sleep(1)
-    os.system('echo B > %s' % rstdev)
-    expect("\x00boot: Waiting for a valid image @ 0x40000")
-    time.sleep(1)
+    rst_cmd(rstchr[1], rstdev)
+    ##expect("\x00boot: Waiting for a valid image @ 0x40000")
+    time.sleep(3)
 
 def load(): # загружаем spl
-    os.system('edcltool -i enp2s0 -f ./loadspl.lua')
+    if model == MDL_1888TX018:
+        os.system('edcltool -i enp2s0 -f ./loadspl.lua')
+    elif model == MDL_1879VM8YA:
+        sudoPassword = '1'
+        command = ['./edclload write  -m 0x0000000 -f ./../../../../spl/u-boot-spl-dtb.bin -i config_lin -v',
+                './edclload run  -i config_lin -v']
+        p = os.system('echo %s|sudo -S %s' % (sudoPassword, command[0]))
+        p = os.system('echo %s|sudo -S %s' % (sudoPassword, command[1]))
     expect("Flashwriter(1.0.0) running(help for information):")
 
 def select(dev): # список устройств и выбор нужного,выбор буфера можно не делать
@@ -146,9 +200,7 @@ def testx(flash_dev, flash_addr, flash_size):
     select(flash_dev)
 # генерим случайный файл
     if do_randfile:
-        randgen = spawn("dd if=/dev/urandom bs=1 of=%s count=%u" % (wr_file, flash_size), encoding='utf-8')
-        randgen.logfile_read = sys.stdout
-        randgen.expect(["%x+0 records out" % flash_size, EOF, TIMEOUT], timeout=5)
+        write_data_file(wr_file, flash_size)
 # записываем
     if do_wr:
         send("program %c %x %x" % ('X', flash_addr, flash_size))
@@ -180,7 +232,11 @@ def testx(flash_dev, flash_addr, flash_size):
         print(colored('%s: read finished' % flash_dev, 'green'))
 
     ser.close()
-# сравниваем
+# проверка данных считанного файла
+    if do_cksum:
+        ok = check_data_file(rd_file, flash_size)
+        print(colored('%s: checksum checked-%s' % (flash_dev, 'ok' if ok else 'error'), 'green'))
+# сравнение файлов
     if do_cmp:
         crc32_wr = zlib.crc32(open(wr_file, 'rb').read(), 0)
         crc32_rd = zlib.crc32(open(rd_file, 'rb').read(), 0)
@@ -189,11 +245,21 @@ def testx(flash_dev, flash_addr, flash_size):
 
     return ok
 
-#testx(sf_dev, sf_addr, sf_size)
+random.seed()
+
+sf_addr = 0
+sf_size = 0x4000
+err = 0
+for i in range(0x1000000//sf_size):
+    if testx(sf_dev, sf_addr, sf_size) == False:
+        err += 1
+    sf_addr += sf_size
+    print(colored("Adddress %x, errors %u\n" % (sf_addr, err), 'yellow'))
+
 #testx(nand_dev, nand_addr, nand_size)
 #testx(mmc_dev, mmc_addr, mmc_size)
 
-testx_complex(1, 1, 1) # шить dtb, kernel, rootfs
+#testx_complex(1, 1, 1) # шить dtb, kernel, rootfs
 
 #nor: todo
 

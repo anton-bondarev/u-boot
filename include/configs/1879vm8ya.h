@@ -40,4 +40,6 @@
 #define BOOT_ROM_HOST_MODE 0x0
 #define CONFIG_SYS_SPI_U_BOOT_OFFS      0x40000
 
+#define BOOT_DEVICE_FLASH_WRITER 0x14 // pseudo loader,for flash programming
+
 #endif

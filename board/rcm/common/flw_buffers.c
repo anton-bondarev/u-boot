@@ -33,6 +33,18 @@ volatile char* edcl_xmodem_buf_sync __attribute__ ((aligned (EDCL_XMODEM_BUF_ALI
 #endif // CONFIRM_HANDSHAKE
 #endif // CONFIG_TARGET_1888BC048
 
+#ifdef CONFIG_TARGET_1879VM8YA
+volatile char blk_buf[512];
+volatile char newin[EDCL_XMODEM_BUF_LEN+64];
+volatile char newout[EDCL_XMODEM_BUF_LEN+64];
+volatile char edcl_xmodem_buf0[EDCL_XMODEM_BUF_LEN] __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
+volatile char edcl_xmodem_buf1[EDCL_XMODEM_BUF_LEN] __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
+volatile char* edcl_xmodem_buf_sync __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
+#ifdef CONFIRM_HANDSHAKE
+    volatile char* edcl_xmodem_sync_conf __attribute__ ((aligned (EDCL_XMODEM_BUF_ALIGN)));
+#endif // CONFIRM_HANDSHAKE
+#endif // CONFIG_TARGET_1879VM8YA
+
 uint32_t flw_virt_to_dma(volatile void* ptr)
 {
     return (uint32_t)ptr;
