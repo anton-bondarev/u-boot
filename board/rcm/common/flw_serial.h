@@ -9,13 +9,13 @@
 
 #ifdef CONFIG_TARGET_1888BM18
     #define BAUDRATE_MIN 2400
-    #define BAUDRATE_MAX 6000000
+    #define BAUDRATE_MAX 6500000
     #define  FLW_TOUT 1000
 #endif // too
 
 #ifdef CONFIG_TARGET_1888BC048
     #define BAUDRATE_MIN 2400
-    #define BAUDRATE_MAX 115200
+    #define BAUDRATE_MAX 6250000
     #define  FLW_TOUT 100000
 #endif // too
 
