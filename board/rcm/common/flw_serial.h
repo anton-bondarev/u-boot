@@ -20,6 +20,8 @@
 #endif // too
 
 #ifdef CONFIG_TARGET_1879VM8YA
+    #define BAUDRATE_MIN 2400
+    #define BAUDRATE_MAX 115200
     #define  FLW_TOUT 8000
 #endif
 

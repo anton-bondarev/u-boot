@@ -30,24 +30,24 @@ ser = None
 # w25q128fw size: 001000000 erasesize: 00001000 writesize: 00000100\r\n'
 sf_dev = "sf00"
 sf_addr = 0x0
-sf_size = 0x2000
+sf_size = 0x100000
 
 #Nand: chipsize=0x010000000,writesize=0x800,erasesize=0x20000
 nand_dev = "nand0"
 nand_addr = 0x000000
 nand_size = 0x20000
 
-# Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
+# Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1 ( 0x3b7700000)
 mmc_dev = "mmc0"
-mmc_addr = 0x0
-mmc_size = 0x60000
+mmc_addr = 0x3b7600000
+mmc_size = 0x100000
 
-do_randfile = 1
-do_wr = 1
-do_restart = 1
+do_randfile = 0
+do_wr = 0
+do_restart = 0
 do_rd = 1
-do_cmp = 1
-do_cksum = 1
+do_cmp = 0
+do_cksum = 0
 
 def write_data_file(name, size):
     b = bytearray()
@@ -68,6 +68,7 @@ def check_data_file(name, size):
     i = 0
     stream = open(name, "rb")
     b = stream.read(size)
+    stream.close()
     for i in range(size-2):
         s += b[i]
     #print("%x,%x,%x" % (s, b[size-2], b[size-1]))
@@ -75,7 +76,7 @@ def check_data_file(name, size):
 
 def ser_init():
     global ttydev, ttybr
-    return serial.Serial( port=ttydev, baudrate=ttybr, timeout=3, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
+    return serial.Serial( port=ttydev, baudrate=ttybr, timeout=10, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
 
 def send(cmd):
     global ser
@@ -102,10 +103,11 @@ getc_cnt = 0;
 def getc(size, timeout=30):
     global ser
     global getc_cnt
+    dsp_size = size // 100
     getc_cnt += size
-    if getc_cnt > 0x20000:
+    if getc_cnt > dsp_size:
         getc_cnt = 0
-        print('.', end = '\n')
+        print('.', end = '')
     d = ser.read(size) or None
     #print(colored(d if d != None else "None", 'green'))
     return d
@@ -115,13 +117,14 @@ def putc(data, timeout=30):
     global ser
     global putc_cnt
     l = len(data)
+    dsp_size = l // 100
     for i in range(len(data)):
         d = data[i:i+1]
         #print(colored(d, 'yellow'))
         ser.write(d)
         #time.sleep(0.01)
     putc_cnt += l
-    if putc_cnt > 0x20000:
+    if putc_cnt > dsp_size:
         putc_cnt = 0
         print('.', end = '\n')
     return 
@@ -247,17 +250,9 @@ def testx(flash_dev, flash_addr, flash_size):
 
 random.seed()
 
-sf_addr = 0
-sf_size = 0x4000
-err = 0
-for i in range(0x1000000//sf_size):
-    if testx(sf_dev, sf_addr, sf_size) == False:
-        err += 1
-    sf_addr += sf_size
-    print(colored("Adddress %x, errors %u\n" % (sf_addr, err), 'yellow'))
-
+#testx(sf_dev, sf_addr, sf_size)
 #testx(nand_dev, nand_addr, nand_size)
-#testx(mmc_dev, mmc_addr, mmc_size)
+testx(mmc_dev, mmc_addr, mmc_size)
 
 #testx_complex(1, 1, 1) # шить dtb, kernel, rootfs
 
