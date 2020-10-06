@@ -35,7 +35,6 @@ import getch
 MDL_1888TX018 = 0
 MDL_1888BM018 = 1
 MDL_1888BC048 = 2
-MDL_1879VM8YA = 3
 
 MODE_XMODEM = 0
 MODE_EDCL = 1
@@ -81,7 +80,7 @@ def setup_model_param(model):
         """
         mmc_dev0 = "mmc0"       # Name mmc0@0x3C064000,block length read 0x200,block length write 0x200,erase size(x512 byte) 0x1
         mmc_addr0 = 0x300100000
-        mmc_size0 = 0x5ad000
+        mmc_size0 = 0x4000      # 0x5ad000
 
         nor_dev0 = "nor0"       # CFI conformant size: 010000000 erasesize: 00040000 writesize: 00000001\r\n'
         nor_addr0 = 0x0
@@ -147,8 +146,12 @@ def setup_model_param(model):
 wr_file = "tmpwr"
 rd_file = "tmprd"
 
-edcl_buf_size = 4096
+term = None
+xfer_xmodem = None
+xfer_edcl = None
 ser = None
+
+edcl_buf_size = 4096
 
 do_term = 0
 do_rand_file = 1
@@ -314,17 +317,11 @@ def usr_term():
         if data != b'':
             print(data.decode('utf-8'))
 
-def testx(flash_dev, flash_addr, flash_size):
+def flashwriter_start():
+    global term
     global chip
     global rstmsg
     global splbase
-    global ser
-    global term
-    global buf_ptr, sync_ptr, buf_len
-    err = 0
-
-    xfer_xmodem = None
-    xfer_edcl = None
 
     term, reset = intialize_programmer(chip)
     reset.resetToHost()
@@ -337,6 +334,14 @@ def testx(flash_dev, flash_addr, flash_size):
     term.xfer.send(stream, splbase)
     stream.close()
     expect("Flashwriter(1.0.0) running(help for information):")
+
+def testx(flash_dev, flash_addr, flash_size):
+    global ser
+    global term
+    global buf_ptr, sync_ptr, buf_len
+    global xfer_xmodem, xfer_edcl
+
+    err = 0
 
     if do_term:
         usr_term()
@@ -376,18 +381,17 @@ def testx(flash_dev, flash_addr, flash_size):
             get_buf_ptr()
             send("program %c %x %x" % ('E', flash_addr, flash_size))
             expect("completed")
-            if xfer_edcl == None:
-                xfer_edcl = xferEdcl(term)
+            term.xfer.selectTransport("edcl")
+            xfer_edcl = term.xfer
             wr_stream = open(wr_file, "rb")
             n = 0
-            xfer_edcl.connect(term.chip)
-            xfer_edcl.connect(term.chip)
             while True:
                 wr_buf = wr_stream.read(edcl_buf_size)
                 if not wr_buf:
                     break
                 while True:
                     xfer_edcl.send(io.BytesIO(wr_buf), buf_ptr[n & 1])          # set address of current buffer
+                    time.sleep(0.1) # природа?
                     if write_sync(xfer_edcl, buf_ptr[n & 1]) == True:           # if sync been writen
                         break
                     xfer_edcl.reconnect()                                       # else reconnect and resend
@@ -414,10 +418,8 @@ def testx(flash_dev, flash_addr, flash_size):
             send("duplicate %c %x %x" % ('E', flash_addr, flash_size))
             expect("ready")
             rd_stream = open(rd_file, "wb")
-            if xfer_edcl == None:
-                xfer_edcl = xferEdcl(term)
-            xfer_edcl.connect(term.chip)
-            xfer_edcl.connect(term.chip)
+            term.xfer.selectTransport("edcl")
+            xfer_edcl = term.xfer
             for n in range(flash_size//edcl_buf_size):
                 while True:
                     buf_addr = wait_neq_sync(xfer_edcl, 0) # get address of current buffer
@@ -471,6 +473,8 @@ model = sel_model[socket.gethostname()]
 if setup_model_param(model) == False:
     printf("Error: model mismatch\n")
     exit
+
+flashwriter_start()
 
 for iter in range(test_num):
     if model == MDL_1888TX018:

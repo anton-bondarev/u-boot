@@ -196,8 +196,8 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
     else {
 #ifdef CONFIRM_HANDSHAKE
         edcl_xmodem_sync_conf = 0;
+#endif // CONFIRM_HANDSHAKE
         edcl_xmodem_buf_sync = 0;
-#endif
         while (size > 0) {                                                          // check size % EDCL_XMODEM_BUF_LEN is 0 before
             while (edcl_xmodem_buf_sync == 0) flw_delay(100);                       // wait for valid address
             char* curr_buf = (char*)edcl_xmodem_buf_sync;                           // saving address
@@ -205,12 +205,12 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
             edcl_xmodem_sync_conf = (volatile char*)(~(unsigned int)curr_buf);      // host must wait inverse address,if timeout occured-retry send sync
 #ifdef __PPC__
             asm("msync");                                                           // hier?
-#endif
+#endif // __PPC__
             while (edcl_xmodem_sync_conf != 0) flw_delay(100);                      // and clear this register for continue,can multiple sending
-#endif
+#endif // CONFIRM_HANDSHAKE
 #ifdef __PPC__
             asm("msync");                                                           // hier?
-#endif
+#endif // __PPC__
             edcl_xmodem_buf_sync = 0;                                               // clear sync, host see it and can load now other buffer
             res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);       // and we do writing current buffer
             if (res) {                                                              // if error,break operation and rememeber error code
