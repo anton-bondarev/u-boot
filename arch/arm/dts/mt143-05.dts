@@ -190,7 +190,7 @@
 			compatible = "rcm,mgeth";
 			reg = <0x01014000 0x1000>;
 			clocks = <&clock_axi_fast>;
-			mac-address = [ec 17 66 64 08 10];
+			mac-address = [ec 17 66 64 09 10];
 			phys = <&sgmiiphy>;
 			phy = <&phy0>;
             phy-mode = "sgmii";
@@ -216,7 +216,7 @@
 			compatible = "rcm,mgeth";
 			reg = <0x01015000 0x1000>;
 			clocks = <&clock_axi_fast>;
-			mac-address = [ec 17 66 64 08 11];
+			mac-address = [ec 17 66 64 09 11];
 			phys = <&sgmiiphy>;
 			phy = <&phy1>;
             phy-mode = "sgmii";
@@ -242,7 +242,7 @@
 			compatible = "rcm,mgeth";
 			reg = <0x01016000 0x1000>;
 			clocks = <&clock_axi_fast>;
-			mac-address = [ec 17 66 64 08 12];
+			mac-address = [ec 17 66 64 09 12];
 			phys = <&sgmiiphy>;
 			phy = <&phy2>;
             phy-mode = "sgmii";
@@ -268,7 +268,7 @@
 			compatible = "rcm,mgeth";
 			reg = <0x01017000 0x1000>;
 			clocks = <&clock_axi_fast>;
-			mac-address = [ec 17 66 64 08 13];
+			mac-address = [ec 17 66 64 09 13];
 			phys = <&sgmiiphy>;
 			phy = <&phy3>;
             phy-mode = "sgmii";
