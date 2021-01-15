@@ -44,6 +44,9 @@ struct rcm_mmc_platdata {
 	uint32_t reg_base;
 	struct gpio_desc card_detect;
 	uint bus_width;
+#ifdef CONFIG_TARGET_1888BC048
+	u8* blk_buf;
+#endif
 };
 
 static inline struct rcm_mmc_platdata * mmc_get_platdata(const struct mmc * mmc)
@@ -60,6 +63,9 @@ static uint32_t wait_tick(void)
 static void delay_loop(uint count)
 {
 	volatile uint cnt = count;
+#ifdef CONFIG_TARGET_1888BC048
+	cnt <<= 4;
+#endif
 	while ( cnt -- )
 		;
 }
@@ -418,17 +424,22 @@ static bool sd_write_block(const struct mmc*, uint32_t, u8*, uint);
 
 static bool sd_trans_data(const struct mmc * mmc, sd_data_oper oper, uint32_t sdc_adr, u8 * mem_ptr, uint blk_qty, uint blk_len)
 {
+#ifndef CONFIG_TARGET_1888BC048
 	u8* blk_buf = (u8*)memalign( 64, blk_len );
+#else
+	u8* blk_buf = ((struct rcm_mmc_platdata*)dev_get_platdata(mmc->dev))->blk_buf; // reserved memory
+#endif
+	int ret = false;
+
 	if( ! blk_buf )
-		return false;
+		goto exit;
 	//BUG_ON(! mmc->high_capacity && (sdc_adr % blk_len) != 0);
 	while ( blk_qty -- ) {
 			if( oper == sd_write_block )
 				memcpy( blk_buf, mem_ptr, blk_len );
 			if ( ! (* oper)(mmc, sdc_adr, blk_buf, blk_len) ) {
 				Debug("sd_trans_data ERROR\n");
-				free( blk_buf );
-				return false;
+				goto exit;
 			}
 			if( oper == sd_read_block )
 				memcpy( mem_ptr, blk_buf, blk_len );
@@ -439,11 +450,15 @@ static bool sd_trans_data(const struct mmc * mmc, sd_data_oper oper, uint32_t sd
 			mem_ptr += blk_len;
 			sdc_adr += (mmc->high_capacity ? 1 : blk_len);
 	}
+	ret = true;
 #ifdef DEBUG_BUF
 	Debug("\n");
 #endif
-	free( blk_buf );
-	return true;
+exit:
+#ifndef CONFIG_TARGET_1888BC048
+	if (blk_buf) free(blk_buf);
+#endif
+	return ret;
 }
 
 static inline bool sd_read_data(const struct mmc * mmc, uint32_t src_adr, u8 * dst_ptr, uint blk_qty, uint blk_len)
@@ -475,6 +490,25 @@ static int rcm_dm_mmc_get_wp(struct udevice * dev)
 	return 0;
 }
 
+#ifdef CONFIG_TARGET_1888BC048
+static int rcm_mmc_map_memory(struct udevice *dev)
+{
+	struct fdt_resource r;
+	struct rcm_mmc_platdata* pdata = dev_get_platdata(dev);
+	int node = dev_of_offset(dev);
+	int phandle;
+
+	if ((phandle=fdtdec_lookup_phandle(gd->fdt_blob, node, "mmc-buffer")) < 0)
+		return -EINVAL;
+
+	if (fdt_get_resource(gd->fdt_blob, phandle, "reg", 0, &r)<0)
+		return -EINVAL;
+
+	pdata->blk_buf = (u8*)r.start;
+	return 0;
+}
+#endif
+
 static int rcm_mmc_probe(struct udevice * dev)
 {
 	Debug(">rcm_mmc_probe\n");
@@ -499,6 +533,12 @@ static int rcm_mmc_probe(struct udevice * dev)
 		dev_err(bus, "No cs-gpios property\n");
 		return -EINVAL;
 	}
+
+#ifdef CONFIG_TARGET_1888BC048
+	if (rcm_mmc_map_memory(dev)) {
+		return -EINVAL;
+	}
+#endif
 
 	mmc_set_clock(mmc, cfg->f_min, false);
 
