@@ -2906,7 +2906,7 @@ int mmc_init(struct mmc *mmc)
 
 	if (!mmc->init_in_progress)
 	{
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_TARGET_1888BC048)
 		int i = 0;
 		for(i = 0; i < 2; i++)
 		{
