@@ -6,20 +6,6 @@
 	#address-cells = <1>;
 	#size-cells = <1>;
 
-	reserved-memory {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		ranges;
-
-		mmc_buffer0: mmc_buffer0@0x7f000 {
-			reg = <0x7f000 0x800>;
-		}; /* sector 2048 bytes max */
-
-		mmc_buffer1: mmc_buffer1@0x7f800 {
-			reg = <0x7f800 0x800>;
-		}; /* sector 2048 bytes max */
-	};
-
     config {
            u-boot,spl-payload-offset = <0x060000>; 
     };
@@ -122,7 +108,7 @@
 			clocks = <&clock_axi_slow>;
 			carddetect-gpio = <&gpio0 3 0>;
 			u-boot,dm-pre-reloc;
-			mmc-buffer = <&mmc_buffer0>;
+			mmc-buffer = <0x7f000 0x800>;
 			status = "okay";
 		};
 
@@ -132,7 +118,7 @@
 			clocks = <&clock_axi_slow>;
 			carddetect-gpio = <&gpio0 4 0>;
 			u-boot,dm-pre-reloc;
-			mmc-buffer = <&mmc_buffer1>;
+			mmc-buffer = <0x7f800 0x800>; //
 			status = "okay";
 		};
 

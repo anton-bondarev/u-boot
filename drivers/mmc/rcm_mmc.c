@@ -491,21 +491,12 @@ static int rcm_dm_mmc_get_wp(struct udevice * dev)
 }
 
 #ifdef CONFIG_TARGET_1888BC048
-static int rcm_mmc_map_memory(struct udevice *dev)
+static u8* rcm_mmc_map_memory(struct udevice *dev)
 {
-	struct fdt_resource r;
-	struct rcm_mmc_platdata* pdata = dev_get_platdata(dev);
-	int node = dev_of_offset(dev);
-	int phandle;
-
-	if ((phandle=fdtdec_lookup_phandle(gd->fdt_blob, node, "mmc-buffer")) < 0)
-		return -EINVAL;
-
-	if (fdt_get_resource(gd->fdt_blob, phandle, "reg", 0, &r)<0)
-		return -EINVAL;
-
-	pdata->blk_buf = (u8*)r.start;
-	return 0;
+	u32 tmp[2];
+	if (ofnode_read_u32_array(dev->node, "mmc-buffer", tmp, 2))
+		return NULL;
+	return (u8*)tmp[0];
 }
 #endif
 
@@ -535,9 +526,8 @@ static int rcm_mmc_probe(struct udevice * dev)
 	}
 
 #ifdef CONFIG_TARGET_1888BC048
-	if (rcm_mmc_map_memory(dev)) {
+	if ((pdata->blk_buf = rcm_mmc_map_memory(dev)) == NULL)
 		return -EINVAL;
-	}
 #endif
 
 	mmc_set_clock(mmc, cfg->f_min, false);
