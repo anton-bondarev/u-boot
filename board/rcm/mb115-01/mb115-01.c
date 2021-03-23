@@ -228,7 +228,8 @@ int power_init_board(void)
 #ifdef CONFIG_MTD_RCM_NOR
 	rcm_mtd_arbiter_init();
 	rcm_sram_nor_init();
-	gd->env_valid = ENV_VALID;
+	// this line was commented for using U-Boot without loading the environment from any sources (CONFIG_ENV_IS_NOWHERE)
+	// gd->env_valid = ENV_VALID;
 #endif
 	return 0;
 }

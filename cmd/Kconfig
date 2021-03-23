@@ -2186,12 +2186,5 @@ config CMD_RCM_SRAM_NOR_TEST
 	help
 	  Enable tests for SRAM-NOR controller of the board MB115.
 
-config CMD_RCM_SRAM_NOR_TEST_AUTO
-	bool "Autorun tests"
-	depends on CMD_RCM_SRAM_NOR_TEST
-	default n
-	help
-	  Enable autorun tests for static RAM and NOR flash tests for the board MB115"
-
 
 endmenu

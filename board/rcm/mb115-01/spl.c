@@ -58,7 +58,17 @@ void board_init_f(ulong dummy)
 
 u32 spl_boot_device(void)
 {
+#if defined(CONFIG_TARGET_1888TX018_SPL_FIRST_DEVICE_MMC)
 	return BOOT_DEVICE_MMC1;
+#elif defined(CONFIG_TARGET_1888TX018_SPL_FIRST_DEVICE_SPI_FLASH)
+	return BOOT_DEVICE_SPI;
+#elif defined(CONFIG_TARGET_1888TX018_SPL_FIRST_DEVICE_NOR)
+	return BOOT_DEVICE_NOR;
+#elif defined(CONFIG_TARGET_1888TX018_SPL_FIRST_DEVICE_UART_EDCL)
+	return BOOT_DEVICE_XMODEM_EDCL;
+#else
+#error First device for the bootloader image from SPL is not defined
+#endif
 }
 
 
@@ -122,15 +132,21 @@ void board_boot_order(u32 *spl_boot_list)
 {
 	spl_boot_list[0] = spl_boot_device();
 	switch (spl_boot_list[0]) {
-	case BOOT_DEVICE_SPI:
-		spl_boot_list[1] = BOOT_DEVICE_MMC1;
-		spl_boot_list[2] = BOOT_DEVICE_NOR;		// NOR before NAND, becose now GPIOAFSEL is initialized for NOR earlier(see spl_board_init)
-		spl_boot_list[3] = BOOT_DEVICE_NAND;	// and function for initialization NOR is absent,but for NAND this function exist as self (nand_init)
-		spl_boot_list[4] = BOOT_DEVICE_XMODEM_EDCL;	// for adding new elements increase array size
-		break;
 	case BOOT_DEVICE_MMC1:
 		spl_boot_list[1] = BOOT_DEVICE_SPI;
+		spl_boot_list[2] = BOOT_DEVICE_NOR;         // NOR before NAND, becose now GPIOAFSEL is initialized for NOR earlier(see spl_board_init)
+		spl_boot_list[3] = BOOT_DEVICE_NAND;        // and function for initialization NOR is absent,but for NAND this function exist as self (nand_init)
+		spl_boot_list[4] = BOOT_DEVICE_XMODEM_EDCL; // for adding new elements increase array size
+		break;
+	case BOOT_DEVICE_SPI:
+		spl_boot_list[1] = BOOT_DEVICE_MMC1;
 		spl_boot_list[2] = BOOT_DEVICE_NOR;
+		spl_boot_list[3] = BOOT_DEVICE_NAND;
+		spl_boot_list[4] = BOOT_DEVICE_XMODEM_EDCL;
+		break;
+	case BOOT_DEVICE_NOR:
+		spl_boot_list[1] = BOOT_DEVICE_MMC1;
+		spl_boot_list[1] = BOOT_DEVICE_SPI;
 		spl_boot_list[3] = BOOT_DEVICE_NAND;
 		spl_boot_list[4] = BOOT_DEVICE_XMODEM_EDCL;
 		break;

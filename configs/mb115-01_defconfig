@@ -103,6 +103,11 @@ CONFIG_ENV_IS_IN_MMC=y
 CONFIG_ENV_IS_IN_NAND=n
 CONFIG_ENV_IS_IN_FLASH=n
 
+CONFIG_USE_BOOTARGS=y
+CONFIG_BOOTARGS="console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
+CONFIG_USE_BOOTCOMMAND=y
+CONFIG_BOOTCOMMAND="run kernelsd"
+
 #### CONFIG_SPL_USE_TINY_PRINTF=n # for tiny %llu not working!!!if debug or something uses that format,must off tiny
 
 CONFIG_BAUDRATE=1000000
