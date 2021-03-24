@@ -70,4 +70,24 @@ config PPC32
 	bool "Use in version>2020.04 for usb driver"
 	default y
 
+choice
+	prompt "First device for the bootloader image from SPL"
+
+config TARGET_1888TX018_SPL_FIRST_DEVICE_MMC
+	bool "SD/MMC"
+	depends on MMC
+
+config TARGET_1888TX018_SPL_FIRST_DEVICE_SPI_FLASH
+	bool "SPI-flash"
+	depends on SPI_FLASH
+
+config TARGET_1888TX018_SPL_FIRST_DEVICE_NOR
+	bool "NOR"
+	depends on MTD_RCM_NOR
+
+config TARGET_1888TX018_SPL_FIRST_DEVICE_UART_EDCL
+	bool "UART/EDCL"
+
+endchoice
+
 endif

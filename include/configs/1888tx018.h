@@ -88,14 +88,6 @@
 
 #define CONFIG_SYS_FLASH_QUIET_TEST 1
 
-#ifdef CONFIG_CMD_RCM_SRAM_NOR_TEST_AUTO // special mode, for testing only
-    #define CONFIG_BOOTCOMMAND "run sramnortest"
-#else
-    #define CONFIG_BOOTCOMMAND "run kernelsd"
-#endif
-
-#define CONFIG_USE_BOOTARGS
-#define CONFIG_BOOTARGS "console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
 #define CONFIG_IPADDR 192.168.0.2
 #define CONFIG_SERVERIP 192.168.0.1
 #define CONFIG_NETMASK 255.255.255.0
