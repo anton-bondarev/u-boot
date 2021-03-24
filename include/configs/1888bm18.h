@@ -75,8 +75,6 @@
 
 #define CONFIG_SYS_FLASH_QUIET_TEST 1
 
-#define CONFIG_USE_BOOTARGS
-#define CONFIG_BOOTARGS "console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
 #define CONFIG_IPADDR 192.168.0.12
 #define CONFIG_SERVERIP 192.168.0.1
 #define CONFIG_NETMASK 255.255.255.0
