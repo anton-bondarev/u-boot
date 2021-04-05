@@ -1,0 +1,482 @@
+/*
+ * Device Tree Source for RCM 1888TX018 platform
+ *
+ * This file is licensed under the terms of the GNU General Public
+ * License version 2.  This program is licensed "as is" without
+ * any warranty of any kind, whether express or implied.
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include "1888tx018-pinfunc.h"
+
+/dts-v1/;
+/ {
+	compatible = "rcm,1888tx018";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	lsif0clock: lsif0clock@100M {
+		u-boot,dm-pre-reloc;
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+	};
+
+	lsif1clock: lsif1clock@100M {
+		u-boot,dm-pre-reloc;
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+	};
+
+	sram_nor_arbiter0: sram_nor_arbiter {
+		status = "disbaled";
+		u-boot,dm-pre-reloc;
+		compatible = "rcm,sram-nor-arbiter";
+		pinctrl-names = "default";
+		pinctrl-0 =
+			<&lsif0_mgpio0_sram_nor>,
+			<&lsif0_mgpio1_sram_nor>,
+			<&lsif0_mgpio2_sram_nor>,
+			<&lsif0_mgpio3_sram_nor>,
+			<&lsif0_mgpio4_sram_nor>,
+			<&lsif0_mgpio5_sram_nor>,
+			<&lsif0_mgpio6_sram_nor>,
+			<&lsif0_mgpio7_sram_nor>,
+			<&lsif0_mgpio8_sram_nor>;
+		// sram-nor-mux = <1>;      // 0 to route extmem wires to LSIF0, 1 - to MCIF
+		// ext-mem-mux-mode = <2>;  // page 913 0-SRAM_NOR(used for NOR)), 1-NAND,GBIT_GRETH0,GBIT_GRETH1, 2-GRETH0,GRETH1,NAND(used for NAND)
+		// ce-manage = <0>;         // LSIF: all cs=>1 controller, cs-mode=1, chip-num=0x10
+		#address-cells = <1>;
+		#size-cells = <1>;
+		sctl-reg {
+			u-boot,dm-pre-reloc;
+			reg = <0x38000000 0x1000>;
+		};
+		lsif-reg {
+			u-boot,dm-pre-reloc;
+			reg = <0x3C03F000 0x1000>;
+		};
+	};
+
+	plb_sram_nor0: plb_sram_nor0@0x80170000 {
+		status = "disabled";
+		u-boot,dm-pre-reloc;
+		compatible = "rcm,sram-nor","simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		dcr-reg = <0x80170000 0x1000>;
+	};
+
+	plb_sram_nor1: plb_sram_nor1@0x80190000 {
+		status = "disabled";
+		u-boot,dm-pre-reloc;
+		compatible = "rcm,sram-nor","simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		dcr-reg = <0x80190000 0x1000>;
+	};
+
+	lsif0 {
+		u-boot,dm-pre-reloc;
+		compatible = "simple-bus";
+		reg = <0x3C03F000 0x1000>;
+		reg-names = "ctrlreg";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		mgpio0: mgpio0@0x3C040000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C040000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_greth0_1_default: greth0_1_default {
+					pinmux = <GBETH0_RX_DV>, <GBETH0_RX_ER>, <GBETH0_RX_COL>, <GBETH0_RX_CRS>, <GBETH0_RXD0>, <GBETH0_RXD1>, <GBETH0_RXD2>, <GBETH0_RXD3>;
+				};
+				lsif0_mgpio0_sram_nor: lsif0_mgpio0_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_D0>, <SRAM_NOR_D1>, <SRAM_NOR_D2>, <SRAM_NOR_D3>, <SRAM_NOR_D4>, <SRAM_NOR_D5>, <SRAM_NOR_D6>, <SRAM_NOR_D7>;
+				};
+			};
+		};
+
+		mgpio1: mgpio1@0x3C041000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C041000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_greth0_2_default: greth0_2_default {
+					pinmux = <GBETH0_RXD4>, <GBETH0_RXD5>, <GBETH0_RXD6>, <GBETH0_RXD7>;
+				};
+				lsif0_mgpio1_sram_nor: lsif0_mgpio1_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_D8>, <SRAM_NOR_D9>, <SRAM_NOR_D10>, <SRAM_NOR_D11>, <SRAM_NOR_D14>, <SRAM_NOR_D15>, <SRAM_NOR_D16>, <SRAM_NOR_D17>;
+				};
+			};
+		};
+
+		mgpio2: mgpio2@0x3C042000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C042000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				lsif0_mgpio2_sram_nor: lsif0_mgpio2_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_D18>, <SRAM_NOR_D19>, <SRAM_NOR_D20>, <SRAM_NOR_D21>, <SRAM_NOR_D22>, <SRAM_NOR_D23>, <SRAM_NOR_D24>, <SRAM_NOR_D25>;
+				};
+			};
+		};
+
+		mgpio3: mgpio3@0x3C043000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C043000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_nand0_1_default: nand0_1_default {
+					pinmux = <NAND_D0>, <NAND_D1>, <NAND_D2>, <NAND_D3>, <NAND_D4>, <NAND_D5>, <NAND_D6>, <NAND_D7>;
+				};
+				lsif0_mgpio3_sram_nor: lsif0_mgpio3_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_D28>, <SRAM_NOR_D29>, <SRAM_NOR_D30>, <SRAM_NOR_D31>, <SRAM_NOR_D32>, <SRAM_NOR_D33>, <SRAM_NOR_D34>, <SRAM_NOR_D35>;
+				};
+			};
+		};
+
+		mgpio4: mgpio4@0x3C044000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C044000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_greth0_3_default: greth0_3_default {
+					pinmux = <GBETH0_TX_EN>, <GBETH0_TX_ER>, <GBETH0_TXD0>, <GBETH0_TXD1>;
+				};
+
+				pinctrl_nand0_2_default: nand0_2_default {
+					pinmux = <NAND_READY1N>, <NAND_READY2N>;
+				};
+				lsif0_mgpio4_sram_nor: lsif0_mgpio4_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_D36>, <SRAM_NOR_D37>, <SRAM_NOR_D38>, <SRAM_NOR_D39>, <SRAM_NOR_A0>, <SRAM_NOR_A1>, <SRAM_NOR_A2>, <SRAM_NOR_A3>;
+				};
+			};
+		};
+
+		mgpio5: mgpio5@0x3C045000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C045000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_greth0_4_default: greth0_4_default {
+					pinmux = <GBETH0_TXD2>, <GBETH0_TXD3>, <GBETH0_TXD4>, <GBETH0_TXD5>, <GBETH0_TXD6>, <GBETH0_TXD7>, <GBETH0_MDC>, <GBETH0_MDIO>;
+				};
+				lsif0_mgpio5_sram_nor: lsif0_mgpio5_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_A4>, <SRAM_NOR_A5>, <SRAM_NOR_A6>, <SRAM_NOR_A7>, <SRAM_NOR_A8>, <SRAM_NOR_A9>, <SRAM_NOR_A11>, <SRAM_NOR_A12>;
+				};
+			};
+		};
+
+		mgpio6: mgpio6@0x3C046000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C046000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				lsif0_mgpio6_sram_nor: lsif0_mgpio6_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_A13>, <SRAM_NOR_A14>, <SRAM_NOR_A15>, <SRAM_NOR_A16>, <SRAM_NOR_A17>, <SRAM_NOR_A18>, <SRAM_NOR_A19>, <SRAM_NOR_A20>;
+				};
+			};
+
+		};
+
+		mgpio7: mgpio7@0x3C047000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C047000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_nand0_3_default: nand0_3_default {
+					pinmux = <NAND_REN>, <NAND_CLE>, <NAND_CE2N>, <NAND_CE1N>;
+				};
+				lsif0_mgpio7_sram_nor: lsif0_mgpio7_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_A21>, <SRAM_NOR_A22>, <SRAM_NOR_A24>, <SRAM_NOR_A25>, <SRAM_NOR_CE0>, <SRAM_NOR_CE1>, <SRAM_NOR_CE2>, <SRAM_NOR_CE3>;
+				};
+			};
+		};
+
+		mgpio8: mgpio8@0x3C048000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C048000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_nand0_4_default: nand0_4_default {
+					pinmux = <NAND_ALE>, <NAND_WEN>, <NAND_WPN>;
+				};
+				lsif0_mgpio8_sram_nor: lsif0_mgpio8_sram_nor {
+					u-boot,dm-pre-reloc;
+					pinmux = <SRAM_NOR_CE4>, <SRAM_NOR_CE5>, <SRAM_NOR_BHE_H>, <SRAM_NOR_BHE_L>, <SRAM_NOR_BLE_H>, <SRAM_NOR_BLE_L>, <SRAM_NOR_OE>, <SRAM_NOR_WE>;
+				};
+			};
+		};
+
+		greth1: greth0@0x3C034000 {
+			status = "disabled";
+			compatible = "rcm,greth";
+			reg = <0x3C034000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_greth0_1_default>, <&pinctrl_greth0_2_default>, <&pinctrl_greth0_3_default>, <&pinctrl_greth0_4_default>;
+		};
+
+		nand0: nand0@0x3C032000 {
+			status = "disabled";
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,nand";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x3C032000 0x1000>;
+			ranges = <0x00000000 0x20000000 0x20000000>;
+			clock-frequency = <100000000>;
+			config-reg = <0x3C03F000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_nand0_1_default>, <&pinctrl_nand0_2_default>, <&pinctrl_nand0_3_default>, <&pinctrl_nand0_4_default>;
+		};
+
+		sram_nor0: sram_nor0@0x3C030000 {
+			status = "disabled";
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,sram-nor","simple-bus";
+			chip-num = <0x10>;  // CS4+0 ce-manage
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x3C030000 0x1000>;
+			cs-mode = <1>;     // 0 - cs in address, 1 - cs in reg */
+			addr-size = <26>;  // min 10 max 26 bit
+			timings = <0x1f1f0808>;
+			lsif_nor0: lsif_nor0 {
+				u-boot,dm-pre-reloc;
+				ranges = <0x20000000 0x10 0x20000000 0x10000000>;
+			};
+		};
+	};
+
+	lsif1 {
+		u-boot,dm-pre-reloc;
+		compatible = "simple-bus";
+		reg = <0x3C060000 0x1000>;
+		reg-names = "ctrlreg";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		mgpio2_1: mgpio2_1@0x3C069000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C069000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_uart0_default: uart0_default {
+					u-boot,dm-pre-reloc;
+					pinmux = <UART0_RXD>, <UART0_TXD>;
+				};
+			};
+		};
+
+		mgpio3_1: mgpio3_1@0x3C06A3000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C06A000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_spi0_default: spi0_default {
+					u-boot,dm-pre-reloc;
+					pinmux = <SPI0_SCLK>, <SPI0_MOSI>, <SPI0_MISO>;
+				};
+				pinctrl_uart1_default: uart1_default {
+					pinmux = <UART1_RXD>, <UART1_TXD>;
+				};
+
+				pinctrl_uart2_default: uart2_default {
+					pinmux = <UART2_RXD>, <UART2_TXD>;
+				};
+			};
+		};
+
+		mgpio4_1: mgpio4_1@0x3C06B000 {
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C06B000 0x1000>;
+			pinctrl {
+				u-boot,dm-pre-reloc;
+				compatible = "rcm,pl061-pinctrl";
+				pinctrl_spi1_default: spi1_default {
+					u-boot,dm-pre-reloc;
+					pinmux = <SPI1_SCLK>, <SPI1_MOSI>, <SPI1_MISO>;
+				};
+				pinctrl_sdio_default: sdio_default {
+					u-boot,dm-pre-reloc;
+					pinmux = <SDIO_CMD>, <SDIO_D0>, <SDIO_D1>, <SDIO_D2>, <SDIO_D3>;
+				};
+			};
+		};
+
+		i2c0: i2c@0x3C05A000 {
+			status = "disabled";
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,i2cmst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C05A000 0x1000>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+			clock-frequency = <100000000>;
+			bus-clock = <100000>;
+
+			spd0: spd@50 {
+				status = "disabled";
+				u-boot,dm-pre-reloc;
+				compatible = "i2c-eeprom";
+				reg = <0x50>;
+			};
+
+			spd1: spd@51 {
+				status = "disabled";
+				u-boot,dm-pre-reloc;
+				compatible = "i2c-eeprom";
+				reg = <0x51>;
+			};
+		};
+
+		gpio0: gpio0@0x3C065000 {
+			status = "disabled";
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C065000 0x1000>;
+		};
+
+		gpio1: gpio1@0x3C066000 {
+			status = "disabled";
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl061";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3C066000 0x1000>;
+			#gpio-cells = <2>;
+			gpio-controller;
+		};
+
+		spi0: spi0@0x3C061000 {
+			status = "disabled";
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,pl022-spi";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_spi0_default>;
+			clocks = <&lsif1clock>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0 0x3C061000 0 0x1000>;
+			cs-gpios = <&gpio1 2 0>, <0>, <0>, <0>;
+			spi-max-frequency = <12500000>;
+			spi-mode = <0x07>;
+
+			spi_flash@0 {
+				status = "disabled";
+				u-boot,dm-pre-reloc;
+				compatible = "st,m25p32", "spi-flash";
+			};
+		};
+
+		spi1: spi1@0x3C062000 {
+			status = "disabled";
+			compatible = "rcm,pl022-spi";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_spi1_default>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x3C062000 0x1000>;
+			cs-gpios = <&gpio1 4 0>;
+			spi-max-frequency = <400000>;
+		};
+
+		uart0: uart0@3C05D000 {
+			status = "disabled";
+ 			u-boot,dm-pre-reloc;
+			compatible = "arm,pl011", "arm,primecell";
+			reg = <0x3C05D000 0x1000>;
+			clock = <100000000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_uart0_default>;
+		};
+
+		uart1: uart1@3C05E000 {
+			status = "disabled";
+			compatible = "arm,pl011", "arm,primecell";
+			reg = <0x3C05E000 0x1000>;
+			clock = <100000000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_uart1_default>;
+		};
+
+		mmc0: mmc0@0x3C064000 {
+			status = "disabled";
+			u-boot,dm-pre-reloc;
+			compatible = "rcm,mmc-0.2";
+			reg = <0x3C064000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_sdio_default>;
+		};
+
+		usb: musb@0x3C06D000 {
+			status = "disabled";
+			compatible = "rcm,musb";
+			reg = <0x3C06C000 0x1000>,
+			      <0x3C06D000 0x1000>,
+			      <0x38000008 0x4>;
+			reg-names = "phy", "mc", "control";
+		};
+	};
+};
