@@ -1,23 +1,21 @@
 /*
-*
-* Device Tree Source for RCM MB115.02 extention board ( SRAM-NOR module )
-*
-*/
+ * Device Tree Source for RCM MB115-02 board (SRAM, NOR)
+ *
+ * This file is licensed under the terms of the GNU General Public
+ * License version 2.  This program is licensed "as is" without
+ * any warranty of any kind, whether express or implied.
+ */
 
 / {
 	sram_nor_arbiter0: sram_nor_arbiter {
-		u-boot,dm-pre-reloc;
-		status = "okay";
-		sram-nor-mux = <1>;					/* 0 to route extmem wires to LSIF0, 1 - to MCIF, */
-		ce-manage = <2>;					/* MCIF(page 913 + confluence): cs0..3=>1 controller,cs4,5=>2 controller,cs-mode=0,chip-num=0x3F */
+		ce-manage = <2>;         // LSIF: all cs=>1 controller, cs-mode=1, chip-num=0x10
 	};
 
 	plb_sram_nor0: plb_sram_nor0@0x80170000 {
-		u-boot,dm-pre-reloc;
 		status = "okay";
 		chip-num = <0x3F>;
-		cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
-		addr-size = <22>; /* min 10 max 26 bit */
+		cs-mode = <0>;  // 0 - cs in address, 1 - cs in reg
+		addr-size = <22>;  // min 10 max 26 bit
 		mcif_sram0: mcif_sram0 {
 			u-boot,dm-pre-reloc;
 			ranges = <0xc0000000 0x4 0x00000000 0x01000000>;
@@ -37,11 +35,10 @@
 	};
 
 	plb_sram_nor1: plb_sram_nor1@0x80190000 {
-		u-boot,dm-pre-reloc;
 		status = "okay";
 		chip-num = <0x3F>;
-		cs-mode = <0>;  /* 0 - cs in address, 1 - cs in reg */
-		addr-size = <26>; /* min 10 max 26 bit */
+		cs-mode = <0>;  // 0 - cs in address, 1 - cs in reg
+		addr-size = <26>;  // min 10 max 26 bit
 		timings = <0x1f1f0808>;
 		mcif_nor0: mcif_nor0 {
 			u-boot,dm-pre-reloc;
