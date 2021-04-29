@@ -59,7 +59,7 @@ static noinline int process_spintable_next(void)
     }
     asm("isync");
 
-    tlb47x_map_nocache(spintable->entry_addr&(~0x0FFFFFFF), 0x00000000, TLBSID_256M, TLB_MODE_RWX);
+    tlb47x_map_coherent(spintable->entry_addr&(~0x0FFFFFFF), 0x00000000, TLBSID_256M, TLB_MODE_RWX);
 
     // never return from kernel
     ((kernel_start)(uint32_t)(spintable->entry_addr))((uint32_t)spintable->r3);
@@ -77,7 +77,7 @@ int process_spintable (void)
     while((ucurrent() - start) < INITIAL_DELAY_US);
 
     // map IM0 to 0x40000000 somewhere othere than 0
-    tlb47x_map(0x01000000000, 0x40000000, TLBSID_1M, TLB_MODE_RWX);
+    tlb47x_map_nocache(0x01000000000, 0x40000000, TLBSID_1M, TLB_MODE_RWX);
 
     // switch context to new address
     asm("   mfmsr r0 \n\

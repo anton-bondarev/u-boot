@@ -28,7 +28,7 @@ void tlb47x_inval(uint32_t cpu_adr, tlb_size_id tlb_sid)
 }
 
 
-static void tlb47x_map_internal(uint64_t physical, uint32_t logical, uint32_t wimg, tlb_size_id size, tlb_rwx_mode smode, tlb_rwx_mode umode)
+static void tlb47x_map_internal(uint64_t physical, uint32_t logical, uint32_t il1i, uint32_t il1d, uint32_t wimg, tlb_size_id size, tlb_rwx_mode smode, tlb_rwx_mode umode)
 {
 	tlb_entr_data_0 tlb_0;
 	tlb_0.data = 0x00000000;
@@ -44,8 +44,8 @@ static void tlb47x_map_internal(uint64_t physical, uint32_t logical, uint32_t wi
 
 	tlb_entr_data_2 tlb_2;
 	tlb_2.data = 0x00000000;
-    tlb_2.entr.il1i = 1;
-    tlb_2.entr.il1d = 1;
+	tlb_2.entr.il1i = il1i;
+	tlb_2.entr.il1d = il1d;
     tlb_2.entr.u = 0;
     tlb_2.entr.wimg = wimg;
     tlb_2.entr.e = 0;  // BE   
@@ -55,12 +55,17 @@ static void tlb47x_map_internal(uint64_t physical, uint32_t logical, uint32_t wi
 	_write_tlb_entry(tlb_0.data, tlb_1.data, tlb_2.data, 0); 
 }
 
-void tlb47x_map(uint64_t physical, uint32_t logical, tlb_size_id size, tlb_rwx_mode smode)
-{
-    tlb47x_map_internal(physical, logical, 0x4, size, smode, TLB_MODE_NONE);
-}
-
 void tlb47x_map_nocache(uint64_t physical, uint32_t logical, tlb_size_id size, tlb_rwx_mode smode)
 {
-    tlb47x_map_internal(physical, logical, 0x2, size, smode, TLB_MODE_NONE);    
+	tlb47x_map_internal(physical, logical, 1, 1, 0x4, size, smode, TLB_MODE_NONE);
+}
+
+void tlb47x_map_cached(uint64_t physical, uint32_t logical, tlb_size_id size, tlb_rwx_mode smode)
+{
+	tlb47x_map_internal(physical, logical, 0, 0, 0x2, size, smode, TLB_MODE_NONE);
+}
+
+void tlb47x_map_coherent(uint64_t physical, uint32_t logical, tlb_size_id size, tlb_rwx_mode smode)
+{
+	tlb47x_map_internal(physical, logical, 1, 1, 0x2, size, smode, TLB_MODE_NONE);
 }
