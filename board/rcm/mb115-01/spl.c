@@ -38,7 +38,7 @@ volatile unsigned int* _test_addr;
 static void init_byte_order(void)
 {
 	tlb47x_inval( 0x30000000, TLBSID_256M ); 
-	tlb47x_map_nocache( 0x1030000000, 0x30000000, TLBSID_256M, TLB_MODE_RWX );
+	tlb47x_map_nocache(0x1030000000, 0x30000000, TLBSID_256M, TLB_MODE_NONE, TLB_MODE_RWX);
 }
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
