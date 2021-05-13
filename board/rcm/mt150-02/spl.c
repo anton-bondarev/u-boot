@@ -32,9 +32,9 @@ struct rumboot_bootheader hdr = {
 static void init_periph_byte_order(void)
 {
 	tlb47x_inval(0xD0020000, TLBSID_64K); 
-	tlb47x_map_nocache(0x20C0020000, 0xD0020000, TLBSID_64K, TLB_MODE_NONE, TLB_MODE_RW);
+	tlb47x_map_guarded(0x20C0020000, 0xD0020000, TLBSID_64K, TLB_MODE_NONE, TLB_MODE_RW);
 	tlb47x_inval(0xD0030000, TLBSID_64K); 
-	tlb47x_map_nocache(0x20C0030000, 0xD0030000, TLBSID_64K, TLB_MODE_NONE, TLB_MODE_RW);
+	tlb47x_map_guarded(0x20C0030000, 0xD0030000, TLBSID_64K, TLB_MODE_NONE, TLB_MODE_RW);
 }
 
 void board_init_f(ulong dummy)

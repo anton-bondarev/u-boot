@@ -60,6 +60,11 @@ void tlb47x_map_nocache(uint64_t physical, uint32_t logical, tlb_size_id size, t
 	tlb47x_map_internal(physical, logical, 1, 1, 0x4, size, umode, smode);
 }
 
+void tlb47x_map_guarded(uint64_t physical, uint32_t logical, tlb_size_id size, tlb_rwx_mode umode, tlb_rwx_mode smode)
+{
+	tlb47x_map_internal(physical, logical, 1, 1, 0x5, size, umode, smode);
+}
+
 void tlb47x_map_cached(uint64_t physical, uint32_t logical, tlb_size_id size, tlb_rwx_mode umode, tlb_rwx_mode smode)
 {
 	tlb47x_map_internal(physical, logical, 0, 0, 0x2, size, umode, smode);
