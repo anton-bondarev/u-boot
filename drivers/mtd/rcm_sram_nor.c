@@ -202,11 +202,11 @@ static int set_high_addr_and_map_tlb( rcm_sram_nor_device *pdev, const char* nod
         switch( size ) {
         case 0x01000000:
                 tlb47x_inval( bus_addr, TLBSID_16M );
-                tlb47x_map_nocache( parent_bus_addr, bus_addr, TLBSID_16M, TLB_MODE_RWX );
+                tlb47x_map_nocache(parent_bus_addr, bus_addr, TLBSID_16M, TLB_MODE_NONE, TLB_MODE_RWX);
                 break;
         case 0x10000000:
                 tlb47x_inval( bus_addr, TLBSID_256M );
-                tlb47x_map_nocache( parent_bus_addr, bus_addr, TLBSID_256M, TLB_MODE_RWX );
+                tlb47x_map_nocache(parent_bus_addr, bus_addr, TLBSID_256M, TLB_MODE_NONE, TLB_MODE_RWX);
                 break;
         default:
                 dev_err( &pdev->dev, "support only 256M window\n" );

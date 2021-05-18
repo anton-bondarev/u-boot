@@ -108,7 +108,7 @@ static void fill_for_ecc(uint32_t base, uint32_t size)
 	size &= ~(0xFFFFF); // align by 1 MB
 
 	while (size) {
-		tlb47x_map_nocache(base, 0, TLBSID_1M, TLB_MODE_RW); // map 1 MB
+		tlb47x_map_nocache(base, 0, TLBSID_1M, TLB_MODE_NONE, TLB_MODE_RW); // map 1 MB
 		memset(0, 0, 0x100000); // fill 1 MB
 		tlb47x_inval(0, TLBSID_1M); // unmap 1 MB
 

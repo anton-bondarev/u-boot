@@ -32,9 +32,9 @@ struct rumboot_bootheader hdr = {
 static void init_periph_byte_order(void)
 {
 	tlb47x_inval(0xD0020000, TLBSID_64K); 
-	tlb47x_map_nocache(0x20C0020000, 0xD0020000, TLBSID_64K, TLB_MODE_RW);
+	tlb47x_map_guarded(0x20C0020000, 0xD0020000, TLBSID_64K, TLB_MODE_NONE, TLB_MODE_RW);
 	tlb47x_inval(0xD0030000, TLBSID_64K); 
-	tlb47x_map_nocache(0x20C0030000, 0xD0030000, TLBSID_64K, TLB_MODE_RW);
+	tlb47x_map_guarded(0x20C0030000, 0xD0030000, TLBSID_64K, TLB_MODE_NONE, TLB_MODE_RW);
 }
 
 void board_init_f(ulong dummy)
@@ -79,7 +79,7 @@ static bool test_mem(uint32_t base, uint32_t size)
 static void map_memory_range(const struct rcm_emi_memory_range *range, const char *mem_name)
 {
 	tlb47x_inval(range->base, TLBSID_256M);
-	tlb47x_map_nocache(range->base, range->base, TLBSID_256M, TLB_MODE_RWX);
+	tlb47x_map_nocache(range->base, range->base, TLBSID_256M, TLB_MODE_NONE, TLB_MODE_RWX);
 	printf("Testing %s...\n", mem_name);
 	if (!test_mem(range->base, 0x10000)) {
 		printf("The test has been failed. Resetting...");

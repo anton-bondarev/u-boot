@@ -241,7 +241,7 @@ static int mem_map_drop_all(void)
 	return 0;
 }
 
-static int mem_map_set(uint64_t phys_adr, uint32_t cpu_adr, tlb_size_id tlb_sid, bool cached)
+static int mem_map_set(uint64_t phys_adr, uint32_t cpu_adr, tlb_size_id tlb_sid, bool cached, tlb_rwx_mode umode, tlb_rwx_mode smode)
 {
 	int map_ind;
 	
@@ -258,9 +258,9 @@ static int mem_map_set(uint64_t phys_adr, uint32_t cpu_adr, tlb_size_id tlb_sid,
 	}
 
 	if (cached)
-		tlb47x_map_cached(phys_adr, cpu_adr, tlb_sid, TLB_MODE_RWX);
+		tlb47x_map_cached(phys_adr, cpu_adr, tlb_sid, umode, smode);
 	else
-		tlb47x_map_nocache(phys_adr, cpu_adr, tlb_sid, TLB_MODE_RWX);
+		tlb47x_map_nocache(phys_adr, cpu_adr, tlb_sid, umode, smode);
 	bi_dram_add_region(cpu_adr, get_tlb_sid_size(tlb_sid));
 
 	s_maps[map_ind].phys_adr = phys_adr;
@@ -339,7 +339,7 @@ static int do_mem_map_set(int argc, char * const argv[])
 		return mem_map_list(false);
 	}
 
-	if ((argc == 3) || (argc == 4)) {
+	if ((argc >= 3) && (argc <= 6)) {
 		ulong cpu_adr;
 		if ( strict_strtoul(argv[0], 16, & cpu_adr) < 0 ) {
 			printf("Bad cpu_adr\n");
@@ -356,16 +356,36 @@ static int do_mem_map_set(int argc, char * const argv[])
 		uint64_t phys_adr = simple_strtoull(argv[2], &endptr, 16 );
 
 		bool cached = false;
-		if (argc == 4) {
+		if (argc >= 4) {
 			if (strcmp(argv[3], "cached") == 0)
 				cached = true;
-			else {
-				printf("Bad flags\n");
+			else if (strcmp(argv[3], "nocache") != 0) {
+				printf("Bad nocache/cached flag\n");
 				return CMD_RET_USAGE;
 			}
 		}
 
-		return mem_map_set(phys_adr, cpu_adr, tlb_sid, cached);
+		tlb_rwx_mode umode = TLB_MODE_NONE;
+		if (argc >= 5) {
+			ulong val;
+			if ((strict_strtoul(argv[4], 10, &val) != 0) || (val > 7)) {
+				printf("Bad uxwr flag\n");
+				return CMD_RET_USAGE;
+			}
+			umode = val;
+		}
+
+		tlb_rwx_mode smode = TLB_MODE_RWX;
+		if (argc >= 6) {
+			ulong val;
+			if ((strict_strtoul(argv[5], 10, &val) != 0) || (val > 7)) {
+				printf("Bad sxwr flag\n");
+				return CMD_RET_USAGE;
+			}
+			smode = val;
+		}
+
+		return mem_map_set(phys_adr, cpu_adr, tlb_sid, cached, umode, smode);
 	}
 
 	return CMD_RET_USAGE;
@@ -431,7 +451,7 @@ static int do_mem_map_test(int argc, char * const argv[])
 static int do_mem_map_help(int argc, char * const argv[])
 {
 	if ( argc != 1 || strcmp(argv[0], "set") == 0 ) {
-		printf("mmap set cpu_adr { 4k | 16k | 64k | 1m | 16m | 256m | 1g } phys_adr [cached]\n");
+		printf("mmap set cpu_adr { 4k | 16k | 64k | 1m | 16m | 256m | 1g } phys_adr [ { nocache | cached } [ uxwr [sxwr] ] ]\n");
 		printf("mmap set { 1 | 2 }\n");		
 	}
 	if ( argc != 1 || strcmp(argv[0], "drop") == 0 ) 
@@ -474,7 +494,7 @@ static int do_mem_map(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[]
 
 #ifdef CONFIG_CMD_MEMMAP
 U_BOOT_CMD(
-	mmap, 6, 1, do_mem_map,
+	mmap, 8, 1, do_mem_map,
 	"phys memory mapping",
 	"(set|drop|list|tlb|test) [options]"
 );
