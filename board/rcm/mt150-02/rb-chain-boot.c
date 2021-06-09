@@ -70,11 +70,9 @@ static int rumboot_load_image(struct spl_image_info *spl_image,
 
 			if (hdr0->magic == RUMBOOT_HEADER_MAGIC) {
 				once_again = true;
-                // bug in rumboot adds aditional src->plugin->align block to the image length
-                // after possible bug fix this place should be changed
-				add_offset += /* src->plugin->align + */
-					round_up_to_align(hdr0->datalen,
-							  src->plugin->align);
+				add_offset += round_up_to_align(
+					hdr0->datalen + sizeof(struct rumboot_bootheader),
+					src->plugin->align);
 				debug("Found rumboot image - try next one\n");
 				continue;
 			} else if (!spl_parse_image_header(spl_image, ih)) {

@@ -49,7 +49,8 @@ config ENV_OFFSET
 	depends on ENV_IS_IN_NAND || ENV_IS_IN_FLASH || ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC
 	default 0x40000 if ENV_IS_IN_NAND
 	default 0x1040000 if ENV_IS_IN_FLASH
-	default 0x140000 if ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC
+	default 0x140000 if ENV_IS_IN_SPI_FLASH
+	default 0xF0000 if ENV_IS_IN_MMC
 
 config ENV_SIZE
 	hex "Environment size"
