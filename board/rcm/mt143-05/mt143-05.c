@@ -34,7 +34,7 @@ struct rumboot_bootheader hdr = {
 
 u32 spl_boot_device(void)
 {
-	return BOOT_DEVICE_BOOTROM;
+	return BOOT_DEVICE_UART;
 }
 
 
@@ -94,23 +94,8 @@ void spl_board_init(void)
 
 void board_boot_order(u32 *spl_boot_list)
 {
-	spl_boot_list[0] = spl_boot_device();
-	switch (spl_boot_list[0]) {
-	case BOOT_DEVICE_BOOTROM:
-		spl_boot_list[1] = BOOT_DEVICE_MMC1;
-		spl_boot_list[2] = BOOT_DEVICE_SPI;
-		break;
-	case BOOT_DEVICE_SPI:
-		spl_boot_list[1] = BOOT_DEVICE_MMC1;
-		spl_boot_list[2] = BOOT_DEVICE_BOOTROM;
-		break;
-	case BOOT_DEVICE_MMC1:
-		spl_boot_list[1] = BOOT_DEVICE_SPI;
-		spl_boot_list[2] = BOOT_DEVICE_BOOTROM;
-		break;
-	}
-    spl_boot_list[3] = BOOT_DEVICE_UART; // X-Modem
-    spl_boot_list[4] = BOOT_DEVICE_NONE;
+	spl_boot_list[0] = BOOT_DEVICE_BOOTROM;
+	spl_boot_list[1] = spl_boot_device();
 }
 
 
