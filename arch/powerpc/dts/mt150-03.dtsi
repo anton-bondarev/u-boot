@@ -10,16 +10,12 @@
 	plb {
 		lsif {
 			greth0: greth0@D002A000 {
-				// status = "disabled";
-				compatible = "rcm,greth";
-				reg = <0xD002A000 0x1000>;
+				status = "okay";
 				mac-address = [ EC 17 66 77 06 80 ];
 			};
 
 			greth1: greth1@D003A000 {
-				status = "disabled";
-				compatible = "rcm,greth";
-				reg = <0xD003A000 0x1000>;
+				// status = "okay";
 				mac-address = [ EC 17 66 77 06 81 ];
 			};
 		};
