@@ -24,11 +24,11 @@
 		mmc0 = &mmc0;
 		mmc1 = &mmc1;
 		spi0 = &spi0;
-	}; 
+	};
 
 	L2: l2-cache-controller@0x01106000 {
 		status = "okay";
-	};	
+	};
 
 	axi {
 		uart0: uart0@0x01044000 {
@@ -47,18 +47,18 @@
 		};
 
 		spi0: spi@0x01040000 {
-			status = "okay";
-			u-boot,dm-pre-reloc;
-			cs-gpios = <&gpio0 5 0>;	
-
-			spi_flash@0 {
-				u-boot,dm-pre-reloc;
-				compatible = "st,w25q32", "spi-flash";
-				reg = <0>;
-				spi-max-frequency = <1000000>;
-				spi-cpol;
-				spi-cpha;
-			};
+			// status = "okay";
+			// u-boot,dm-pre-reloc;
+			// cs-gpios = <&gpio0 5 0>;
+			//
+			// spi_flash@0 {
+			// 	u-boot,dm-pre-reloc;
+			// 	compatible = "st,w25q32", "spi-flash";
+			// 	reg = <0>;
+			// 	spi-max-frequency = <1000000>;
+			// 	spi-cpol;
+			// 	spi-cpha;
+			// };
 		};
 
 		mmc0: mmc0@0x01042000 {
@@ -72,65 +72,8 @@
 			u-boot,dm-pre-reloc;
 			carddetect-gpio = <&gpio0 4 0>;
 		};
-
-		mdio0: mdio0@0x01080000 {
-			status = "okay";
-			phy0: ethernet-phy@0 {
-				reg = <0xffffffff>; // autodetect
-			};			
-		};
-
-		mgeth0: mgeth@0x01014000 {
-			status = "okay";
-			mac-address = [ec 17 66 64 09 10];
-			phys = <&sgmiiphy>;
-			phy = <&phy0>;
-			phy-mode = "sgmii";
-		};		
-
-		mdio1: mdio1@0x01081000 {
-			status = "okay";
-			phy1: ethernet-phy@0 {
-				reg = <0xffffffff>; // autodetect
-			};			
-		};
-
-		mgeth1: mgeth@0x01015000 {
-			status = "okay";
-			mac-address = [ec 17 66 64 09 11];
-			phys = <&sgmiiphy>;
-			phy = <&phy1>;
-			phy-mode = "sgmii";
-		};		
-
-		mdio2: mdio2@0x01082000 {
-			status = "okay";
-			phy2: ethernet-phy@0 {
-				reg = <0xffffffff>; // autodetect
-			};			
-		};
-
-		mgeth2: mgeth@0x01016000 {
-			status = "okay";
-			mac-address = [ec 17 66 64 09 12];
-			phys = <&sgmiiphy>;
-			phy = <&phy2>;
-			phy-mode = "sgmii";
-		};		
-
-		mdio3: mdio3@0x01083000 {
-			status = "okay";
-			phy3: ethernet-phy@0 {
-				reg = <0xffffffff>; // autodetect
-			};			
-		};
-
-		mgeth3: mgeth@0x01017000 {
-			status = "okay";
-			mac-address = [ec 17 66 64 09 13];
-			phys = <&sgmiiphy>;
-			phy = <&phy3>;
-			phy-mode = "sgmii";
-		};
 	};
 };
+
+// Ethernet
+#include "mt143-02.dtsi"
