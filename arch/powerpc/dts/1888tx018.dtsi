@@ -15,18 +15,21 @@
 	#address-cells = <1>;
 	#size-cells = <1>;
 
-	lsif0clock: lsif0clock@100M {
+	cpu_clk: cpu_clk {
 		u-boot,dm-pre-reloc;
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
-		clock-frequency = <100000000>;
+		clock-frequency = <800000000>;
 	};
 
-	lsif1clock: lsif1clock@100M {
+	lsifclock: lsifclock@100M {
 		u-boot,dm-pre-reloc;
+		compatible = "rcm,lsif-clock";
 		#clock-cells = <0>;
-		compatible = "fixed-clock";
+		clocks = <&cpu_clk>;
 		clock-frequency = <100000000>;
+		lsif0enabled;
+		lsif1enabled;
 	};
 
 	sram_nor_arbiter0: sram_nor_arbiter {
@@ -415,7 +418,7 @@
 			compatible = "rcm,pl022-spi";
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_spi0_default>;
-			clocks = <&lsif1clock>;
+			clocks = <&lsifclock>;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0 0x3C061000 0 0x1000>;
