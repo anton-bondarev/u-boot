@@ -24,7 +24,7 @@
 
 	lsifclock: lsifclock@100M {
 		u-boot,dm-pre-reloc;
-		compatible = "rcm,lsif-clock";
+		compatible = "rcm,tx018_lsif_clk";
 		#clock-cells = <0>;
 		clocks = <&cpu_clk>;
 		clock-frequency = <100000000>;
