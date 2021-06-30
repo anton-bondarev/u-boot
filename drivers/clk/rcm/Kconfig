@@ -1,8 +1,5 @@
-if TARGET_1888TX018
-
 config TX018_LSIF_CLOCK
 	bool "Enable TX018 LSIF clock driver"
+	depends on CLK && TARGET_1888TX018
 	help
 	  Enable to configure lsif clock via Device Tree
-
-endif
