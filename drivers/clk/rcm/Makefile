@@ -2,4 +2,4 @@
 # Makefile for RC Module specific clk
 #
 
-obj-y += tx018_lsif_clk.o
+obj-$(CONFIG_TX018_LSIF_CLOCK) += tx018_lsif_clk.o

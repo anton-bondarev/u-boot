@@ -1,5 +1,5 @@
 /*
- * Synopsys LSIF clock driver
+ *  LSIF clock driver
  *
  *  This program is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License version 2 as published
@@ -24,6 +24,9 @@
 
 #define LSIF0_CLKEN_MASK (1 << 0)
 #define LSIF1_CLKEN_MASK (1 << 1)
+
+#define UPD_CKEN_MASK (1 << 4)
+#define UPD_CKDIV_MASK (1 << 0)
 
 
 static u32 read_reg(u32 reg)
@@ -52,7 +55,7 @@ static int lsif_clk_probe(struct udevice *dev)
 	int ret;
 	ulong Fpll;
 	bool locked;
-	
+
 	// check WR_LOCK
 	val = read_reg(RCM_PLL_WR_LOCK);
 
@@ -82,7 +85,7 @@ static int lsif_clk_probe(struct udevice *dev)
 		val |= LSIF0_CLKEN_MASK;
 	if (ofnode_read_bool(dev->node,"lsif1enabled"))
 		val |= LSIF1_CLKEN_MASK;
-		
+
 	write_reg(RCM_PLL_CKEN_LSIF, val);
 
 	Fpll = clk_get_rate(&c);
@@ -93,7 +96,7 @@ static int lsif_clk_probe(struct udevice *dev)
 	write_reg(RCM_PLL_DIVMODE_LSIF, divmode);
 
 	//apply settings
-	write_reg(RCM_PLL_UPD_CK, 1);
+	write_reg(RCM_PLL_UPD_CK, UPD_CKEN_MASK | UPD_CKDIV_MASK);
 
 	// block WR_LOCK
 	if(locked)
@@ -107,7 +110,7 @@ static const struct udevice_id lsif_clk_id[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(lsif_clk) = {
+U_BOOT_DRIVER(tx018_lsif_clk) = {
 	.name = "rcm,tx018_lsif_clk",
 	.id = UCLASS_CLK,
 	.of_match = lsif_clk_id,
