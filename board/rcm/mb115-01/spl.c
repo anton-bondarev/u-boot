@@ -107,8 +107,8 @@ void spl_board_init(void)
 	// Not all devices in Device Tree have references to their clock devices.
 	// So we need to load and probe all clock devices.
 	// do nothing just getting probed devices
-    uclass_foreach_dev_probe(UCLASS_CLK, dev);
-	
+	uclass_foreach_dev_probe(UCLASS_CLK, dev);
+
 	/* init dram */
 	ddr_init(0);
 
