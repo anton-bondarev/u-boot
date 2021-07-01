@@ -20,8 +20,10 @@ config ENV_OFFSET
 	hex "Environment offset"
 	help
 		Offset from base address where is environment of u-boot"
-	depends on ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC
-	default 0x40000 if ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC
+	depends on ENV_IS_IN_SPI_FLASH || ENV_IS_IN_MMC || ENV_IS_IN_EEPROM
+	default 0x40000 if ENV_IS_IN_SPI_FLASH
+	default 0xF0000 if ENV_IS_IN_MMC
+	default 0x0 if ENV_IS_IN_EEPROM
 
 config ENV_SIZE
 	hex "Environment size"
