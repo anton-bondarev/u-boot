@@ -41,10 +41,23 @@ static void write_reg(u32 reg, u32 val)
 	iowrite32(val, (volatile void *)(CRG_DDR_BASE + reg));
 }
 
+static ulong clk_fixed_rate_get_rate(struct clk *clk)
+{
+	struct udevice *dev = clk->dev;
+	int ret;
+	u32 res;
+
+	ret = ofnode_read_u32(dev->node,"clock-frequency",&res);
+	if (ret) {
+		dev_err(dev, "clock-frequency not found, err=%d\n", ret);
+		return -ENODEV;
+	}
+	return (ulong)res;
+}
 
 static const struct clk_ops lsif_ops = {
+	.get_rate = clk_fixed_rate_get_rate,
 };
-
 
 static int lsif_clk_probe(struct udevice *dev)
 {
