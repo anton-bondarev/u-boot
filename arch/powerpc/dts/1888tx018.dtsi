@@ -451,7 +451,6 @@
 			compatible = "arm,pl011", "arm,primecell";
 			reg = <0x3C05D000 0x1000>;
 			clocks = <&lsifclock>;
-			clock = <100000000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart0_default>;
 		};
@@ -461,7 +460,6 @@
 			compatible = "arm,pl011", "arm,primecell";
 			reg = <0x3C05E000 0x1000>;
 			clocks = <&lsifclock>;
-			clock = <100000000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart1_default>;
 		};

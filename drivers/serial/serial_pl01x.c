@@ -367,6 +367,10 @@ int pl01x_serial_ofdata_to_platdata(struct udevice *dev)
 	if (!ret) {
 		clk_enable(&clk);
 		plat->clock = clk_get_rate(&clk);
+		if (!plat->clock) {
+			dev_err(dev, "Invalid aclk rate: 0\n");
+			return -EINVAL;
+		}
 	}
 	plat->type = dev_get_driver_data(dev);
 	plat->skip_init = dev_read_bool(dev, "skip-init");
