@@ -367,8 +367,8 @@ int pl01x_serial_ofdata_to_platdata(struct udevice *dev)
 	if (!ret) {
 		clk_enable(&clk);
 		plat->clock = clk_get_rate(&clk);
-		if (!plat->clock) {
-			dev_err(dev, "Invalid aclk rate: 0\n");
+		if (IS_ERR_VALUE(plat->clock)) {
+			dev_err(dev, "Invalid serial pl01x rate: 0\n");
 			return -EINVAL;
 		}
 	}
