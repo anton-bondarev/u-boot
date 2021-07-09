@@ -76,9 +76,9 @@ int tx018_ofdata_to_platdata(struct udevice *dev){
 
 	tx018_platdata->Fpll = clk_get_rate(&c);
 	if (IS_ERR_VALUE(tx018_platdata->Fpll)) {
-			dev_err(dev, "Invalid tx018 lsif rate: 0\n");
-			return -EINVAL;
-		}
+		dev_err(dev,"Invalid tx018 lsif rate: \n");
+		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -92,10 +92,10 @@ static int lsif_clk_probe(struct udevice *dev)
 	u32 divmode;
 	bool locked;
 
+	struct tx018_lsif_clk_platdata* tx018_platdata = dev_get_platdata(dev);
+
 	// check WR_LOCK
 	val = read_reg(RCM_PLL_WR_LOCK);
-
-	struct tx018_lsif_clk_platdata* tx018_platdata = dev_get_platdata(dev);
 
 	locked = (val == RCM_PLL_WR_LOCK_LOCKED);
 	if (locked){
