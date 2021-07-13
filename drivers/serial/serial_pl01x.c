@@ -365,12 +365,17 @@ int pl01x_serial_ofdata_to_platdata(struct udevice *dev)
 	plat->clock = dev_read_u32_default(dev, "clock", CONFIG_PL011_CLOCK);
 	ret = clk_get_by_index(dev, 0, &clk);
 	if (!ret) {
-		clk_enable(&clk);
+		ret = clk_enable(&clk);
+		if (ret && ret != -ENOSYS) {
+			dev_err(dev, "failed to enable clock\n");
+			return ret;
+		}
 		plat->clock = clk_get_rate(&clk);
 		if (IS_ERR_VALUE(plat->clock)) {
-			dev_err(dev, "Invalid serial pl01x rate: \n");
-			return -EINVAL;
+			dev_err(dev, "failed to get rate\n");
+			return plat->clock;
 		}
+		debug("%s: CLK %d\n", __func__, plat->clock);
 	}
 	plat->type = dev_get_driver_data(dev);
 	plat->skip_init = dev_read_bool(dev, "skip-init");
