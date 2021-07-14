@@ -102,8 +102,6 @@ void usleep(uint32_t usec);
 
 void spl_board_init(void)
 {
-	struct udevice *dev;
-
 	/* init dram */
 	ddr_init(0);
 
