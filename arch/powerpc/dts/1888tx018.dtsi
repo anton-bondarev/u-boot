@@ -450,7 +450,7 @@
  			u-boot,dm-pre-reloc;
 			compatible = "arm,pl011", "arm,primecell";
 			reg = <0x3C05D000 0x1000>;
-			clock = <100000000>;
+			clocks = <&lsifclock>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart0_default>;
 		};
@@ -459,7 +459,7 @@
 			status = "disabled";
 			compatible = "arm,pl011", "arm,primecell";
 			reg = <0x3C05E000 0x1000>;
-			clock = <100000000>;
+			clocks = <&lsifclock>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart1_default>;
 		};
