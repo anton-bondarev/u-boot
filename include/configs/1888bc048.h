@@ -51,18 +51,16 @@
 #define CONFIG_LOADADDR 80000000
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"bootcmd=run kernelsd\0" \
-	"bootfile=vswork/uImage\0" \
+	"bootfile=bc048/uImage\0" \
 	"fdt_addr_r=81000000\0" \
 	"hostname=bc048\0" \
 	"kernel=run loadfdt; run loadkernel; bootm ${loadaddr} - ${fdt_addr_r}\0" \
 	"kernelsd=run loadsd; bootm ${loadaddr} - ${fdt_addr_r}\0" \
-	"loadfdt=tftp ${fdt_addr_r} vswork/mt143-05.dtb\0" \
-	"loadfdtsd=ext4load mmc 0:2 ${fdt_addr_r} /boot/mt143-05.dtb\0" \
+	"loadfdt=tftp ${fdt_addr_r} bc048/bc048.dtb\0" \
+	"loadfdtsd=ext4load mmc 0:2 ${fdt_addr_r} /boot/uImage-bc048.dtb\0" \
 	"loadkernel=tftp ${loadaddr} ${bootfile}\0" \
-	"loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage\0" \
+	"loadkernelsd=ext4load mmc 0:2 ${loadaddr} /boot/uImage-bc048.bin\0" \
 	"loadsd=run loadfdtsd; run loadkernelsd\0" \
-	"netmask=255.255.255.0\0" \
-	"serverip=192.168.1.2\0" \
 	"tftptimeout=1000\0" \
 	"tftptimeoutcountmax=100\0"
 #endif
