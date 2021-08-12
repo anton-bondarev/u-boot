@@ -172,6 +172,33 @@ static void get_cmd(char* buf, unsigned int len)
     }
 }
 
+#ifdef __PPC__
+#define __MSYNC() \
+    asm("mbar 0");
+    asm("mbar 1");
+    asm("msync");
+    asm("isync");
+#else
+#define __MSYNC()
+#endif
+
+#define wait_sync(magic) { \
+    volatile void *__tmp; \
+    do { \
+        __tmp = edcl_xmodem_buf_sync; \
+        __MSYNC(); \
+        flw_delay(1); \
+    } while (__tmp != (void *) magic); \
+}
+
+#define write_sync(value) \
+    edcl_xmodem_buf_sync = (void *) value; \
+    __MSYNC(); \
+
+#define write_sync_ack(value) \
+    edcl_xmodem_buf_sync_ack = (void *) value; \
+    __MSYNC();
+
 static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, unsigned long long addr, unsigned long long size)
 {
     int res;
@@ -194,31 +221,29 @@ static int prog_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
         res = last_err = load_buf_xmodem(&pc);
     }
     else {
-#ifdef CONFIRM_HANDSHAKE
-        edcl_xmodem_sync_conf = 0;
-#endif // CONFIRM_HANDSHAKE
-        edcl_xmodem_buf_sync = 0;
-        while (size > 0) {                                                          // check size % EDCL_XMODEM_BUF_LEN is 0 before
-            while (edcl_xmodem_buf_sync == 0) flw_delay(100);                       // wait for valid address
-            char* curr_buf = (char*)edcl_xmodem_buf_sync;                           // saving address
-#ifdef CONFIRM_HANDSHAKE
-            edcl_xmodem_sync_conf = (volatile char*)(~(unsigned int)curr_buf);      // host must wait inverse address,if timeout occured-retry send sync
-#ifdef __PPC__
-            asm("msync");                                                           // hier?
-#endif // __PPC__
-            while (edcl_xmodem_sync_conf != 0) flw_delay(100);                      // and clear this register for continue,can multiple sending
-#endif // CONFIRM_HANDSHAKE
-#ifdef __PPC__
-            asm("msync");                                                           // hier?
-#endif // __PPC__
-            edcl_xmodem_buf_sync = 0;                                               // clear sync, host see it and can load now other buffer
-            res = seldev->write(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);       // and we do writing current buffer
+        write_sync(NULL);
+        volatile void *curbuf = edcl_xmodem_buf0;
+        wait_sync(curbuf);
+        write_sync_ack(curbuf);
+        while (size > 0) { 
+            write_sync(NULL);
+            volatile void *nextbuf = (curbuf == edcl_xmodem_buf0) ? edcl_xmodem_buf1 : edcl_xmodem_buf0;
+            /* Handle last packet in batch */
+            if (size > EDCL_XMODEM_BUF_LEN) {
+                wait_sync(nextbuf);
+                write_sync_ack(nextbuf);
+            }
+            unsigned long long towrite = (size > EDCL_XMODEM_BUF_LEN) ? EDCL_XMODEM_BUF_LEN : size;
+            res = seldev->write(seldev, addr, towrite, (void *) curbuf);
             if (res) {                                                              // if error,break operation and rememeber error code
                 last_err = res;
                 break;
             }
-            addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;               // correction address of next buffer
+            curbuf = nextbuf;
+            addr += towrite;
+            size -= towrite;
         }
+    write_sync(NULL);
     }
     return res;
 }
@@ -238,29 +263,24 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
         res = last_err = send_buf_xmodem(&pc);
     }
     else {
-        char* curr_buf = (char*)edcl_xmodem_buf0;
-        edcl_xmodem_buf_sync = 0;
-#ifdef CONFIRM_HANDSHAKE
-        edcl_xmodem_sync_conf = 0;
-#endif
+        write_sync(NULL);
+        char* curbuf = (char*)edcl_xmodem_buf0;
         while (size > 0) {                                                          // check size % EDCL_XMODEM_BUF_LEN is 0 before
-            res = seldev->read(seldev, addr, EDCL_XMODEM_BUF_LEN, curr_buf);        // reading
+            wait_sync(curbuf);
+            write_sync_ack(curbuf);
+            volatile void *nextbuf = (curbuf == edcl_xmodem_buf0) ? edcl_xmodem_buf1 : edcl_xmodem_buf0;
+            unsigned long long toread = (size > EDCL_XMODEM_BUF_LEN) ? EDCL_XMODEM_BUF_LEN : size;
+            res = seldev->read(seldev, addr, toread, curbuf);        // reading
             if (res) {                                                              // if error,break operation and rememeber error code
                 last_err = res;
                 break;
             }
-            addr += EDCL_XMODEM_BUF_LEN, size -= EDCL_XMODEM_BUF_LEN;               // next reading address
-            edcl_xmodem_buf_sync = curr_buf;                                        // and set current buffer address
-            while (edcl_xmodem_buf_sync) flw_delay(100);                            // wait for host ready
-#ifdef CONFIRM_HANDSHAKE
-            edcl_xmodem_sync_conf = (volatile char*)(~(unsigned int)edcl_xmodem_buf_sync);      // host must wait inverse 0,if timeout occured-retry send sync
-            while (edcl_xmodem_sync_conf != 0) flw_delay(100);                      // and clear this register for continue,can multiple sending
-#endif
-#ifdef __PPC__
-            asm("msync");
-#endif
-            curr_buf = (char*)(curr_buf == edcl_xmodem_buf0 ? edcl_xmodem_buf1 : edcl_xmodem_buf0); // switch buffer
+            write_sync(NULL);
+            addr += toread;
+            size -= toread;
+            curbuf = nextbuf;
         }
+        write_sync(NULL);
     }
     return res;
 }
@@ -412,13 +432,12 @@ static void cmd_dec(void)
         }
         else if (!strcmp(cmd_buf, "bufptr"))
         {
-#ifndef CONFIRM_HANDSHAKE
-            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x\n",
-                flw_virt_to_dma(edcl_xmodem_buf0), flw_virt_to_dma(edcl_xmodem_buf1), flw_virt_to_dma(&edcl_xmodem_buf_sync), EDCL_XMODEM_BUF_LEN);
-#else
-            printf("buffers 0x%x 0x%x sync 0x%x length 0x%x conf 0x%x \n",
-                flw_virt_to_dma(edcl_xmodem_buf0), flw_virt_to_dma(edcl_xmodem_buf1), flw_virt_to_dma(&edcl_xmodem_buf_sync), EDCL_XMODEM_BUF_LEN, flw_virt_to_dma(&edcl_xmodem_sync_conf));
-#endif
+            printf("buffers 0x%x 0x%x sync 0x%x ack 0x%x length 0x%x\n",
+                flw_virt_to_dma(edcl_xmodem_buf0), 
+                flw_virt_to_dma(edcl_xmodem_buf1), 
+                flw_virt_to_dma(&edcl_xmodem_buf_sync), 
+                flw_virt_to_dma(&edcl_xmodem_buf_sync_ack),
+                EDCL_XMODEM_BUF_LEN);
         }
         else if (!strcmp(cmd_buf, "rand"))
         {
@@ -491,7 +510,7 @@ static void cmd_dec(void)
                         (program && ( cmd_buf[8] != 'E' && cmd_buf[8] != 'X' )) ||
                         (duplicate && ( cmd_buf[10] != 'E' && cmd_buf[10] != 'X' )))
                     puts("Bad parameters\n");
-                else if ((program || duplicate) && (size % EDCL_XMODEM_BUF_LEN))
+                else if ((program || duplicate) && (size % seldev->dev_info.erase_size))
                     puts("Data size not multiple of buffer size\n");
                 else
                 {
@@ -536,7 +555,7 @@ static void cmd_dec(void)
 
 static int flash_writer_pseudo_loader(struct spl_image_info *spl_image, struct spl_boot_device *bootdev)
 {
-    printf("Flashwriter(%s) running(help for information):\n", FLW_VERSION);
+    printf("FlashWriter (%s) (help for useless info)\n", FLW_VERSION);
 #ifdef CONFIG_TARGET_1888TX018 // for testing only,remove after
     srand(get_sys_timer());
 #endif
@@ -544,4 +563,4 @@ static int flash_writer_pseudo_loader(struct spl_image_info *spl_image, struct s
     return -1;
 }
 
-SPL_LOAD_IMAGE_METHOD("Fashwriter", 1, BOOT_DEVICE_FLASH_WRITER, flash_writer_pseudo_loader);
+SPL_LOAD_IMAGE_METHOD("Flashwriter", 1, BOOT_DEVICE_FLASH_WRITER, flash_writer_pseudo_loader);
