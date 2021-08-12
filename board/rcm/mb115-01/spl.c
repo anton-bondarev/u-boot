@@ -39,7 +39,7 @@ volatile unsigned int* _test_addr;
 static void init_byte_order(void)
 {
 	tlb47x_inval( 0x30000000, TLBSID_256M ); 
-	tlb47x_map( 0x1030000000, 0x30000000, TLBSID_256M, TLB_MODE_RWX );	
+	tlb47x_map( 0x1030000000, 0x30000000, TLBSID_256M, TLB_MODE_RWX);
 }
 
 /* SPL should works without DDR usage, test part of DDR for loading main U-boot and load it */
@@ -191,11 +191,15 @@ static void write_tlb_entry8(void)
   );
 };
 
+
 void spl_board_init(void)
 {
 	commutate_plb6();
 	write_tlb_entry4();
 	write_tlb_entry8();
+	write_dcr_reg(0x80000201, 0x3);
+	uint32_t pri = read_dcr_reg(0x80000201);
+	printf("priority: %x\n", pri);
 
 #ifdef CONFIG_1888TX018_DDR
 	/* init dram */
@@ -265,4 +269,3 @@ int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	return 0;
 	}
-
