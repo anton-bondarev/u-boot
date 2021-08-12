@@ -2,6 +2,7 @@
 #include <nand.h>
 
 #include "flw_nand.h"
+#include "flw_buffers.h"
 
 int rcm_nand_flw_init(char* dma_buf, char* part, unsigned int partlen, uint64_t* full_size, uint32_t* write_size, uint32_t* erase_size);
 int rcm_nand_flw_erase_block(unsigned long addr);
@@ -10,7 +11,6 @@ int rcm_nand_flw_read_page(unsigned long addr, char* data);
 
 int flw_nand_found(struct flw_dev_info_t* dev_info)
 {
-    extern char edcl_xmodem_buf0[];
     int ret;
     ret = rcm_nand_flw_init(edcl_xmodem_buf0, dev_info->part, sizeof(dev_info->part), &dev_info->full_size, &dev_info->write_size, &dev_info->erase_size);
     return ret;
