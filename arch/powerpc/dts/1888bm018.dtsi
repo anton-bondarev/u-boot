@@ -15,9 +15,18 @@
 	#address-cells = <1>;
 	#size-cells = <1>;
 
-	lsif_clock: lsif_clock {
+	cpu_clk: cpu_clk {
+		u-boot,dm-pre-reloc;
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
+		clock-frequency = <200000000>;
+	};
+
+	lsif_clock: lsif_clock {
+		u-boot,dm-pre-reloc;
+		compatible = "rcm,bm018_clk_if";
+		#clock-cells = <0>;
+		clocks = <&cpu_clk>;
 		clock-frequency = <100000000>;
 	};
 
@@ -47,7 +56,7 @@
 				u-boot,dm-pre-reloc;
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0xD0029000 0x1000>;
-				clock = <100000000>;
+				clocks = <&lsif_clock>;
 				skip-init; // the UART speed is configured by RUMBOOT and it depens on the board switches
 			};
 

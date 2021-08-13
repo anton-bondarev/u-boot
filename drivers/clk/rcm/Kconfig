@@ -3,3 +3,8 @@ config TX018_LSIF_CLOCK
 	depends on CLK && TARGET_1888TX018
 	help
 	  Enable to configure lsif clock via Device Tree
+
+config BM018_CLK_IF
+	bool "Enable BM018 CLK IF driver"
+	help
+	  Enable to configure clk if via Device Tree
