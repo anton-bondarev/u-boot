@@ -8,7 +8,7 @@
  */
 / {
 	plb {
-		lsif {
+		clk_if {
 			greth0: greth0@D002A000 {
 				status = "okay";
 				mac-address = [ EC 17 66 77 06 80 ];

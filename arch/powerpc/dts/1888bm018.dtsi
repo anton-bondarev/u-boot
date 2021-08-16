@@ -22,7 +22,7 @@
 		clock-frequency = <200000000>;
 	};
 
-	lsif_clock: lsif_clock {
+	clk_if: clk_if {
 		u-boot,dm-pre-reloc;
 		compatible = "rcm,bm018_clk_if";
 		#clock-cells = <0>;
@@ -44,7 +44,7 @@
 			emi-frc = <(RCM_EMI_RFC_TRFC_9 | RCM_EMI_RFC_RP(0))>;
 		};
 
-		lsif {
+		clk_if {
 			u-boot,dm-pre-reloc;
 			compatible = "simple-bus";
 			#address-cells = <1>;
@@ -56,7 +56,7 @@
 				u-boot,dm-pre-reloc;
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0xD0029000 0x1000>;
-				clocks = <&lsif_clock>;
+				clocks = <&clk_if>;
 				skip-init; // the UART speed is configured by RUMBOOT and it depens on the board switches
 			};
 
@@ -105,7 +105,7 @@
 				reg = <0 0xD002B000 0 0x1000>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				clocks = <&lsif_clock>;
+				clocks = <&clk_if>;
 				cs-gpios = <0>, <0>, <0>, <0>;
 			};
 
@@ -115,7 +115,7 @@
 				reg = <0 0xD003B000 0 0x1000>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				clocks = <&lsif_clock>;
+				clocks = <&clk_if>;
 				cs-gpios = <0>, <0>, <0>, <0>;
 			};
 
