@@ -3,12 +3,11 @@
 
 #include <linux/types.h>
 
-#define EDCL_XMODEM_BUF_LEN (16384)
 #define EDCL_XMODEM_BUF_ALIGN 64
 //#define USE_DSP_MEM /* Doesn't work. Left here for later experiments only */
 
 #ifdef CONFIG_TARGET_1888TX018
-
+#define EDCL_XMODEM_BUF_LEN (16384)
 #ifndef USE_DSP_MEM
 extern volatile char blk_buf[];
 extern volatile char edcl_xmodem_buf0[];
@@ -27,6 +26,7 @@ extern volatile char** p_edcl_xmodem_buf_sync_ack;
 #endif // CONFIG_TARGET_1888TX018
 
 #ifdef CONFIG_TARGET_1888BM18
+#define EDCL_XMODEM_BUF_LEN (4096)
 extern volatile char* blk_buf;
 extern volatile char* edcl_xmodem_buf0;
 extern volatile char* edcl_xmodem_buf1;
@@ -58,4 +58,8 @@ extern volatile char* edcl_xmodem_buf_sync_ack;
 
 uint32_t flw_virt_to_dma(volatile void* ptr);
 
+
+#ifndef EDCL_XMODEM_BUF_LEN
+    #define EDCL_XMODEM_BUF_LEN (4096)
+#endif
 #endif // FLW_BUFFERS_H
