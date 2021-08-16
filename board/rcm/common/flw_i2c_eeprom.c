@@ -80,7 +80,7 @@ void flw_i2c_eeprom_list_add(void)
 {
 #ifdef CONFIG_TARGET_1888BC048
 unsigned int bus, dev;
-char* name = "i2c*";
+    char name[64];
 
     for (bus=0; bus<FLW_MAX_I2C_BUS; bus++)
     {
@@ -89,7 +89,7 @@ char* name = "i2c*";
             struct flw_dev_info_t dev_info = {0};
             unsigned char addr = i2c_eeprom_param[bus][dev].devaddr;
             if (flw_i2c_eeprom_found(bus, addr)) {
-                name[3] = bus +'0';
+                sprintf(name, "i2c%d-%x", bus, addr);
                 dev_info.i2c_bus = bus;
                 dev_info.i2c_addr = addr;
                 dev_info.i2c_alen = i2c_eeprom_param[bus][dev].alen;
