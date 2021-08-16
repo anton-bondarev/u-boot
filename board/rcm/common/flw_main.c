@@ -351,10 +351,10 @@ static void set_br(const char* br_str)
     if (new_baudrate >= BAUDRATE_MIN && new_baudrate <= BAUDRATE_MAX)
     {
         gd->baudrate = (unsigned int)new_baudrate;
-        printf(",new=%u", gd->baudrate);
+        printf(",new=%u\n", gd->baudrate);
         udelay(100000);
         serial_setbrg();
-    }
+    }  
     puts("\n");
 }
 
