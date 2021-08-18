@@ -13,6 +13,7 @@ void flash_dev_list_clear(void)
 
 void flash_dev_list_add(const char* name, unsigned int type, const struct flw_dev_info_t* dev_info, flw_erase erase, flw_write write, flw_read read)
 {
+    printf("Registering device: %s\n", name);
     if (fdl.num < MAX_DEV_NUM)
     {
         strcpy(fdl.dev[fdl.num].name, name);
