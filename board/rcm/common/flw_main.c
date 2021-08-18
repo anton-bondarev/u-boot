@@ -275,6 +275,7 @@ static int dupl_dev(char* edcl_xmodem_buf, struct flw_dev_t* seldev, char mode, 
                 last_err = res;
                 break;
             }
+            __MSYNC();
             write_sync(NULL);
             addr += toread;
             size -= toread;
