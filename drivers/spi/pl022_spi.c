@@ -155,8 +155,11 @@ static int pl022_setup_gpio(struct udevice *bus)
 	}
 
 	for(i = 0; i < ARRAY_SIZE(ps->cs_gpios); i++) {
-			if (!dm_gpio_is_valid(&ps->cs_gpios[i]))
-					continue;
+			if (!dm_gpio_is_valid(&ps->cs_gpios[i])) {
+				/* Make sure internal CS is deasserted */
+				writel(0x3, ps->base + 0xCC);
+				continue;
+			}
 
 			dm_gpio_set_dir_flags(&ps->cs_gpios[i],
 									GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
@@ -214,14 +217,11 @@ static void spi_cs_activate(struct udevice *dev, uint cs)
 {
 	struct udevice *bus = dev_get_parent(dev);
 	struct pl022_spi_slave *priv = dev_get_priv(bus);
-
 	if (!dm_gpio_is_valid(&priv->cs_gpios[cs])) {
-#ifdef CONFIG_TARGET_1888BM18
 		u32 val = readl(priv->base + 0xCC);
 		val |= 0x2;
 		val &= ~0x1;
 		writel(val, priv->base + 0xCC);
-#endif
 		return;
 	}
 
@@ -235,11 +235,9 @@ static void spi_cs_deactivate(struct udevice *dev, uint cs)
 	struct pl022_spi_slave *priv = dev_get_priv(bus);
 
 	if (!dm_gpio_is_valid(&priv->cs_gpios[cs])) {
-#ifdef CONFIG_TARGET_1888BM18
 		u32 val = readl(priv->base + 0xCC);
 		val |= 0x3;
 		writel(val, priv->base + 0xCC);
-#endif
 		return;
 	}
 
@@ -259,11 +257,11 @@ __weak int sdcard_init(void)
 }
 #endif
 
+
 static int pl022_spi_probe(struct udevice *bus)
 {
 	struct pl022_spi_pdata *plat = dev_get_platdata(bus);
 	struct pl022_spi_slave *ps = dev_get_priv(bus);
-
 	ps->base = ioremap(plat->addr, plat->size);
 	ps->freq = plat->freq;
 
@@ -292,6 +290,7 @@ static int pl022_spi_probe(struct udevice *bus)
 #if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
 	pl022_setup_dma(ps->base);
 #endif
+
 	return 0;
 }
 
