@@ -1,15 +1,15 @@
 
 /dts-v1/;
 / {
-    model = "RC-Module 1888BC048 SoC";
+	model = "RC-Module 1888BC048 SoC";
 	compatible = "rcm,1888BC048";
 	#address-cells = <1>;
 	#size-cells = <1>;
 
 
-    config {
-           u-boot,spl-payload-offset = <0x060000>; 
-    };
+	config {
+		   u-boot,spl-payload-offset = <0x060000>; 
+	};
 
 	chosen {
 		stdout-path = "uart0";
@@ -20,6 +20,7 @@
 		mmc0 = &mmc0;
 		mmc1 = &mmc1;
 		spi0 = &spi0;
+		spi1 = &spi1;
 	}; 
 
 	clock_axi_slow: clock_axi_slow@100M {
@@ -50,17 +51,17 @@
 		#size-cells = <1>;
 		u-boot,dm-pre-reloc;
 
-	    uart0: uart0@0x01044000 {
-		    compatible = "rcm,muart";			
+		uart0: uart0@0x01044000 {
+			compatible = "rcm,muart";			
 			clocks = <&clock_axi_fast>;
-		    reg = <0x01044000 0x1000>;
-		    u-boot,dm-pre-reloc;
+			reg = <0x01044000 0x1000>;
+			u-boot,dm-pre-reloc;
 		};
 
 		i2c0: i2c@0x01046000 {
 			compatible = "rcm,i2cbasis";
-		    #address-cells = <1>;
-		    #size-cells = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			clocks = <&clock_axi_slow>;
 			reg = <0x01046000 0x1000>;
 			bus-clock = <100000>;
@@ -72,34 +73,72 @@
 		};
 
 		gpio0: gpio0@0x01088000 {
-		    compatible = "rcm,gpio";
+			compatible = "rcm,gpio";
 			#address-cells = <1>;
-		    #size-cells = <0>;
+			#size-cells = <0>;
 			clocks = <&clock_axi_slow>;
-		    reg = <0x01088000 0x1000>;
+			reg = <0x01088000 0x1000>;
 			#gpio-cells = <2>;
 			gpio-controller;
-		    u-boot,dm-pre-reloc;
+			u-boot,dm-pre-reloc;
 		};
-        
-        spi0: spi@0x01040000 {
-		    compatible = "rcm,pl022-spi";			
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-			clocks = <&clock_axi_slow>;
-		    reg = <0x01040000 0x1000>;
-		    spi-max-frequency = <25000000>;		
-			cs-gpios = <&gpio0 5 0>;	
-		    u-boot,dm-pre-reloc;
 
-		    spi_flash@0 {
-			    compatible = "st,w25q32", "spi-flash";
-			    reg = <0>;
+		spi0: spi@0x01040000 {
+			compatible = "rcm,pl022-spi";			
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&clock_axi_slow>;
+			reg = <0x01040000 0x1000>;
+			spi-max-frequency = <25000000>;		
+			cs-gpios = <&gpio0 5 0>, <0>;	
+			u-boot,dm-pre-reloc;
+
+			spi_flash@0 {
+				compatible = "st,w25q32", "spi-flash";
+				reg = <0>;
 				spi-max-frequency = <1000000>;
 				spi-cpol;
 				spi-cpha;
-			    u-boot,dm-pre-reloc;								
-		    };			
+				u-boot,dm-pre-reloc;								
+			};			
+
+			spi_flash@1 {
+				compatible = "st,w25q32", "spi-flash";
+				reg = <1>;
+				spi-max-frequency = <1000000>;
+				spi-cpol;
+				spi-cpha;
+				u-boot,dm-pre-reloc;								
+			};			
+		};
+
+		spi1: spi@0x01041000 {
+			compatible = "rcm,pl022-spi";			
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&clock_axi_slow>;
+			reg = <0x01041000 0x1000>;
+			spi-max-frequency = <25000000>;		
+			cs-gpios = <&gpio0 6 0>, <0>;	
+			u-boot,dm-pre-reloc;
+
+			spi_flash@0 {
+				compatible = "st,w25q32", "spi-flash";
+				reg = <0>;
+				spi-max-frequency = <1000000>;
+				spi-cpol;
+				spi-cpha;
+				u-boot,dm-pre-reloc;								
+			};			
+
+			spi_flash@1 {
+				compatible = "st,w25q32", "spi-flash";
+				reg = <1>;
+				spi-max-frequency = <1000000>;
+				spi-cpol;
+				spi-cpha;
+				u-boot,dm-pre-reloc;								
+			};			
 		};
 
 		mmc0: mmc0@0x01042000 {
@@ -169,7 +208,7 @@
 			reg = <0x0108d000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <1>;			
-            status = "okay";
+			status = "okay";
 		};
 
 		sgmiiphy: sgmiphy@0x01086000 {
@@ -178,7 +217,7 @@
 			#phy-cells = <0>;
 			sctl = <&sctl>, <0x14>;
 			auto-negotiation;
-            status = "okay";
+			status = "okay";
 		};
 
 		mdio0: mdio0@0x01080000 {
@@ -189,7 +228,7 @@
 			clocks = <&clock_axi_slow>;		
 			pinctrl-names = "default";
 			pinctrl-0 = <&mdio0mux0>, <&mdio0mux1>;
-            status = "okay";
+			status = "okay";
 
 			phy0: ethernet-phy@0 {
 				reg = <0xffffffff>;	// autodetect
@@ -203,7 +242,7 @@
 			mac-address = [ec 17 66 64 08 10];
 			phys = <&sgmiiphy>;
 			phy = <&phy0>;
-            phy-mode = "sgmii";
+			phy-mode = "sgmii";
 			status = "okay";
 		};		
 
@@ -215,7 +254,7 @@
 			clocks = <&clock_axi_slow>;		
 			pinctrl-names = "default";
 			pinctrl-0 = <&mdio1mux0>, <&mdio1mux1>;
-            status = "okay";
+			status = "okay";
 
 			phy1: ethernet-phy@0 {
 				reg = <0xffffffff>;	// autodetect
@@ -229,7 +268,7 @@
 			mac-address = [ec 17 66 64 08 11];
 			phys = <&sgmiiphy>;
 			phy = <&phy1>;
-            phy-mode = "sgmii";
+			phy-mode = "sgmii";
 			status = "okay";
 		};		
 
@@ -241,7 +280,7 @@
 			clocks = <&clock_axi_slow>;		
 			pinctrl-names = "default";
 			pinctrl-0 = <&mdio2mux0>, <&mdio2mux1>;
-            status = "okay";
+			status = "okay";
 
 			phy2: ethernet-phy@0 {
 				reg = <0xffffffff>;	// autodetect
@@ -255,7 +294,7 @@
 			mac-address = [ec 17 66 64 08 12];
 			phys = <&sgmiiphy>;
 			phy = <&phy2>;
-            phy-mode = "sgmii";
+			phy-mode = "sgmii";
 			status = "okay";
 		};		
 
@@ -267,7 +306,7 @@
 			clocks = <&clock_axi_slow>;		
 			pinctrl-names = "default";
 			pinctrl-0 = <&mdio3mux0>, <&mdio3mux1>;
-            status = "okay";
+			status = "okay";
 
 			phy3: ethernet-phy@0 {
 				reg = <0xffffffff>;	// autodetect
@@ -281,9 +320,9 @@
 			mac-address = [ec 17 66 64 08 13];
 			phys = <&sgmiiphy>;
 			phy = <&phy3>;
-            phy-mode = "sgmii";
+			phy-mode = "sgmii";
 			status = "okay";
 		};		
 
-    };
+	};
 };
