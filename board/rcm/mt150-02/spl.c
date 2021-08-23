@@ -89,6 +89,28 @@ static void map_memory_range(const struct rcm_emi_memory_range *range, const cha
 }
 #endif // CONFIG_SPL_RCM_EMI_CORE
 
+static uint32_t read_dcr_reg(uint32_t addr)
+{
+  uint32_t res;
+
+  asm volatile   (
+  "mfdcrx (%0), (%1) \n\t"       // mfdcrx RT, RA
+  :"=r"(res)
+  :"r"((uint32_t) addr)
+  :
+	);
+  return res;
+};
+
+static void write_dcr_reg(uint32_t addr, uint32_t value)
+{
+
+  asm volatile   (
+  "mtdcrx (%0), (%1) \n\t"       // mtdcrx RA, RS
+  ::"r"((uint32_t) addr), "r"((uint32_t) value)
+  :
+	);
+};
 
 void spl_board_init(void) {
 #ifdef CONFIG_SPL_RCM_EMI_CORE
@@ -106,6 +128,10 @@ void spl_board_init(void) {
 	if (memory_type_config->bank_number != 0)
 		map_memory_range(&memory_type_config->ranges[0], "SDRAM");
 #endif // CONFIG_SPL_RCM_EMI_CORE
+	write_dcr_reg(0x80000201, 0x3);
+	uint32_t pri = read_dcr_reg(0x80000201);
+	printf("priority: %x\n", pri);
+
 }
 
 void board_boot_order(u32 *spl_boot_list)
