@@ -98,7 +98,7 @@
 
 			mmc0: mmc0@D002C000 {
 				u-boot,dm-pre-reloc;
-				status = "okay";
+				status = "disabled";
 				compatible = "rcm,mmc-0.2";
 				reg = <0xD002C000 0x1000>;
 				carddetect-gpio = <&gpio0 3 0>;
@@ -113,7 +113,7 @@
 
 			mmc1: mmc1@D003C000 {
 				u-boot,dm-pre-reloc;
-				status = "okay";
+				status = "disabled";
 				compatible = "rcm,mmc-0.2";
 				reg = <0xD003C000 0x1000>;
 				carddetect-gpio = <&gpio1 0 0>;
@@ -128,7 +128,7 @@
 
 			spi0: spi@D002B000 {
 				u-boot,dm-pre-reloc;
-				status = "disabled";
+				status = "okay";
 				compatible = "arm,pl022-spi", "arm,primecell";
 				reg = <0 0xD002B000 0 0x1000>;
 				#address-cells = <1>;
@@ -156,7 +156,7 @@
 
 			spi1: spi@D003B000 {
 				u-boot,dm-pre-reloc;
-				status = "disabled";
+				status = "okay";
 				compatible = "arm,pl022-spi", "arm,primecell";
 				reg = <0 0xD003B000 0 0x1000>;
 				#address-cells = <1>;
