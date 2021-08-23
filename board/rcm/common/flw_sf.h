@@ -22,7 +22,7 @@
 
 #ifdef CONFIG_TARGET_1888BM18
     #define FLW_MAX_SF_BUS_NUM 2
-    #define FLW_MAX_SF_CS_NUM 1
+    #define FLW_MAX_SF_CS_NUM 2
 #endif
 
 #ifdef CONFIG_TARGET_1888BC048
