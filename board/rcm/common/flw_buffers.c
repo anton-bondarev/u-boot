@@ -19,12 +19,12 @@ volatile char* edcl_xmodem_buf_sync_ack __attribute__ ((aligned (EDCL_XMODEM_BUF
 #endif // CONFIG_TARGET_1888TX018
 
 #ifdef CONFIG_TARGET_1888BM18
-#define IM1_BASE_ADDRESS 0xC0010000
+#define IM1_BASE_ADDRESS 0xC0040000
 volatile char* blk_buf = (volatile char*)(IM1_BASE_ADDRESS);
-volatile char* edcl_xmodem_buf0 = (volatile char*)(IM1_BASE_ADDRESS+0x2000);
-volatile char* edcl_xmodem_buf1 = (volatile char*)(IM1_BASE_ADDRESS+0x4000);
-volatile char** p_edcl_xmodem_buf_sync = (volatile char**)(IM1_BASE_ADDRESS+0x1000);
-volatile char** p_edcl_xmodem_buf_sync_ack = (volatile char**)(IM1_BASE_ADDRESS+0x1000);
+volatile char* edcl_xmodem_buf0 = (volatile char*)(IM1_BASE_ADDRESS + EDCL_XMODEM_BUF_LEN);
+volatile char* edcl_xmodem_buf1 = (volatile char*)(IM1_BASE_ADDRESS + EDCL_XMODEM_BUF_LEN * 2);
+volatile char** p_edcl_xmodem_buf_sync = (volatile char**)(IM1_BASE_ADDRESS + (EDCL_XMODEM_BUF_LEN * 3));
+volatile char** p_edcl_xmodem_buf_sync_ack = (volatile char**)(IM1_BASE_ADDRESS + (EDCL_XMODEM_BUF_LEN * 3) + 4);
 #endif // CONFIG_TARGET_1888BM18
 
 #ifdef CONFIG_TARGET_1888BC048

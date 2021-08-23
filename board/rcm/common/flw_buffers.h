@@ -26,14 +26,14 @@ extern volatile char** p_edcl_xmodem_buf_sync_ack;
 #endif // CONFIG_TARGET_1888TX018
 
 #ifdef CONFIG_TARGET_1888BM18
-#define EDCL_XMODEM_BUF_LEN (4096)
+#define EDCL_XMODEM_BUF_LEN (32768)
 extern volatile char* blk_buf;
 extern volatile char* edcl_xmodem_buf0;
 extern volatile char* edcl_xmodem_buf1;
 extern volatile char** p_edcl_xmodem_buf_sync;
 extern volatile char** p_edcl_xmodem_buf_sync_ack;
 #define edcl_xmodem_buf_sync (*p_edcl_xmodem_buf_sync)
-#define edcl_xmodem_buf_sync_ack (*p_edcl_xmodem_buf_sync)
+#define edcl_xmodem_buf_sync_ack (*p_edcl_xmodem_buf_sync_ack)
 #endif // CONFIG_TARGET_1888BM18
 
 #ifdef CONFIG_TARGET_1888BC048
