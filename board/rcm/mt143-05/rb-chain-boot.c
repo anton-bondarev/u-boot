@@ -47,8 +47,8 @@ static int rumboot_load_image(struct spl_image_info *spl_image,
 		return -ENOMEDIUM;
 	}
 
-	debug("rb: src: %p, plugin: %p, init:%p\n", src, src->plugin,
-	      src->plugin->init);
+	debug("rb: src: %p, plugin: %p, init:%p (%s)\n", src, src->plugin,
+	      src->plugin->init, src->name);
 	debug("rb: original offset: %x\n", (unsigned int)(src->offset));
 
 	if (!src->plugin->init(src, pdata))
@@ -56,12 +56,18 @@ static int rumboot_load_image(struct spl_image_info *spl_image,
 
 	bool once_again;
 	unsigned int add_offset = src->offset;
+	size_t chunksize = src->plugin->align;
+	if (chunksize < sizeof(*hdr)) {
+		chunksize = sizeof(*hdr);
+		chunksize = round_up_to_align(chunksize, src->plugin->align);
+	}
+
 	do {
 		char buf[BUF_SIZE];
 		once_again = false;
 		debug("rb: Using %x offset for chain boot\n", add_offset);
-		if (BUF_SIZE ==
-		    src->plugin->read(src, pdata, buf, add_offset, BUF_SIZE)) {
+		if (chunksize ==
+		    src->plugin->read(src, pdata, buf, add_offset, chunksize)) {
 			struct rumboot_bootheader *hdr0 =
 				(struct rumboot_bootheader *)buf;
 			struct image_header *ih = NULL;
@@ -69,8 +75,8 @@ static int rumboot_load_image(struct spl_image_info *spl_image,
 
 			if (hdr0->magic == RUMBOOT_HEADER_MAGIC) {
 				once_again = true;
-				add_offset += round_up_to_align(
-					hdr0->datalen + sizeof(struct rumboot_bootheader),
+				add_offset += chunksize + round_up_to_align(
+					hdr0->datalen,
 					src->plugin->align);
 				debug("Found rumboot image - try next one\n");
 				continue;
