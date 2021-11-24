@@ -101,10 +101,10 @@ sudo apt install crossbuild-essential-armhf
 
 ### Конфигурация
 
-Конфигурация по умолчанию находится в файле configs/mb115-01_defconfig. Скопируйте ее в .config.
+Конфигурация по умолчанию находится в файле configs/mt143-05_defconfig. Скопируйте ее в .config.
 
 ```
-cp configs/mb115-01_defconfig .config
+cp configs/mt143-05_defconfig .config
 ```
 
 Интерактивное редактирование конфигурации выполняется командой:
@@ -141,12 +141,12 @@ ARCH=powerpc CROSS_COMPILE=arm-linux-gnueabihf- make
 
 ### Особенности
 
-DDR память инициализируется отдельным приложением, которое должно быть исполнено ДО того, как будет выполнен u-boot-spl.
+DDR память инициализируется отдельным приложением, которое должно быть исполнено ДО того, как будет выполнен u-boot-spl. 
 
-На данный момент предоставляется готовый бинарный файл ddr_initializer.bin, выполняющий инициализацию памяти идущей в комплекте с инструментальной платой. 
+Репозиторий со сценарием для генерации образа конфигуратора представлен по ссылке. 
+https://github.com/RC-MODULE/soc_config_tool
 
-Исходные коды размещены в репозитории RumBoot здесь: 
-https://github.com/RC-MODULE/rumboot/blob/master/src/platform/basis/targets/ddr/ddr_initializer.c
+После сборки по инструкции должен получится файл ddr_init.bin, выполняющий инициализацию памяти идущей в комплекте с инструментальной платой. 
 
 ВАЖНО: Последовательность инициализации DDR будет дорабатываться ближайшее время, для упрощения поддержки других памятей пользователем и эта инструкция может измениться.
 
@@ -155,7 +155,7 @@ https://github.com/RC-MODULE/rumboot/blob/master/src/platform/basis/targets/ddr/
 Этот сценарий полезен для отладки u-boot без прошивки в ПЗУ. Флаг `-I` включает интерактивный режим, флаг `-r pl2303` использует для автоматического сброса питания платы механизм gpio линий pl2303 (присутствует на инструментальных платах).
 
 ```
-rumboot-xrun -f rumboot-basis-Production-iram-ddr_initializer.bin -f spl/u-boot-spl-dtb.rbi -f u-boot.img -r pl2303 -p /dev/ttyUSB0 -I
+rumboot-xrun -f rumboot-basis-Production-iram-ddr_init.bin -f spl/u-boot-spl-dtb.rbi -f u-boot.img -r pl2303 -p /dev/ttyUSB0 -I
 ```
 
 ### Прошивка u-boot в SPI Flash
@@ -165,7 +165,7 @@ rumboot-xrun -f rumboot-basis-Production-iram-ddr_initializer.bin -f spl/u-boot-
 Для SPI Flash используется кратное 1 байту (`-a basic`)
 
 ```
-rumboot-combine -a basic -i rumboot-basis-Production-iram-ddr_initializer.bin -i spl/u-boot-spl-dtb.rbi -i u-boot-dtb.img -o full_loader.bin
+rumboot-combine -a basic -i rumboot-basis-Production-iram-ddr_init.bin -i spl/u-boot-spl-dtb.rbi -i u-boot-dtb.img -o full_loader.bin
 ```
 
 #### Запишите полученный бинарный файл на SD карту. 
@@ -185,7 +185,7 @@ rumboot-combine -a basic -i rumboot-basis-Production-iram-ddr_initializer.bin -i
 Для этого используется выравнивание для SD карты (опция -a):
 
 ```
-rumboot-combine -a SD -i rumboot-basis-Production-iram-ddr_initializer.bin -i spl/u-boot-spl-dtb.rbi -i u-boot-dtb.img -o full_loader.bin
+rumboot-combine -a SD -i rumboot-basis-Production-iram-ddr_init.bin -i spl/u-boot-spl-dtb.rbi -i u-boot-dtb.img -o full_loader.bin
 ```
 
 #### Запишите полученный бинарный файл на SPI Flash. 
