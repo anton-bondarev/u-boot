@@ -155,7 +155,7 @@ https://github.com/RC-MODULE/soc_config_tool
 Этот сценарий полезен для отладки u-boot без прошивки в ПЗУ. Флаг `-I` включает интерактивный режим, флаг `-r pl2303` использует для автоматического сброса питания платы механизм gpio линий pl2303 (присутствует на инструментальных платах).
 
 ```
-rumboot-xrun -f rumboot-basis-Production-iram-ddr_init.bin -f spl/u-boot-spl-dtb.rbi -f u-boot.img -r pl2303 -p /dev/ttyUSB0 -I
+rumboot-xrun -f ddr_init.bin -f spl/u-boot-spl-dtb.rbi -f u-boot.img -r pl2303 -p /dev/ttyUSB0 -I
 ```
 
 ### Прошивка u-boot в SPI Flash
@@ -165,7 +165,7 @@ rumboot-xrun -f rumboot-basis-Production-iram-ddr_init.bin -f spl/u-boot-spl-dtb
 Для SPI Flash используется кратное 1 байту (`-a basic`)
 
 ```
-rumboot-combine -a basic -i rumboot-basis-Production-iram-ddr_init.bin -i spl/u-boot-spl-dtb.rbi -i u-boot-dtb.img -o full_loader.bin
+rumboot-combine -a basic -i ddr_init.bin -i spl/u-boot-spl-dtb.rbi -i u-boot-dtb.img -o full_loader.bin
 ```
 
 #### Запишите полученный бинарный файл на SD карту. 
@@ -185,7 +185,7 @@ rumboot-combine -a basic -i rumboot-basis-Production-iram-ddr_init.bin -i spl/u-
 Для этого используется выравнивание для SD карты (опция -a):
 
 ```
-rumboot-combine -a SD -i rumboot-basis-Production-iram-ddr_init.bin -i spl/u-boot-spl-dtb.rbi -i u-boot-dtb.img -o full_loader.bin
+rumboot-combine -a SD -i ddr_init.bin -i spl/u-boot-spl-dtb.rbi -i u-boot-dtb.img -o full_loader.bin
 ```
 
 #### Запишите полученный бинарный файл на SPI Flash. 
