@@ -110,7 +110,7 @@ cp configs/mt143-05_defconfig .config
 Интерактивное редактирование конфигурации выполняется командой:
 
 ```
-ARCH=powerpc CROSS_COMPILE=arm-linux-gnueabihf- make menuconfig
+ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- make menuconfig
 ```
 
 Это обновит значения в файле .config. Сохраните его, чтобы не потерять изменения, если они важны.
@@ -120,7 +120,7 @@ ARCH=powerpc CROSS_COMPILE=arm-linux-gnueabihf- make menuconfig
 Команды сборки будут выглядеть следующим образом
 
 ```
-ARCH=powerpc CROSS_COMPILE=arm-linux-gnueabihf- make
+ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- make
 ```
 
 В результате получится два файла:
