@@ -3,3 +3,28 @@ config 1888TX018_DDR
 	depends on TARGET_1888TX018
 	help
 	  Enable DDR SDRAM controller for the 1888tx018 device.
+
+config 1888TX018_DDR_SPD
+	depends on 1888TX018_DDR
+	bool "Initialize DDR timings from SPD"
+	help
+	  Enable DDR SDRAM controller for the 1888tx018 device.
+
+choice 1888TX018_DDR_SPEED
+    prompt "DDR3 Speed Selection"
+	depends on !1888TX018_DDR_SPD
+
+	config 1888TX018_DDR_1600
+	bool "DDR3 1600"
+
+	config 1888TX018_DDR_1333
+	bool "DDR3 1333"
+
+	config 1888TX018_DDR_1060
+	bool "DDR3 1060"
+
+	config 1888TX018_DDR_800
+	bool "DDR3 800"
+
+endchoice
+

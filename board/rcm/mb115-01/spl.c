@@ -103,7 +103,11 @@ void usleep(uint32_t usec);
 void spl_board_init(void)
 {
 	/* init dram */
+#ifdef CONFIG_1888TX018_DDR_SPD
 	ddr_init(0);
+#else
+	ddr_init(2);
+#endif
 
 	if(!is_ddr_ok())
 	{
