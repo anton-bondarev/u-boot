@@ -41,13 +41,14 @@
 			clocks = <&axiclock>;
 		    reg = <0x000CF000 0x1000>;
 		    spi-max-frequency = <25000000>;		
-			cs-gpios = <&gpio0 1 0>, <&gpio0 0 0>, <&gpio0 2 0>, <&gpio0 3 0>;	
+			cs-gpios = <&gpio0 1 0>, <&gpio0 0 0>, <&gpio0 2 0>, <&gpio0 3 0>;
+			oe-gpios = <&gpio0 7 0>;
 		    u-boot,dm-pre-reloc;
 
 		    spi_flash@0 {
 			    compatible = "winbond,w25q128", "spi-flash";
 			    reg = <0>;
-				spi-max-frequency = <1000000>;
+				spi-max-frequency = <100000>;
 				spi-cpol;
 				spi-cpha;
 			    u-boot,dm-pre-reloc;
@@ -58,6 +59,8 @@
 				compatible = "mmc-spi-slot";
 			    reg = <1>;
 				spi-max-frequency = <25000000>;
+				spi-cpol;
+				spi-cpha;
 			    u-boot,dm-pre-reloc;
 				//status="disabled";
 			};
