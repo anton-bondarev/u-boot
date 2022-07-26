@@ -134,7 +134,7 @@ static int pl060_probe(struct udevice *dev)
 //        (readl(&regs->pid2) == 0x04) &&
 //        (readl(&regs->pid3) == 0x00))
     {
-        writel(0x0f, &regs->regime); // switch everything to gpio mode
+        writel(0xff, &regs->regime); // switch everything to gpio mode
         return 0;
     }
 
