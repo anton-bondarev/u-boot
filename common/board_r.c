@@ -599,11 +599,20 @@ static int initr_bbmii(void)
 static int initr_net(void)
 {
 	puts("Net:   ");
-	eth_initialize();
+
+	if (!eth_initialize()) {
+#if defined(CONFIG_TARGET_1879VM8YA)
+		env_set("stdin", "serial");
+		env_set("stdout", "serial");
+		env_set("stderr", "serial");
+#endif // defined(CONFIG_TARGET_1879VM8YA)
+	}
+
 #if defined(CONFIG_RESET_PHY_R)
 	debug("Reset Ethernet PHY\n");
 	reset_phy();
 #endif
+
 	return 0;
 }
 #endif
@@ -799,7 +808,10 @@ static init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_API
 	initr_api,
 #endif
-	console_init_r,		/* fully init console as a device */
+#if !defined(CONFIG_TARGET_1879VM8YA)
+	/* there is the only netconsole on nm6408 we init it after net init */
+	console_init_r,         /* fully init console as a device */
+#endif // !defined(CONFIG_TARGET_1879VM8YA)
 #ifdef CONFIG_DISPLAY_BOARDINFO_LATE
 	console_announce_r,
 	show_board_info,
@@ -845,6 +857,10 @@ static init_fnc_t init_sequence_r[] = {
 	INIT_FUNC_WATCHDOG_RESET
 	initr_net,
 #endif
+#if defined(CONFIG_TARGET_1879VM8YA)
+	/* there is the only netconsole on nm6408 we init it after net init */
+	console_init_r,         /* fully init console as a device */
+#endif // !defined(CONFIG_TARGET_1879VM8YA)
 #ifdef CONFIG_POST
 	initr_post,
 #endif
