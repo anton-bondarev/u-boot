@@ -284,17 +284,17 @@ static int pl022_spi_probe(struct udevice *bus)
 
 	ps->base = ioremap(plat->addr, plat->size);
 	ps->freq = plat->freq;
+	ps->bus = bus;
 
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_TARGET_1888BC048)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_TARGET_1888BC048) || defined(CONFIG_ARCH_RCM_ARM)
 	int ret = pl022_setup_gpio(bus);
 	if (ret < 0)
 	{
 		pr_err("Can't get %s gpios! Error: %d\n", bus->name, ret);
 		return ret;
 	}
-#elif defined(CONFIG_ARCH_RCM_ARM)
-	ps->bus = bus;
-	pl022_setup_gpio(bus);
+#endif
+#if defined(CONFIG_ARCH_RCM_ARM)
 	// sd card should be switched to SPI mode before any activity on SPI bus
 	sdcard_init();
 #endif
