@@ -38,6 +38,8 @@ static int spl_edcl_load_image(struct spl_image_info *spl_image,
 	{
 		volatile unsigned long *edcl_sync_cell_ptr = (unsigned long *) EDCL_SYNC_ADDR; 
 
+		spl_edcl_enable();
+
 		// wait for u-boot-dtb.img loading
 		*edcl_sync_cell_ptr = 1;
 		printf("Enter HOST mode for EDCL loading. waiting for marker at %08X\n", EDCL_SYNC_ADDR);
