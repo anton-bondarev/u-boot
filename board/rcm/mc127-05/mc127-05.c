@@ -67,6 +67,7 @@ bool is_ddr_ok(void)
 
 extern void EMIC_init (unsigned base);
 
+#define GRETH_BASE 0x000D0000
 #define GPIO_BASE 0x000CC000
 #define SPI_BASE 0x000CF000
 #define SD_CS_GPIO 0
@@ -132,13 +133,24 @@ int sdcard_init(void)
 	unsigned char answer = 0xff;
 	int count0 = 10;
 
+	puts("SDcard init\n");
+
+#if 0
 	writew(0, spiregs + SSP_CS);
 	writew(250, spiregs + SSP_CPSR);
-	writew((readw(spiregs + SSP_CR0) & ~0xff00) | (4 << SSP_SCR_SHFT), spiregs + SSP_CR0);	
+	writew((readw(spiregs + SSP_CR0) & ~0xff00) | (4 << SSP_SCR_SHFT), spiregs + SSP_CR0);
 
 	/* Enable the SPI hardware */
 	writew(readw(spiregs + SSP_CR1) | SSP_CR1_MASK_SSE,
-		   spiregs + SSP_CR1);
+		spiregs + SSP_CR1);
+#endif
+
+	writew(2, spiregs + SSP_CS);
+	writew(250, spiregs + SSP_CPSR);
+	writew(0x4C7, spiregs + SSP_CR0);
+
+	/* Enable the SPI hardware */
+	writew(0xA,spiregs + SSP_CR1);
 
 	// alloc cs
 	clrbits(le32, gpioregs+0, 1 << SD_CS_GPIO);
@@ -172,8 +184,26 @@ int sdcard_init(void)
 	return answer;
 }
 
+void spl_edcl_enable(void)
+{
+	void *edclregs = (void *)GRETH_BASE;
+
+	clrbits(le32, edclregs+0, 1<<14);
+
+	return;
+}
+
 void spl_board_init(void)
 {
+	puts("OE enable\n");
+
+	setbits(le32, (void *)0xCC038, 0xff);
+
+	setbits(le32, (void *)0xCC010, 1 << 7);
+	clrbits(le32, (void *)0xCC000, 1 << 7);
+
+	udelay(100000);
+
 	/* init dram */
 	EMIC_init(0x600C0000);
 	EMIC_init(0x800C0000);
