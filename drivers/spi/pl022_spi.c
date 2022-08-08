@@ -56,7 +56,8 @@
 /* SSP Control Register 0  - SSP_CR0 */
 #define SSP_CR0_SPO		(0x1 << 6)
 #define SSP_CR0_SPH		(0x1 << 7)
-#define SSP_CR0_BIT_MODE(x)	((x) - 1)
+#define SSP_CR0_BIT_MODE(x)	SSP_CR0_BIT_MODE(8)
+#define SSP_CR0_8BIT_MODE	(0x07)
 #define SSP_SCR_MIN		(0x00)
 #define SSP_SCR_MAX		(0xFF)
 #define SSP_SCR_SHFT		8
@@ -79,7 +80,6 @@
 #if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_ARCH_RCM_ARM)
 #include <asm-generic/gpio.h>
 
-#define SSP_CR0_8BIT_MODE	(0x07)
 #define MAX_CS_COUNT		4
 #define SSP_SPI_IRQ_MASK	0x0d8
 /* SSP Interrupt mask register */
@@ -144,8 +144,28 @@ static int pl022_setup_gpio(struct udevice *bus)
 {
 	int i;
 	struct pl022_spi_slave *ps = dev_get_priv(bus);
-	int ret = gpio_request_list_by_name(bus, "cs-gpios", ps->cs_gpios,
-										ARRAY_SIZE(ps->cs_gpios), 0);
+	int ret;
+
+#if defined(CONFIG_TARGET_1879VM8YA)
+	struct gpio_desc oe;
+
+	ret = gpio_request_list_by_name(bus, "oe-gpios", &oe, 1, 0);
+	if (ret < 0) {
+		pr_err("Can't get %s oe-gpios! Error: %d\n", bus->name, ret);
+		return ret;
+	}
+
+	if (dm_gpio_is_valid(&oe)) {
+			dm_gpio_set_dir_flags(&oe, GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
+			dm_gpio_set_value(&oe, 0);
+			puts("OE is set\n");
+	}
+
+	udelay(100000);
+#endif /* defined(CONFIG_TARGET_1879VM8YA) */
+
+	ret = gpio_request_list_by_name(bus, "cs-gpios", ps->cs_gpios,
+						ARRAY_SIZE(ps->cs_gpios), 0);
 	if (ret < 0) {
 			pr_err("Can't get %s gpios! Error: %d\n", bus->name, ret);
 			return ret;
@@ -156,7 +176,7 @@ static int pl022_setup_gpio(struct udevice *bus)
 					continue;
 
 			dm_gpio_set_dir_flags(&ps->cs_gpios[i],
-									GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
+							GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
 
 			// and disable
 			dm_gpio_set_value(&ps->cs_gpios[i], 1);
@@ -193,6 +213,7 @@ static void pl022_setup_dma(void* base)
 
 	writew(dmacr, base + SSP_DMACR);
 
+#if !defined(CONFIG_TARGET_1879VM8YA)
 	// enable SSP
 	u16 cr1 = (0b1 << SSP_CR1_SOD_n)
             | (0b0 << SSP_CR1_MS_n)
@@ -200,6 +221,7 @@ static void pl022_setup_dma(void* base)
             | (0b0 << SSP_CR1_LBM_n);
 
 	writew(cr1, base + SSP_CR1);
+#endif /* !defined(CONFIG_TARGET_1879VM8YA) */
 
 	// disable GSPI DMA
 	//writel(0, ps->base + SSP_SPI_IRQ_MASK);
@@ -263,17 +285,17 @@ static int pl022_spi_probe(struct udevice *bus)
 
 	ps->base = ioremap(plat->addr, plat->size);
 	ps->freq = plat->freq;
+	ps->bus = bus;
 
-#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_TARGET_1888BC048)
+#if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_TARGET_1888BM18) || defined(CONFIG_TARGET_1888BC048) || defined(CONFIG_ARCH_RCM_ARM)
 	int ret = pl022_setup_gpio(bus);
 	if (ret < 0)
 	{
 		pr_err("Can't get %s gpios! Error: %d\n", bus->name, ret);
 		return ret;
 	}
-#elif defined(CONFIG_ARCH_RCM_ARM)
-	ps->bus = bus;
-	pl022_setup_gpio(bus);
+#endif
+#if defined(CONFIG_ARCH_RCM_ARM)
 	// sd card should be switched to SPI mode before any activity on SPI bus
 	sdcard_init();
 #endif
@@ -283,7 +305,7 @@ static int pl022_spi_probe(struct udevice *bus)
 		return -ENOTSUPP;
 
 	/* 8 bits per word, high polarity and default clock rate */
-	writew(SSP_CR0_BIT_MODE(8), ps->base + SSP_CR0);
+	writew(SSP_CR0_SPO | SSP_CR0_SPH | SSP_CR0_8BIT_MODE, ps->base + SSP_CR0);
 	writew(DFLT_PRESCALE, ps->base + SSP_CPSR);
 
 #if defined(CONFIG_TARGET_1888TX018) || defined(CONFIG_ARCH_RCM_ARM)
@@ -551,7 +573,7 @@ static int pl022_spi_set_speed(struct udevice *bus, uint speed)
 	}
 
 	writew(best_cpsr, ps->base + SSP_CPSR);
-	cr0 = readw(ps->base + SSP_CR0);
+	cr0 = readw(ps->base + SSP_CR0) & ~(0xFF << SSP_SCR_SHFT);
 	writew(cr0 | (best_scr << SSP_SCR_SHFT), ps->base + SSP_CR0);
 
 	return 0;
